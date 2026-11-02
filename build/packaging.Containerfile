@@ -31,7 +31,11 @@ RUN --mount=type=secret,id=runner-ca,target=/tmp/getpatched-runner-ca.crt,requir
     cat /tmp/apt-update.log; \
     apt_retry -y dist-upgrade; \
     for binary in $install_packages; do \
-      test "$(apt-cache policy "$binary" | awk '/Candidate:/ {print $2}')" = "$EXPECTED_VERSION"; \
+      candidate="$(apt-cache policy "$binary" | awk '/Candidate:/ {print $2}')"; \
+      test "$candidate" = "$EXPECTED_VERSION" || { \
+        echo "Public candidate changed for $binary: $candidate (expected $EXPECTED_VERSION); refresh preflight, do not downgrade." >&2; \
+        exit 1; \
+      }; \
     done; \
     apt_retry install -y --no-install-recommends build-essential fakeroot dpkg-dev apt-utils gnupg python3 valgrind pkg-config; \
     apt_retry build-dep -y --no-install-recommends "$SOURCE_PACKAGE"; \
