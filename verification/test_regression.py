@@ -50,29 +50,34 @@ class CaresTargetRegression(unittest.TestCase):
 
 
 class BrotliRegression(unittest.TestCase):
-    def test_baseline_requires_the_bounded_needs_more_output_signature(self):
+    def test_baseline_requires_the_block_length_error_after_16_mib_signature(self):
         check = {
             "cve": "CVE-2026-111497", "testId": "brotli-invalid-block-switch",
-            "timedOut": False, "returncode": 0, "decoderResult": 3,
-            "decoderError": 3, "formatBlockSwitchError": -17,
-            "decoderOutputBytes": 32 * 1024 * 1024, "decoderCalls": 8192,
+            "timedOut": False, "returncode": 0, "decoderResult": 0,
+            "decoderError": -9, "formatBlockSwitchError": -17,
+            "inputRemaining": 3, "decoderOutputBytes": 16 * 1024 * 1024,
+            "decoderCalls": 4096,
             "normalStreamCompatible": True,
         }
         self.assertTrue(brotli_baseline_reproduced(check))
         self.assertFalse(brotli_baseline_reproduced({**check, "decoderError": -15}))
         self.assertFalse(brotli_baseline_reproduced({**check, "decoderOutputBytes": 4096}))
-        self.assertFalse(brotli_baseline_reproduced({**check, "decoderCalls": 1}))
+        self.assertFalse(brotli_baseline_reproduced({**check, "decoderResult": 3}))
 
     def test_patched_requires_the_specific_format_error_and_compatibility(self):
         check = {
             "cve": "CVE-2026-111497", "testId": "brotli-invalid-block-switch",
             "timedOut": False, "returncode": 0, "decoderResult": 0,
             "decoderError": -17, "formatBlockSwitchError": -17,
+            "decoderOutputBytes": 16 * 1024 * 1024, "decoderCalls": 4096,
             "normalStreamCompatible": True,
         }
         self.assertTrue(brotli_patched_succeeded(check))
         self.assertFalse(brotli_patched_succeeded({**check, "decoderResult": 3}))
         self.assertFalse(brotli_patched_succeeded({**check, "normalStreamCompatible": False}))
+        self.assertFalse(brotli_patched_succeeded({**check, "decoderOutputBytes": 33 * 1024 * 1024}))
+        self.assertFalse(brotli_patched_succeeded({**check, "decoderCalls": 8193}))
+        self.assertFalse(brotli_patched_succeeded({key: value for key, value in check.items() if key != "decoderOutputBytes"}))
 
 
 class ExecuteTimeout(unittest.TestCase):

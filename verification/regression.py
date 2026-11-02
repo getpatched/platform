@@ -18,6 +18,8 @@ from urllib.parse import urlsplit
 
 LIBPNG_CVE_2025_65018_FIXTURE = "cve-2025-65018-advisory-adam7-rgb16.png"
 LIBPNG_CVE_2025_65018_FIXTURE_SHA256 = "9deb34ada9b550df50181e4cd8c947303fd7b2881f61f3f16efa249d845e9905"
+BROTLI_MAX_PROBE_OUTPUT = 32 * 1024 * 1024
+BROTLI_MAX_PROBE_CALLS = 8192
 
 
 def execute(command, timeout=30, env=None):
@@ -244,11 +246,12 @@ def brotli_baseline_reproduced(check):
         and check.get("testId") == "brotli-invalid-block-switch"
         and check.get("timedOut") is False
         and check.get("returncode") == 0
-        and check.get("decoderResult") == 3  # BROTLI_DECODER_RESULT_NEEDS_MORE_OUTPUT
-        and check.get("decoderError") == 3
+        and check.get("decoderResult") == 0  # BROTLI_DECODER_RESULT_ERROR
+        and check.get("decoderError") == -9  # BROTLI_DECODER_ERROR_FORMAT_BLOCK_LENGTH_1
         and check.get("formatBlockSwitchError") == -17
-        and check.get("decoderOutputBytes") == 32 * 1024 * 1024
-        and check.get("decoderCalls") == 8192
+        and check.get("inputRemaining") == 3
+        and check.get("decoderOutputBytes") == 16 * 1024 * 1024
+        and check.get("decoderCalls") == 4096
         and check.get("normalStreamCompatible") is True
     )
 
@@ -262,6 +265,10 @@ def brotli_patched_succeeded(check):
         and check.get("decoderResult") == 0  # BROTLI_DECODER_RESULT_ERROR
         and check.get("decoderError") == -17
         and check.get("formatBlockSwitchError") == -17
+        and isinstance(check.get("decoderOutputBytes"), int)
+        and 0 <= check["decoderOutputBytes"] <= BROTLI_MAX_PROBE_OUTPUT
+        and isinstance(check.get("decoderCalls"), int)
+        and 1 <= check["decoderCalls"] <= BROTLI_MAX_PROBE_CALLS
         and check.get("normalStreamCompatible") is True
     )
 
