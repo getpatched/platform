@@ -1880,7 +1880,7 @@ function assertRelease(record) {
     ["getpatched/packaging-libpng1.6", { sponsorDelayHours: 0, targetIds: ["ubuntu-focal-amd64"] }],
     ["getpatched/packaging-libgit2", { sponsorDelayHours: 0, targetIds: ["ubuntu-focal-amd64", "ubuntu-jammy-amd64"] }],
     ["getpatched/packaging-tiff", { sponsorDelayHours: 0, targetIds: ["ubuntu-focal-amd64", "debian-bookworm-amd64", "debian-trixie-amd64"] }],
-    ["getpatched/packaging-poppler", { sponsorDelayHours: 0, targetIds: ["ubuntu-focal-amd64"] }],
+    ["getpatched/packaging-poppler", { sponsorDelayHours: 0, targetIds: ["ubuntu-focal-amd64", "debian-bookworm-amd64", "debian-trixie-amd64"] }],
     ["getpatched/packaging-c-ares", { sponsorDelayHours: 168, targetIds: ["ubuntu-focal-amd64", "debian-trixie-amd64"] }],
     ["getpatched/packaging-brotli", { sponsorDelayHours: 168, targetIds: ["ubuntu-focal-amd64"] }],
   ]);
