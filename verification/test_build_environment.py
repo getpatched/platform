@@ -9,7 +9,7 @@ import sys
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "scripts"))
 
-from build_environment import runner_ca_bundle
+from build_environment import offline_resolver_config, runner_ca_bundle
 
 
 class RunnerCaBundleTests(unittest.TestCase):
@@ -45,4 +45,15 @@ class RunnerCaBundleTests(unittest.TestCase):
                 with patch.dict(os.environ, {"GETPATCHED_CA_BUNDLE": str(bundle)}):
                     with self.assertRaisesRegex(RuntimeError, message):
                         runner_ca_bundle()
+
+
+class OfflineResolverConfigTests(unittest.TestCase):
+    def test_configures_local_only_dns_and_returns_read_only_bind_mount(self):
+        with tempfile.TemporaryDirectory() as directory:
+            mount = offline_resolver_config(directory)
+            config = (Path(directory) / "resolv.conf").read_text()
+        self.assertEqual(config, "nameserver 127.0.0.1\noptions timeout:1 attempts:1\n")
+        self.assertEqual(mount[0], "--mount")
+        self.assertIn("target=/etc/resolv.conf,readonly", mount[1])
+        self.assertIn("/resolv.conf", mount[1])
 

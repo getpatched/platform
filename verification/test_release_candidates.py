@@ -159,6 +159,12 @@ class ReleaseCandidateOutput(unittest.TestCase):
         self.assertNotIn("require_release_compatibility", source)
         self.assertIn('verification_checks_passed=True, publication_enabled=profile["repository"]["enabled"]', source)
 
+    def test_package_build_uses_local_resolver_mount_without_network_access(self):
+        source = SCRIPT.read_text()
+        self.assertIn("offline_resolver_config(temp)", source)
+        self.assertIn("*offline_resolver_mount", source)
+        self.assertIn('"--network", "none"', source)
+
     def test_private_staging_requires_explicit_release_eligibility(self):
         workflow = (SCRIPT.parents[1] / ".github/workflows/private-staging.yml").read_text()
         self.assertIn('test -s "$RUNNER_TEMP/candidate/release-eligibility.json"', workflow)

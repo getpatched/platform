@@ -12,6 +12,13 @@ import re
 import ssl
 
 
+def offline_resolver_config(directory):
+    """Create an isolated resolver config for tests that expect a DNS timer."""
+    path = Path(directory) / "resolv.conf"
+    path.write_text("nameserver 127.0.0.1\noptions timeout:1 attempts:1\n")
+    return ["--mount", "type=bind,source=" + str(path) + ",target=/etc/resolv.conf,readonly"]
+
+
 def runner_ca_bundle():
     explicit_override = os.environ.get("GETPATCHED_CA_BUNDLE")
     configured = explicit_override or "/etc/ssl/certs/ca-certificates.crt"
