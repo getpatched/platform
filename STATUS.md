@@ -413,3 +413,15 @@ The advisory scanner now treats an exact reviewed vulnerable baseline as affecte
 ### Next actions
 
 1. Inspect run 41083191679 through terminal state and review its retained artifacts. Then push and quality-check the reviewed Poppler advisory-scope correction and rerun Poppler. Keep TIFF and libpng blocked on accurate baseline reproductions; do not publish packages.
+
+## Active 100-CVE goal — Poppler CVE-2026-107705 — 2 Nov 2026
+
+- Debian Security Tracker currently lists the exact Bookworm and Trixie Poppler sources as vulnerable. Canonical says Ubuntu Focal needs evaluation, so no Focal target is proposed for this CVE.
+- Added target recipes for Bookworm amd64 `22.12.0-2+deb12u2` and Trixie amd64 `25.03.0-5+deb13u4`, pinned to Debian Snapshot `20261030T000000Z`. Both signed `InRelease` files and `Sources.xz` hash chains were verified; details and archive digests are in `evidence/poppler-cve-2026-107705-research-20261102/README.md`.
+- Added a minimal target-scoped 127-byte password clamp backport of upstream commit `60e19a30152560fcccfb2ae7f7559eda560c0160`, plus a `PDFDoc`-based encrypted R6 fixture probe and baseline/patched scanner classification. The upstream patch does not apply verbatim because these distro sources predate its `GooString` refactor.
+- Local patch dry-runs pass for both source versions; both recipes load; the probe syntax-checks against both header sets; and 96 focused platform tests pass. These checks do not prove installed behavior.
+- The candidate has not yet reproduced against the installed baseline or passed a patched build, scan, or consumer check. Docker Desktop is unavailable locally; run the exact commit through GitHub-hosted verification before counting it. No binary or production advisory was published.
+
+### Next actions
+
+1. Obtain a fresh independent review of the current two-repository diff. Address findings, then publish reviewable source and platform branches and run the non-publishing Bookworm and Trixie workflows. Count this CVE only after both target runs pass all gates.

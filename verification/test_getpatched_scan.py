@@ -45,6 +45,37 @@ SCANNER_SPEC.loader.exec_module(SCANNER_MODULE)
 
 
 class GetPatchedScannerContract(unittest.TestCase):
+    def test_poppler_revision6_candidate_requires_clean_regression_and_consumer(self):
+        cve_check = {
+            "cve": "CVE-2026-107705",
+            "testId": "CVE-2026-107705-revision6-long-owner-password",
+            "passed": True,
+            "command": [
+                "valgrind", "--tool=memcheck", "--error-exitcode=97", "--leak-check=no",
+                "--read-var-info=yes", "--log-file=/tmp/revision6-password.valgrind",
+                "/tmp/poppler-revision6-password", "/recipe/tests/fixtures/CVE-2026-107705-r6-encrypted.pdf",
+            ],
+            "returncode": 0,
+            "timedOut": False,
+            "memoryLog": "ERROR SUMMARY: 0 errors\n",
+        }
+        consumer = {
+            "command": ["pdfinfo", "-v"],
+            "returncode": 0,
+            "timedOut": False,
+            "stdout": "pdfinfo version 25.03.0\n",
+            "stderr": "",
+            "passed": True,
+        }
+        self.assertTrue(SCANNER_MODULE.poppler_revision6_patched_succeeded(cve_check, [consumer]))
+        self.assertFalse(SCANNER_MODULE.poppler_revision6_patched_succeeded(cve_check, []))
+        self.assertFalse(SCANNER_MODULE.poppler_revision6_patched_succeeded(
+            {**cve_check, "memoryLog": "ERROR SUMMARY: 1 errors\n"}, [consumer]
+        ))
+        self.assertFalse(SCANNER_MODULE.poppler_revision6_patched_succeeded(
+            {**cve_check, "command": ["valgrind"]}, [consumer]
+        ))
+
     def make_tiff_recipe(self, root, target_id="ubuntu-focal-amd64", signature=("0x114980", "0x116FB2", "0x10AC12")):
         root = Path(root)
         (root / "patches").mkdir(parents=True, exist_ok=True)
