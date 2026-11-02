@@ -464,5 +464,213 @@
         }
       }
     }
+,
+    {
+      "source": "c-ares",
+      "targets": {
+        "ubuntu-focal-amd64": {
+          "baseVersion": "1.15.0-1ubuntu0.5",
+          "version": "1.15.0-1ubuntu0.5+getpatched1",
+          "cves": [
+            "CVE-2026-69184"
+          ],
+          "vulnerabilities": [
+            {
+              "id": "CVE-2026-69184",
+              "slug": "cve-2026-69184",
+              "summary": "c-ares CPU exhaustion from unbounded DNS compression-pointer chains",
+              "ubuntuPriority": "medium",
+              "cvssV3": 7.5,
+              "advisoryUrl": "https://ubuntu.com/security/CVE-2026-69184",
+              "patchSlugs": [
+                "cve-2026-69184-name-length-focal"
+              ],
+              "patched": true
+            }
+          ],
+          "patches": [
+            {
+              "id": "cve-2026-69184-name-length-focal",
+              "slug": "cve-2026-69184-name-length-focal",
+              "kind": "security",
+              "title": "Reject overlong DNS names after compression-pointer expansion",
+              "description": "Adds the RFC 1035 255-octet expanded wire-name bound to the legacy Focal c-ares 1.15 parser while retaining its existing pointer-hop cap.",
+              "sha256": "6bc711a379a0dc567551da0f3a98dce7f73c969dbc56af179c71376ca384e1e4",
+              "fileUrl": "https://github.com/getpatched/packaging-c-ares/blob/getpatched/focal/patches/CVE-2026-69184-focal.patch",
+              "cves": [
+                "CVE-2026-69184"
+              ],
+              "upstream": {
+                "repository": "https://github.com/c-ares/c-ares",
+                "commit": "5c8341ba6ff3a8e4e4dfd616f8ed0418838b8b7b",
+                "url": "https://github.com/c-ares/c-ares/commit/5c8341ba6ff3a8e4e4dfd616f8ed0418838b8b7b.patch"
+              },
+              "tests": [
+                {
+                  "id": "c-ares-overlong-expanded-name-focal",
+                  "baselineExpectation": "The exact Focal 1.15.0 source accepts an expanded DNS wire name longer than 255 octets; a maximum-valid 255-octet name remains accepted.",
+                  "patchedExpectation": "The installed parser rejects the same overlong name with ARES_EBADNAME and accepts the maximum-valid 255-octet name."
+                }
+              ]
+            }
+          ],
+          "access": "sponsor",
+          "delayHours": 168,
+          "sponsorEligibility": "any-active-individual-github-sponsorship-tier",
+          "earlyBinaryLicenseId": "LicenseRef-GetPatched-Early-Binary-1.2",
+          "publicContributionSpdx": "MIT",
+          "earlyUse": [
+            "private",
+            "commercial"
+          ],
+          "earlyRedistributionAllowed": false,
+          "status": "development-verified-sponsor-flow-pending",
+          "verification": "https://github.com/getpatched/platform/actions/runs/41492142682",
+          "sourceUrl": "https://github.com/getpatched/packaging-c-ares/tree/getpatched/focal",
+          "patchUrl": "https://github.com/getpatched/packaging-c-ares/blob/getpatched/focal/patches/CVE-2026-69184-focal.patch",
+          "testsUrl": "https://github.com/getpatched/packaging-c-ares/tree/getpatched/focal/tests",
+          "releasesUrl": "https://github.com/getpatched/packaging-c-ares/releases",
+          "releaseStatus": "No production release; sponsor flow verification pending",
+          "publicLicenseScope": "getpatched-authored-contributions-only",
+          "ubuntuProEsmCompatibility": "not-tested-out-of-scope"
+        },
+        "debian-trixie-amd64": {
+          "baseVersion": "1.34.5-1+deb13u1",
+          "version": "1.34.5-1+deb13u1+getpatched1",
+          "cves": [
+            "CVE-2026-69184"
+          ],
+          "vulnerabilities": [
+            {
+              "id": "CVE-2026-69184",
+              "slug": "cve-2026-69184",
+              "summary": "c-ares CPU exhaustion from unbounded DNS compression-pointer chains",
+              "ubuntuPriority": "medium",
+              "cvssV3": 7.5,
+              "advisoryUrl": "https://security-tracker.debian.org/tracker/CVE-2026-69184",
+              "patchSlugs": [
+                "cve-2026-69184-pointer-chain"
+              ],
+              "patched": true
+            }
+          ],
+          "patches": [
+            {
+              "id": "cve-2026-69184-pointer-chain",
+              "slug": "cve-2026-69184-pointer-chain",
+              "kind": "security",
+              "title": "Bound DNS name expansion and compression-pointer traversal",
+              "description": "Backports c-ares' parser limits for expanded DNS names and compression-pointer hops to the Trixie 1.34.5 source.",
+              "sha256": "8f83e7d5aa0bfce4cbc704558488a734a3ae61c09109a2442e32a8140ce2b853",
+              "fileUrl": "https://github.com/getpatched/packaging-c-ares/blob/getpatched/debian-trixie/patches/CVE-2026-69184-trixie.patch",
+              "cves": [
+                "CVE-2026-69184"
+              ],
+              "upstream": {
+                "repository": "https://github.com/c-ares/c-ares",
+                "commit": "5c8341ba6ff3a8e4e4dfd616f8ed0418838b8b7b",
+                "url": "https://github.com/c-ares/c-ares/commit/5c8341ba6ff3a8e4e4dfd616f8ed0418838b8b7b.patch"
+              },
+              "tests": [
+                {
+                  "id": "c-ares-unbounded-pointer-chain",
+                  "baselineExpectation": "The exact Trixie source accepts the crafted 200-hop backward pointer chain and returns a parsed record.",
+                  "patchedExpectation": "The parser returns ARES_EBADNAME and no record for the same bounded input; valid-name boundary compatibility tests pass."
+                }
+              ]
+            }
+          ],
+          "access": "sponsor",
+          "delayHours": 168,
+          "sponsorEligibility": "any-active-individual-github-sponsorship-tier",
+          "earlyBinaryLicenseId": "LicenseRef-GetPatched-Early-Binary-1.2",
+          "publicContributionSpdx": "MIT",
+          "earlyUse": [
+            "private",
+            "commercial"
+          ],
+          "earlyRedistributionAllowed": false,
+          "status": "development-verified-sponsor-flow-pending",
+          "verification": "https://github.com/getpatched/platform/actions/runs/41494211851",
+          "sourceUrl": "https://github.com/getpatched/packaging-c-ares/tree/getpatched/debian-trixie",
+          "patchUrl": "https://github.com/getpatched/packaging-c-ares/blob/getpatched/debian-trixie/patches/CVE-2026-69184-trixie.patch",
+          "testsUrl": "https://github.com/getpatched/packaging-c-ares/tree/getpatched/debian-trixie/tests",
+          "releasesUrl": "https://github.com/getpatched/packaging-c-ares/releases",
+          "releaseStatus": "No production release; sponsor flow verification pending",
+          "publicLicenseScope": "getpatched-authored-contributions-only"
+        }
+      }
+    },
+    {
+      "source": "brotli",
+      "targets": {
+        "ubuntu-focal-amd64": {
+          "baseVersion": "1.0.7-6ubuntu0.1",
+          "version": "1.0.7-6ubuntu0.1+getpatched1",
+          "cves": [
+            "CVE-2026-111497"
+          ],
+          "vulnerabilities": [
+            {
+              "id": "CVE-2026-111497",
+              "slug": "cve-2026-111497",
+              "summary": "Brotli decoder out-of-bounds write on invalid block switches",
+              "ubuntuPriority": "high",
+              "cvssV3": 9.8,
+              "advisoryUrl": "https://ubuntu.com/security/CVE-2026-111497",
+              "patchSlugs": [
+                "cve-2026-111497-invalid-block-switch"
+              ],
+              "patched": true
+            }
+          ],
+          "patches": [
+            {
+              "id": "cve-2026-111497-invalid-block-switch",
+              "slug": "cve-2026-111497-invalid-block-switch",
+              "kind": "security",
+              "title": "Reject invalid block switches before decoder state corruption",
+              "description": "Backports the upstream Brotli decoder fix so malformed block-switch input is returned as a permanent format error rather than accepted as a need for more input.",
+              "sha256": "44209e642d901a6d7a554cd12743bd88614f5574754c54a7f9b9ea13a721d87a",
+              "fileUrl": "https://github.com/getpatched/packaging-brotli/blob/getpatched/focal/patches/CVE-2026-111497-focal.patch",
+              "cves": [
+                "CVE-2026-111497"
+              ],
+              "upstream": {
+                "repository": "https://github.com/google/brotli",
+                "commit": "50a9b70a4d5e1443fc40927952276b68fffa83a0",
+                "url": "https://github.com/google/brotli/commit/50a9b70a4d5e1443fc40927952276b68fffa83a0.patch"
+              },
+              "tests": [
+                {
+                  "id": "brotli-invalid-block-switch",
+                  "baselineExpectation": "The baseline oracle expects BROTLI_DECODER_RESULT_ERROR (0) with decoderError -9 (BROTLI_DECODER_ERROR_FORMAT_BLOCK_LENGTH_1) after producing 16 MiB in 4,096 calls.",
+                  "patchedExpectation": "The patched oracle expects decoderError -17 (BROTLI_DECODER_ERROR_FORMAT_BLOCK_SWITCH) within the 32 MiB/8,192-call hard bounds; normal compression round-trip must succeed."
+                }
+              ]
+            }
+          ],
+          "access": "sponsor",
+          "delayHours": 168,
+          "sponsorEligibility": "any-active-individual-github-sponsorship-tier",
+          "earlyBinaryLicenseId": "LicenseRef-GetPatched-Early-Binary-1.2",
+          "publicContributionSpdx": "MIT",
+          "earlyUse": [
+            "private",
+            "commercial"
+          ],
+          "earlyRedistributionAllowed": false,
+          "status": "development-verified-sponsor-flow-pending",
+          "verification": "https://github.com/getpatched/platform/actions/runs/41492184315",
+          "sourceUrl": "https://github.com/getpatched/packaging-brotli/tree/getpatched/focal",
+          "patchUrl": "https://github.com/getpatched/packaging-brotli/blob/getpatched/focal/patches/CVE-2026-111497-focal.patch",
+          "testsUrl": "https://github.com/getpatched/packaging-brotli/tree/getpatched/focal/tests",
+          "releasesUrl": "https://github.com/getpatched/packaging-brotli/releases",
+          "releaseStatus": "No production release; sponsor flow verification pending",
+          "publicLicenseScope": "getpatched-authored-contributions-only",
+          "ubuntuProEsmCompatibility": "not-tested-out-of-scope"
+        }
+      }
+    }
   ]
 }

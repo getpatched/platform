@@ -807,6 +807,10 @@ test("release registration fails closed on missing, unverified, or invalid packa
   const unverifiedCandidate = await gateway.fetch(request(), makeEnv(valid, "unverified-development-candidate"));
   assert.equal(unverifiedCandidate.status, 422);
 
+  const sponsorFlowPending = await gateway.fetch(request(), makeEnv(valid, "development-verified-sponsor-flow-pending"));
+  assert.equal(sponsorFlowPending.status, 422);
+  assert.match((await sponsorFlowPending.json()).error, /has not passed its verification gates/);
+
   const missingCandidateStatus = await gateway.fetch(request(), makeEnv(valid, null));
   assert.equal(missingCandidateStatus.status, 422);
 

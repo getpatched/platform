@@ -479,6 +479,106 @@
       "affected": [
         {
           "database_specific": {
+            "candidate_status": "development-verified-sponsor-flow-pending",
+            "candidate_version": "1.0.7-6ubuntu0.1+getpatched1",
+            "fixed_versions": [
+              "1.0.7-6ubuntu0.1+getpatched1"
+            ],
+            "getpatched_fixed_version": "1.0.7-6ubuntu0.1+getpatched1",
+            "source_package": "brotli",
+            "target_id": "ubuntu-focal-amd64",
+            "vendor_fixed_versions": []
+          },
+          "ecosystem_specific": {
+            "architecture": "amd64",
+            "distribution": "Ubuntu",
+            "release": "focal",
+            "source_package": "brotli",
+            "target_id": "ubuntu-focal-amd64"
+          },
+          "package": {
+            "ecosystem": "Ubuntu:20.04:LTS",
+            "name": "brotli"
+          },
+          "versions": [
+            "1.0.7-6ubuntu0.1"
+          ]
+        },
+        {
+          "database_specific": {
+            "candidate_status": "development-verified-sponsor-flow-pending",
+            "candidate_version": "1.0.7-6ubuntu0.1+getpatched1",
+            "fixed_versions": [
+              "1.0.7-6ubuntu0.1+getpatched1"
+            ],
+            "getpatched_fixed_version": "1.0.7-6ubuntu0.1+getpatched1",
+            "source_package": "brotli",
+            "target_id": "ubuntu-focal-amd64",
+            "vendor_fixed_versions": []
+          },
+          "ecosystem_specific": {
+            "architecture": "amd64",
+            "distribution": "Ubuntu",
+            "release": "focal",
+            "source_package": "brotli",
+            "target_id": "ubuntu-focal-amd64"
+          },
+          "package": {
+            "ecosystem": "Ubuntu:20.04:LTS",
+            "name": "libbrotli1"
+          },
+          "versions": [
+            "1.0.7-6ubuntu0.1"
+          ]
+        },
+        {
+          "database_specific": {
+            "candidate_status": "development-verified-sponsor-flow-pending",
+            "candidate_version": "1.0.7-6ubuntu0.1+getpatched1",
+            "fixed_versions": [
+              "1.0.7-6ubuntu0.1+getpatched1"
+            ],
+            "getpatched_fixed_version": "1.0.7-6ubuntu0.1+getpatched1",
+            "source_package": "brotli",
+            "target_id": "ubuntu-focal-amd64",
+            "vendor_fixed_versions": []
+          },
+          "ecosystem_specific": {
+            "architecture": "amd64",
+            "distribution": "Ubuntu",
+            "release": "focal",
+            "source_package": "brotli",
+            "target_id": "ubuntu-focal-amd64"
+          },
+          "package": {
+            "ecosystem": "Ubuntu:20.04:LTS",
+            "name": "python3-brotli"
+          },
+          "versions": [
+            "1.0.7-6ubuntu0.1"
+          ]
+        }
+      ],
+      "database_specific": {
+        "severity": "CRITICAL",
+        "verification_status": "development-verified-production-release-pending"
+      },
+      "details": "GetPatched records exact affected package versions and exact reviewed fixes per distribution, release, and architecture. A new target or fixed package version is accepted only after its own build and regression evidence.",
+      "id": "CVE-2026-111497",
+      "modified": "2026-10-30T05:38:23Z",
+      "references": [
+        {
+          "type": "ADVISORY",
+          "url": "https://ubuntu.com/security/CVE-2026-111497"
+        }
+      ],
+      "schema_version": "1.6.0",
+      "summary": "Brotli decoder out-of-bounds write on invalid block switches"
+    },
+    {
+      "affected": [
+        {
+          "database_specific": {
             "candidate_status": "development-verified-production-release-pending",
             "candidate_version": "3.4.0-2ubuntu1.5+getpatched1",
             "fixed_versions": [
@@ -934,6 +1034,83 @@
       ],
       "schema_version": "1.6.0",
       "summary": "libgit2 HTTP redirect authentication can disclose credentials to another host"
+    },
+    {
+      "affected": [
+        {
+          "database_specific": {
+            "candidate_status": "development-verified-sponsor-flow-pending",
+            "candidate_version": "1.34.5-1+deb13u1+getpatched1",
+            "fixed_versions": [
+              "1.34.5-1+deb13u1+getpatched1"
+            ],
+            "getpatched_fixed_version": "1.34.5-1+deb13u1+getpatched1",
+            "source_package": "c-ares",
+            "target_id": "debian-trixie-amd64",
+            "vendor_fixed_versions": []
+          },
+          "ecosystem_specific": {
+            "architecture": "amd64",
+            "distribution": "Debian",
+            "release": "trixie",
+            "source_package": "c-ares",
+            "target_id": "debian-trixie-amd64"
+          },
+          "package": {
+            "ecosystem": "Debian:13",
+            "name": "libcares2"
+          },
+          "versions": [
+            "1.34.5-1+deb13u1"
+          ]
+        },
+        {
+          "database_specific": {
+            "candidate_status": "development-verified-sponsor-flow-pending",
+            "candidate_version": "1.15.0-1ubuntu0.5+getpatched1",
+            "fixed_versions": [
+              "1.15.0-1ubuntu0.5+getpatched1"
+            ],
+            "getpatched_fixed_version": "1.15.0-1ubuntu0.5+getpatched1",
+            "source_package": "c-ares",
+            "target_id": "ubuntu-focal-amd64",
+            "vendor_fixed_versions": []
+          },
+          "ecosystem_specific": {
+            "architecture": "amd64",
+            "distribution": "Ubuntu",
+            "release": "focal",
+            "source_package": "c-ares",
+            "target_id": "ubuntu-focal-amd64"
+          },
+          "package": {
+            "ecosystem": "Ubuntu:20.04:LTS",
+            "name": "libc-ares2"
+          },
+          "versions": [
+            "1.15.0-1ubuntu0.5"
+          ]
+        }
+      ],
+      "database_specific": {
+        "severity": "HIGH",
+        "verification_status": "development-verified-production-release-pending"
+      },
+      "details": "GetPatched records exact affected package versions and exact reviewed fixes per distribution, release, and architecture. A new target or fixed package version is accepted only after its own build and regression evidence.",
+      "id": "CVE-2026-69184",
+      "modified": "2026-10-30T05:38:23Z",
+      "references": [
+        {
+          "type": "ADVISORY",
+          "url": "https://security-tracker.debian.org/tracker/CVE-2026-69184"
+        },
+        {
+          "type": "ADVISORY",
+          "url": "https://ubuntu.com/security/CVE-2026-69184"
+        }
+      ],
+      "schema_version": "1.6.0",
+      "summary": "c-ares CPU exhaustion from unbounded DNS compression-pointer chains"
     }
   ]
 }

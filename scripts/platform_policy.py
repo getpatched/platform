@@ -104,6 +104,7 @@ def package_target_policy(config, package, target_id):
     if candidate_status not in (
         "unverified-development-candidate",
         "development-verified-production-release-pending",
+        "development-verified-sponsor-flow-pending",
     ):
         raise ValueError(f"package {package}/{target_id} has an invalid candidate status")
     binary_packages = policy.get("binaryPackages")

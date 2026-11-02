@@ -114,7 +114,7 @@
         "followUpAssessments": {"type": "object", "propertyNames": {"pattern": "^CVE-[0-9]{4}-[0-9]+$"}, "additionalProperties": {"type": "object", "additionalProperties": false, "required": ["baselineApplicability", "candidateDisposition", "introducedBy", "fixedBy", "regressionTestId", "scannerTreatment"], "properties": {"baselineApplicability": {"const": "not-affected"}, "candidateDisposition": {"const": "fixed-in-backport"}, "introducedBy": {"type": "string", "pattern": "^[a-f0-9]{40}$"}, "fixedBy": {"type": "string", "pattern": "^[a-f0-9]{40}$"}, "regressionTestId": {"type": "string", "minLength": 1}, "scannerTreatment": {"const": "not-a-target-finding; explicit installed regression required; scanner absence alone is not remediation evidence"}}}},
         "advisory": {"type": "string", "format": "uri"},
         "advisories": {"type": "object", "additionalProperties": {"type": "string", "format": "uri"}},
-        "candidateStatus": {"type": "string"}, "releaseAccess": {"$ref": "#/$defs/releaseAccess"}
+        "candidateStatus": {"enum": ["unverified-development-candidate", "development-verified-production-release-pending", "development-verified-sponsor-flow-pending"]}, "releaseAccess": {"$ref": "#/$defs/releaseAccess"}
       }
     },
     "package": {"type": "object", "additionalProperties": false, "required": ["targets"], "properties": {"targets": {"type": "object", "minProperties": 1, "additionalProperties": {"$ref": "#/$defs/packageTarget"}}}}
