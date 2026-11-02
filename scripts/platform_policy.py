@@ -66,7 +66,9 @@ def target_profile(config, target_id):
         raise ValueError("target must pin an immutable archive snapshot timestamp")
     allowed_hosts = {
         "Ubuntu": {"snapshot.ubuntu.com"},
-        "Debian": {"snapshot.debian.org"},
+        # Debian's Fastly mirror serves the same signed immutable snapshot
+        # archive and provides an alternate route when the primary is throttled.
+        "Debian": {"snapshot.debian.org", "snapshot-fastly.debian.org"},
     }[distribution]
     for source in sources:
         parsed = urlsplit(source.get("uri", "")) if isinstance(source, dict) else None
