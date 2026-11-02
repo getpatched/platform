@@ -1,7 +1,8 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import { createHash, createHmac, generateKeyPairSync, sign as signJwt, verify as verifyJwt } from "node:crypto";
-import gateway, { beginSponsorPublication, canonicalAssets, fetchSponsorSnapshot, githubActionsIdentity, hasActiveSponsorship, parseUtc, publishOne, readFreshSponsorSnapshot, reconcile, reconcileSponsors, releaseAssets, requireImmutableReleasesEnabled, updateState, verifyGithubSignature, verifyPackageRun, verifySignedSourceTag } from "../src/index.js";
+import gateway, { assertRelease, beginSponsorPublication, canonicalAssets, fetchSponsorSnapshot, githubActionsIdentity, hasActiveSponsorship, parseUtc, publishOne, readFreshSponsorSnapshot, reconcile, reconcileSponsors, releaseAssets, requireImmutableReleasesEnabled, updateState, verifyGithubSignature, verifyPackageRun, verifySignedSourceTag } from "../src/index.js";
 
 const TEST_RELEASE_TAG_SIGNER = "getpatched-release-maintainer";
 
@@ -772,14 +773,14 @@ test("release registration JSON has a bounded streaming body", async () => {
 });
 
 test("release registration fails closed on missing, unverified, or invalid package policy", async () => {
-  const policyResponse = (releaseAccess, candidateStatus = "development-verified-production-release-pending") => ({
-    targets: { "ubuntu-focal-amd64": { sourceBranch: "getpatched/focal" } },
-    packages: { libxml2: { targets: { "ubuntu-focal-amd64": { releaseAccess, candidateStatus } } } },
+  const policyResponse = (releaseAccess, candidateStatus = "development-verified-production-release-pending", packageName = "libxml2", targetId = "ubuntu-focal-amd64") => ({
+    targets: { [targetId]: { sourceBranch: "getpatched/focal" } },
+    packages: { [packageName]: { targets: { [targetId]: { releaseAccess, candidateStatus } } } },
   });
-  const makeEnv = (releaseAccess, candidateStatus) => ({
+  const makeEnv = (releaseAccess, candidateStatus, packageName, targetId) => ({
     RELEASES: new MemoryBucket(),
     RELEASE_ADMIN_TOKEN: "secret-test",
-    ASSETS: { fetch: async () => Response.json(policyResponse(releaseAccess, candidateStatus)) },
+    ASSETS: { fetch: async () => Response.json(policyResponse(releaseAccess, candidateStatus, packageName, targetId)) },
   });
   const registration = {
     id: "libxml2-policy-test", repository: "getpatched/packaging-libxml2",
@@ -817,6 +818,53 @@ test("release registration fails closed on missing, unverified, or invalid packa
     method: "POST", headers: { authorization: "Bearer secret-test" }, body: JSON.stringify(badSubmittedLicense),
   }), makeEnv(valid));
   assert.equal(badLicenseResponse.status, 422);
+
+  for (const [packageName, targetId] of [["c-ares", "ubuntu-focal-amd64"], ["c-ares", "debian-trixie-amd64"], ["brotli", "ubuntu-focal-amd64"]]) {
+    const candidate = {
+      ...registration, id: `${packageName}-${targetId}-unverified`,
+      repository: `getpatched/packaging-${packageName}`, target_id: targetId,
+    };
+    const response = await gateway.fetch(new Request("https://worker.test/internal/releases", {
+      method: "POST", headers: { authorization: "Bearer secret-test" }, body: JSON.stringify(candidate),
+    }), makeEnv(valid, "unverified-development-candidate", packageName, targetId));
+    assert.equal(response.status, 422, `${packageName} ${targetId} remains closed before verification`);
+    assert.match((await response.json()).error, /has not passed its verification gates/);
+  }
+});
+
+test("release repository allowlist enforces the configured sponsor delay for each package", () => {
+  const config = JSON.parse(readFileSync(new URL("../../packages.json", import.meta.url), "utf8"));
+  for (const [packageName, packageRecord] of Object.entries(config.packages)) {
+    for (const [targetId, targetPolicy] of Object.entries(packageRecord.targets)) {
+      const delay = targetPolicy.releaseAccess.sponsorDelayHours;
+      const record = {
+        id: `${packageName}-policy-test`, state: "prepared",
+        repository: `getpatched/packaging-${packageName}`,
+        tag: "getpatched/ubuntu-focal-amd64/1.2.3+getpatched1",
+        source_commit: "a".repeat(40), target_id: targetId,
+        sponsor_delay_hours: delay,
+        required_assets: [{ name: `${packageName}.deb`, sha256: "b".repeat(64), r2_key: "staging/release/b" }],
+      };
+      assert.doesNotThrow(() => assertRelease(record), `${packageName} ${targetId}`);
+      assert.throws(() => assertRelease({
+        ...record, sponsor_delay_hours: delay === 168 ? 0 : 168,
+      }), /release policy does not match the configured package/, `${packageName} ${targetId}`);
+    }
+  }
+  assert.throws(() => assertRelease({
+    id: "unknown-package", state: "prepared", repository: "attacker/packaging-brotli",
+    tag: "getpatched/ubuntu-focal-amd64/1.2.3", source_commit: "a".repeat(40),
+    sponsor_delay_hours: 168, required_assets: [{ name: "x.deb", sha256: "b".repeat(64), r2_key: "staging/x" }],
+  }), /repository is not an approved package repository/);
+  for (const [packageName, unsupportedTarget] of [["c-ares", "ubuntu-jammy-amd64"], ["brotli", "debian-trixie-amd64"]]) {
+    assert.throws(() => assertRelease({
+      id: `${packageName}-unsupported-target`, state: "prepared",
+      repository: `getpatched/packaging-${packageName}`,
+      tag: "getpatched/1.2.3", source_commit: "a".repeat(40),
+      target_id: unsupportedTarget, sponsor_delay_hours: 168,
+      required_assets: [{ name: "x.deb", sha256: "b".repeat(64), r2_key: "staging/x" }],
+    }), /release target is not configured for this package repository/);
+  }
 });
 
 test("GitHub webhook signature uses the documented HMAC SHA-256 scheme", async () => {

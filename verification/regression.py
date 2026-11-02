@@ -18,6 +18,8 @@ from urllib.parse import urlsplit
 
 LIBPNG_CVE_2025_65018_FIXTURE = "cve-2025-65018-advisory-adam7-rgb16.png"
 LIBPNG_CVE_2025_65018_FIXTURE_SHA256 = "9deb34ada9b550df50181e4cd8c947303fd7b2881f61f3f16efa249d845e9905"
+BROTLI_MAX_PROBE_OUTPUT = 32 * 1024 * 1024
+BROTLI_MAX_PROBE_CALLS = 8192
 
 
 def execute(command, timeout=30, env=None):
@@ -238,6 +240,68 @@ def consumer_version_succeeded(check, expected_banner):
     return not check.get("timedOut", False) and check.get("returncode") == 0 and expected_banner in output
 
 
+def brotli_baseline_reproduced(check):
+    return (
+        check.get("cve") == "CVE-2026-111497"
+        and check.get("testId") == "brotli-invalid-block-switch"
+        and check.get("timedOut") is False
+        and check.get("returncode") == 0
+        and check.get("decoderResult") == 0  # BROTLI_DECODER_RESULT_ERROR
+        and check.get("decoderError") == -9  # BROTLI_DECODER_ERROR_FORMAT_BLOCK_LENGTH_1
+        and check.get("formatBlockSwitchError") == -17
+        and check.get("inputRemaining") == 3
+        and check.get("decoderOutputBytes") == 16 * 1024 * 1024
+        and check.get("decoderCalls") == 4096
+        and check.get("normalStreamCompatible") is True
+    )
+
+
+def brotli_patched_succeeded(check):
+    return (
+        check.get("cve") == "CVE-2026-111497"
+        and check.get("testId") == "brotli-invalid-block-switch"
+        and check.get("timedOut") is False
+        and check.get("returncode") == 0
+        and check.get("decoderResult") == 0  # BROTLI_DECODER_RESULT_ERROR
+        and check.get("decoderError") == -17
+        and check.get("formatBlockSwitchError") == -17
+        and isinstance(check.get("decoderOutputBytes"), int)
+        and 0 <= check["decoderOutputBytes"] <= BROTLI_MAX_PROBE_OUTPUT
+        and isinstance(check.get("decoderCalls"), int)
+        and 1 <= check["decoderCalls"] <= BROTLI_MAX_PROBE_CALLS
+        and check.get("normalStreamCompatible") is True
+    )
+
+
+def cares_regression_succeeded(check, target_id, phase):
+    if (target_id not in ("ubuntu-focal-amd64", "debian-trixie-amd64")
+            or phase not in ("baseline", "patched")
+            or check.get("cve") != "CVE-2026-69184"
+            or check.get("timedOut") is not False
+            or check.get("returncode") != 0):
+        return False
+    output = check.get("stdout", "")
+    if target_id == "ubuntu-focal-amd64":
+        expected_test = "c-ares-overlong-expanded-name-focal"
+        outcome = "overlong_status=0 rejected=no" if phase == "baseline" else "overlong_status=8 rejected=yes"
+        expected_flag = "vulnerabilityReproduced" if phase == "baseline" else "patchedBehavior"
+        return (
+            check.get("testId") == expected_test
+            and check.get(expected_flag) is True
+            and outcome in output
+            and "maximum_name_accepted=yes" in output
+        )
+    expected_test = "c-ares-unbounded-pointer-chain"
+    outcome = "status=0 record=present" if phase == "baseline" else "status=8 record=null"
+    expected_flag = "vulnerabilityReproduced" if phase == "baseline" else "patchedBehavior"
+    return (
+        check.get("testId") == expected_test
+        and check.get(expected_flag) is True
+        and outcome in output
+        and "valid_status=0 valid_record=present" in output
+    )
+
+
 def libpng_probe_command_matches(check, test_id, executable, arguments):
     command = check.get("command")
     prefix = ["valgrind", "--tool=memcheck", "--error-exitcode=97", "--leak-check=no", "--read-var-info=yes"]
@@ -348,6 +412,15 @@ def compile_libgit2_probe(source, binary, patched):
     if patched:
         command.append("-DGETPATCHED_PATCHED=1")
     command.extend([str(source), *flags, "-o", str(binary)])
+    subprocess.run(command, check=True, timeout=30)
+    return binary
+
+
+def compile_pkg_config_probe(source, binary, modules):
+    cflags = subprocess.check_output(["pkg-config", "--cflags", *modules], text=True).split()
+    libraries = subprocess.check_output(["pkg-config", "--libs", *modules], text=True).split()
+    command = ["cc", "-std=c99", "-Wall", "-Wextra", "-Werror", *cflags,
+               str(source), *libraries, "-o", str(binary)]
     subprocess.run(command, check=True, timeout=30)
     return binary
 
@@ -532,6 +605,78 @@ def main():
                 create["passed"] = create["returncode"] == 0
                 extract["passed"] = extract["returncode"] == 0 and extract["stdout"] == item.read_text()
                 checks.extend([create, extract])
+        elif package == "c-ares":
+            if policy["targetId"] == "ubuntu-focal-amd64":
+                probe = compile_pkg_config_probe(
+                    fixtures / "c-ares-name-length.c", temp / "c-ares-name-length", ["libcares"]
+                )
+                check = execute([str(probe)], timeout=5)
+                output = check["stdout"]
+                check["testId"] = "c-ares-overlong-expanded-name-focal"
+                check["vulnerabilityReproduced"] = (
+                    "overlong_status=0 rejected=no" in output
+                    and "maximum_name_accepted=yes" in output
+                )
+                check["patchedBehavior"] = (
+                    "overlong_status=8 rejected=yes" in output
+                    and "maximum_name_accepted=yes" in output
+                )
+            else:
+                probe = compile_pkg_config_probe(
+                    fixtures / "c-ares-pointer-chain.c", temp / "c-ares-pointer-chain", ["libcares"]
+                )
+                check = execute([str(probe)], timeout=5)
+                output = check["stdout"]
+                check["testId"] = "c-ares-unbounded-pointer-chain"
+                check["vulnerabilityReproduced"] = (
+                    "status=0 record=present" in output
+                    and "valid_status=0 valid_record=present" in output
+                )
+                check["patchedBehavior"] = (
+                    "status=8 record=null" in output
+                    and "valid_status=0 valid_record=present" in output
+                )
+            check["cve"] = "CVE-2026-69184"
+            check["passed"] = cares_regression_succeeded(check, policy["targetId"], args.phase)
+            checks.append(check)
+        elif package == "brotli":
+            probe = compile_pkg_config_probe(
+                fixtures / "brotli-stream-probe.c", temp / "brotli-stream-probe",
+                ["libbrotlidec", "libbrotlienc"],
+            )
+            check = execute([str(probe), str(fixtures / "invalid-block-switch.hex")], timeout=5)
+            check["cve"] = "CVE-2026-111497"
+            check["testId"] = "brotli-invalid-block-switch"
+            match = re.search(
+                r"malformed_result=(-?\d+) error=(-?\d+) format_error=(-?\d+) "
+                r"input_remaining=(\d+) output=(\d+) calls=(\d+)",
+                check["stdout"],
+            )
+            if match:
+                result, error, expected_format_error, input_remaining, output_bytes, calls = map(int, match.groups())
+                check["decoderResult"] = result
+                check["decoderError"] = error
+                check["formatBlockSwitchError"] = expected_format_error
+                check["inputRemaining"] = input_remaining
+                check["decoderOutputBytes"] = output_bytes
+                check["decoderCalls"] = calls
+            else:
+                check["decoderResult"] = None
+                check["decoderError"] = None
+                check["formatBlockSwitchError"] = None
+                check["inputRemaining"] = None
+                check["decoderOutputBytes"] = None
+                check["decoderCalls"] = None
+            check["normalStreamCompatible"] = "compatible=yes" in check["stdout"]
+            check["vulnerabilityReproduced"] = brotli_baseline_reproduced(check)
+            check["patchedBehavior"] = brotli_patched_succeeded(check)
+            check["passed"] = (
+                not check["timedOut"] and check["returncode"] == 0
+                and check["normalStreamCompatible"]
+                and (check["vulnerabilityReproduced"] if args.phase == "baseline"
+                     else check["patchedBehavior"])
+            )
+            checks.append(check)
         elif package == "tiff":
             fixture = fixtures / "multisample.tif"
             if not fixture.is_file() or not 0 < fixture.stat().st_size < 1024 * 1024:

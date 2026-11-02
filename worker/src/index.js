@@ -1874,19 +1874,26 @@ function stateKey(id) {
 
 function assertRelease(record) {
   if (!record || !["prepared", "sponsor-period", "public"].includes(record.state)) throw new Error("invalid release state");
-  const approvedRepositories = new Set([
-    "getpatched/packaging-libxml2", "getpatched/packaging-libarchive",
-    "getpatched/packaging-libpng1.6", "getpatched/packaging-libgit2",
-    "getpatched/packaging-tiff", "getpatched/packaging-poppler",
+  const approvedRepositories = new Map([
+    ["getpatched/packaging-libxml2", { sponsorDelayHours: 168, targetIds: ["ubuntu-focal-amd64"] }],
+    ["getpatched/packaging-libarchive", { sponsorDelayHours: 0, targetIds: ["ubuntu-focal-amd64"] }],
+    ["getpatched/packaging-libpng1.6", { sponsorDelayHours: 0, targetIds: ["ubuntu-focal-amd64"] }],
+    ["getpatched/packaging-libgit2", { sponsorDelayHours: 0, targetIds: ["ubuntu-focal-amd64", "ubuntu-jammy-amd64"] }],
+    ["getpatched/packaging-tiff", { sponsorDelayHours: 0, targetIds: ["ubuntu-focal-amd64", "debian-bookworm-amd64", "debian-trixie-amd64"] }],
+    ["getpatched/packaging-poppler", { sponsorDelayHours: 0, targetIds: ["ubuntu-focal-amd64"] }],
+    ["getpatched/packaging-c-ares", { sponsorDelayHours: 168, targetIds: ["ubuntu-focal-amd64", "debian-trixie-amd64"] }],
+    ["getpatched/packaging-brotli", { sponsorDelayHours: 168, targetIds: ["ubuntu-focal-amd64"] }],
   ]);
-  if (!approvedRepositories.has(record.repository)) throw new Error("repository is not an approved package repository");
+  const configuredRepository = approvedRepositories.get(record.repository);
+  if (!configuredRepository) throw new Error("repository is not an approved package repository");
   if (typeof record.tag !== "string" || !/^getpatched\/(?:[a-z0-9-]+\/)?[A-Za-z0-9.+~-]+$/.test(record.tag)) throw new Error("invalid immutable release tag");
   const targetId = record.target_id || "ubuntu-focal-amd64";
   const supportedTargetIds = new Set(Object.values(REPOSITORY_TARGETS).flatMap((architectures) => Object.values(architectures)));
   if (!supportedTargetIds.has(targetId)) throw new Error("release target is not a configured repository suite and architecture");
+  if (!configuredRepository.targetIds.includes(targetId)) throw new Error("release target is not configured for this package repository");
   if (record.public_contribution_spdx !== undefined && record.public_contribution_spdx !== "MIT") throw new Error("public GetPatched contributions must use the configured MIT license");
   if (!Number.isInteger(record.sponsor_delay_hours) || ![0, 168].includes(record.sponsor_delay_hours)) throw new Error("policy must be 0 or 168 hours");
-  const expectedDelay = record.repository === "getpatched/packaging-libxml2" ? 168 : 0;
+  const expectedDelay = configuredRepository.sponsorDelayHours;
   if (record.sponsor_delay_hours !== expectedDelay) throw new Error("release policy does not match the configured package");
   if (expectedDelay === 0 && record.state === "sponsor-period") throw new Error("immediately public packages cannot enter a sponsor period");
   if (expectedDelay === 168 && record.early_binary_license_id !== undefined && record.early_binary_license_id !== "LicenseRef-GetPatched-Early-Binary-1.2") throw new Error("sponsor-first release has an unsupported early-binary license");
@@ -2597,4 +2604,4 @@ export default {
   },
 };
 
-export { beginSponsorPublication, canonicalAssets, fetchSponsorSnapshot, githubActionsIdentity, hasActiveSponsorship, parseUtc, publishImmediateRelease, publishOne, publishPublicSources, readFreshSponsorSnapshot, reconcile, reconcileSponsors, recordSponsorRevocation, releaseAssets, requireImmutableReleasesEnabled, updateState, verifyGithubSignature, verifyPackageRun, verifySignedSourceTag };
+export { assertRelease, beginSponsorPublication, canonicalAssets, fetchSponsorSnapshot, githubActionsIdentity, hasActiveSponsorship, parseUtc, publishImmediateRelease, publishOne, publishPublicSources, readFreshSponsorSnapshot, reconcile, reconcileSponsors, recordSponsorRevocation, releaseAssets, requireImmutableReleasesEnabled, updateState, verifyGithubSignature, verifyPackageRun, verifySignedSourceTag };

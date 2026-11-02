@@ -7,7 +7,8 @@ import unittest
 
 from regression import (LIBPNG_CVE_2025_65018_FIXTURE, libpng_followup_read_is_clean, libpng_output_buffer_result, libpng_overwrite_reproduced, libpng_stride_read_reproduced, memcheck_has_no_errors,
                         libpng_patched_checks_succeeded, tiff_patched_regression_succeeded,
-                        consumer_version_succeeded, poppler_uaf_reproduced, schematron_baseline_reproduced,
+                        brotli_baseline_reproduced, brotli_patched_succeeded,
+                        cares_regression_succeeded, consumer_version_succeeded, poppler_uaf_reproduced, schematron_baseline_reproduced,
                         tiff_baseline_reproduced, tiff_null_output_baseline_reproduced,
                         tiff_null_output_patched_succeeded, parse_callback_url,
                         libgit2_redirect_reproduced, tiff_cve_required, execute)
@@ -20,6 +21,63 @@ class TiffPolicySelection(unittest.TestCase):
         self.assertFalse(tiff_cve_required(policy, "CVE-2025-61143"))
         self.assertFalse(tiff_cve_required({}, "CVE-2025-61143"))
         self.assertFalse(tiff_cve_required({"targetCves": "CVE-2025-61143"}, "CVE-2025-61143"))
+
+
+class CaresTargetRegression(unittest.TestCase):
+    def test_focal_requires_overlong_name_reproduction_and_valid_boundary(self):
+        baseline = {
+            "cve": "CVE-2026-69184", "testId": "c-ares-overlong-expanded-name-focal",
+            "returncode": 0, "timedOut": False, "vulnerabilityReproduced": True,
+            "stdout": "overlong_status=0 rejected=no\nmaximum_name_accepted=yes\n",
+        }
+        patched = {
+            **baseline, "vulnerabilityReproduced": False, "patchedBehavior": True,
+            "stdout": "overlong_status=8 rejected=yes\nmaximum_name_accepted=yes\n",
+        }
+        self.assertTrue(cares_regression_succeeded(baseline, "ubuntu-focal-amd64", "baseline"))
+        self.assertTrue(cares_regression_succeeded(patched, "ubuntu-focal-amd64", "patched"))
+        self.assertFalse(cares_regression_succeeded({**patched, "stdout": "overlong_status=8 rejected=yes\n"}, "ubuntu-focal-amd64", "patched"))
+        self.assertFalse(cares_regression_succeeded(baseline, "debian-trixie-amd64", "baseline"))
+
+    def test_trixie_requires_pointer_chain_reproduction_and_valid_record(self):
+        check = {
+            "cve": "CVE-2026-69184", "testId": "c-ares-unbounded-pointer-chain",
+            "returncode": 0, "timedOut": False, "vulnerabilityReproduced": True,
+            "stdout": "status=0 record=present\nvalid_status=0 valid_record=present\n",
+        }
+        self.assertTrue(cares_regression_succeeded(check, "debian-trixie-amd64", "baseline"))
+        self.assertFalse(cares_regression_succeeded(check, "ubuntu-focal-amd64", "baseline"))
+
+
+class BrotliRegression(unittest.TestCase):
+    def test_baseline_requires_the_block_length_error_after_16_mib_signature(self):
+        check = {
+            "cve": "CVE-2026-111497", "testId": "brotli-invalid-block-switch",
+            "timedOut": False, "returncode": 0, "decoderResult": 0,
+            "decoderError": -9, "formatBlockSwitchError": -17,
+            "inputRemaining": 3, "decoderOutputBytes": 16 * 1024 * 1024,
+            "decoderCalls": 4096,
+            "normalStreamCompatible": True,
+        }
+        self.assertTrue(brotli_baseline_reproduced(check))
+        self.assertFalse(brotli_baseline_reproduced({**check, "decoderError": -15}))
+        self.assertFalse(brotli_baseline_reproduced({**check, "decoderOutputBytes": 4096}))
+        self.assertFalse(brotli_baseline_reproduced({**check, "decoderResult": 3}))
+
+    def test_patched_requires_the_specific_format_error_and_compatibility(self):
+        check = {
+            "cve": "CVE-2026-111497", "testId": "brotli-invalid-block-switch",
+            "timedOut": False, "returncode": 0, "decoderResult": 0,
+            "decoderError": -17, "formatBlockSwitchError": -17,
+            "decoderOutputBytes": 16 * 1024 * 1024, "decoderCalls": 4096,
+            "normalStreamCompatible": True,
+        }
+        self.assertTrue(brotli_patched_succeeded(check))
+        self.assertFalse(brotli_patched_succeeded({**check, "decoderResult": 3}))
+        self.assertFalse(brotli_patched_succeeded({**check, "normalStreamCompatible": False}))
+        self.assertFalse(brotli_patched_succeeded({**check, "decoderOutputBytes": 33 * 1024 * 1024}))
+        self.assertFalse(brotli_patched_succeeded({**check, "decoderCalls": 8193}))
+        self.assertFalse(brotli_patched_succeeded({key: value for key, value in check.items() if key != "decoderOutputBytes"}))
 
 
 class ExecuteTimeout(unittest.TestCase):

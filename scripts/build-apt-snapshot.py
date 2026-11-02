@@ -69,7 +69,7 @@ def snapshot_inventory_matches(releases, active_snapshot, suite="focal", archite
 def validate_release(release):
     if (not isinstance(release, dict) or not re.fullmatch(r"[a-z0-9][a-z0-9-]{1,100}", str(release.get("id", ""))) or
             release.get("state") not in {"public", "sponsor-period"} or
-            not re.fullmatch(r"getpatched/packaging-(?:libxml2|libarchive|libpng1\.6|libgit2|tiff|poppler)", str(release.get("repository", ""))) or
+            not re.fullmatch(r"getpatched/packaging-(?:libxml2|libarchive|libpng1\.6|libgit2|tiff|poppler|c-ares|brotli)", str(release.get("repository", ""))) or
             not re.fullmatch(r"getpatched/[A-Za-z0-9.+~-]+", str(release.get("tag", ""))) or
             not re.fullmatch(r"[a-f0-9]{40}", str(release.get("source_commit", "")))):
         raise ValueError("release inventory contains an invalid pilot package record")
