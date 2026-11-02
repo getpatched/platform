@@ -86,7 +86,7 @@ def validate_source_asset(asset, package, version, *, distribution, descriptor=F
             "launchpad.net", "www.launchpad.net", "archive.ubuntu.com",
             "security.ubuntu.com", "snapshot.ubuntu.com",
         },
-        "Debian": {"snapshot.debian.org"},
+        "Debian": {"snapshot.debian.org", "snapshot-fastly.debian.org"},
     }.get(distribution, set())
     if parsed.scheme != "https" or parsed.hostname not in approved_hosts:
         raise RuntimeError(f"Source asset must use an approved HTTPS {distribution} source host: {name}")

@@ -47,6 +47,22 @@ class PublicCatalogueContract(unittest.TestCase):
         self.assertFalse(profile["repository"]["enabled"])
         self.assertIn("[arch=arm64] https://snapshot.debian.org/archive/debian/20261025T000000Z/", apt_source_list(profile))
 
+    def test_debian_fastly_snapshot_mirror_is_allowed_and_keeps_snapshot_pinned(self):
+        platform = deepcopy(json.loads((ROOT / "packages.json").read_text()))
+        profile = platform["targets"]["debian-trixie-amd64"]
+        profile["aptSources"][0]["uri"] = profile["aptSources"][0]["uri"].replace(
+            "snapshot.debian.org", "snapshot-fastly.debian.org"
+        )
+        resolved = target_profile(platform, "debian-trixie-amd64")
+        self.assertTrue(all("20261030T000000Z" in source["uri"] for source in resolved["aptSources"]))
+        self.assertIn("snapshot-fastly.debian.org", apt_source_list(resolved))
+
+        profile["aptSources"][0]["uri"] = profile["aptSources"][0]["uri"].replace(
+            "20261030T000000Z", "20261031T000000Z"
+        )
+        with self.assertRaises(ValueError):
+            target_profile(platform, "debian-trixie-amd64")
+
     def test_all_distribution_snapshot_sources_require_https(self):
         platform = json.loads((ROOT / "packages.json").read_text())
         for target_id in platform["targets"]:

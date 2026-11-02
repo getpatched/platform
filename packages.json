@@ -51,8 +51,8 @@
       "archiveSnapshot": "20261030T000000Z",
       "baseImage": "debian:bookworm@sha256:d74df7598108a173a621eda4d58a2adbf850b2d9a9d81bc2cca1a6c21174a880",
       "aptSources": [
-        {"type": "both", "uri": "https://snapshot.debian.org/archive/debian/20261030T000000Z/", "suites": ["bookworm", "bookworm-updates"], "components": ["main"]},
-        {"type": "both", "uri": "https://snapshot.debian.org/archive/debian-security/20261030T000000Z/", "suites": ["bookworm-security"], "components": ["main"]}
+        {"type": "both", "uri": "https://snapshot-fastly.debian.org/archive/debian/20261030T000000Z/", "suites": ["bookworm", "bookworm-updates"], "components": ["main"]},
+        {"type": "both", "uri": "https://snapshot-fastly.debian.org/archive/debian-security/20261030T000000Z/", "suites": ["bookworm-security"], "components": ["main"]}
       ],
       "packageEcosystem": "Debian:12"
     },
@@ -68,8 +68,8 @@
       "archiveSnapshot": "20261030T000000Z",
       "baseImage": "debian:trixie@sha256:2dc419c6d7fe3dad0a2f9fd469c34cc90b0f9ba642d8fde837fe3d7d34a0e7f1",
       "aptSources": [
-        {"type": "both", "uri": "https://snapshot.debian.org/archive/debian/20261030T000000Z/", "suites": ["trixie", "trixie-updates"], "components": ["main"]},
-        {"type": "both", "uri": "https://snapshot.debian.org/archive/debian-security/20261030T000000Z/", "suites": ["trixie-security"], "components": ["main"]}
+        {"type": "both", "uri": "https://snapshot-fastly.debian.org/archive/debian/20261030T000000Z/", "suites": ["trixie", "trixie-updates"], "components": ["main"]},
+        {"type": "both", "uri": "https://snapshot-fastly.debian.org/archive/debian-security/20261030T000000Z/", "suites": ["trixie-security"], "components": ["main"]}
       ],
       "packageEcosystem": "Debian:13"
     },
