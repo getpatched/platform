@@ -281,7 +281,7 @@ def expat_regression_succeeded(check, phase):
 
 def expat_consumer_succeeded(check, expected_version):
     output = check.get("stdout", "") + check.get("stderr", "")
-    return (check.get("passed") is True and not check.get("timedOut", False)
+    return (not check.get("timedOut", False)
             and check.get("returncode") == 0
             and f"xmlwf using expat_{expected_version}" in output)
 

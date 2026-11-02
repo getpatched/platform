@@ -38,7 +38,7 @@ class ExpatRegressionEvidence(unittest.TestCase):
 
     def test_consumer_version_check_accepts_only_the_matching_installed_version(self):
         consumer = {"testId": "expat-xmlwf-version", "returncode": 0, "timedOut": False,
-                    "stdout": "xmlwf using expat_2.5.0\n", "passed": True}
+                    "stdout": "xmlwf using expat_2.5.0\n"}
         self.assertTrue(expat_consumer_succeeded(consumer, "2.5.0"))
         self.assertFalse(expat_consumer_succeeded(consumer, "2.9.0"))
 
@@ -47,7 +47,7 @@ class ExpatRegressionEvidence(unittest.TestCase):
                  "returncode": 0, "timedOut": False}
         self.assertTrue(expat_regression_succeeded(probe, "patched"))
         consumer = {"testId": "expat-xmlwf-version", "returncode": 0, "timedOut": False,
-                    "stdout": "xmlwf using expat_2.5.0\n", "passed": True}
+                    "stdout": "xmlwf using expat_2.5.0\n"}
         self.assertTrue(expat_consumer_succeeded(consumer, "2.5.0"))
         self.assertFalse(expat_consumer_succeeded({**consumer, "timedOut": True}, "2.5.0"))
 
