@@ -802,6 +802,7 @@ raise SystemExit(3)
             "CVE-2025-49794", "CVE-2025-49796", "CVE-2026-4111",
             "CVE-2026-53584", "CVE-2026-53585", "CVE-2026-53586",
             "CVE-2025-52885", "CVE-2026-69184", "CVE-2026-111497",
+            "CVE-2026-117610",
         })
         for advisory in committed["vulns"]:
             self.assertEqual(

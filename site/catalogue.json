@@ -671,6 +671,109 @@
           "ubuntuProEsmCompatibility": "not-tested-out-of-scope"
         }
       }
+    },
+    {
+      "source": "expat",
+      "targets": {
+        "debian-bookworm-amd64": {
+          "baseVersion": "2.5.0-1+deb12u5",
+          "version": "2.5.0-1+deb12u5+getpatched1",
+          "cves": ["CVE-2026-117610"],
+          "vulnerabilities": [{
+            "id": "CVE-2026-117610",
+            "slug": "cve-2026-117610",
+            "summary": "An external-entity subparser can crash when it receives empty non-final input before document data.",
+            "advisoryUrl": "https://security-tracker.debian.org/tracker/CVE-2026-117610",
+            "patchSlugs": ["cve-2026-117610-expat"],
+            "patched": true
+          }],
+          "patches": [{
+            "id": "cve-2026-117610",
+            "slug": "cve-2026-117610-expat",
+            "kind": "security",
+            "title": "Handle empty non-final input in external-entity subparsers",
+            "description": "Handles XML_TOK_NONE during subparser initialization so later input is parsed without dereferencing an unset event pointer.",
+            "sha256": "365988ba0fb36bf8fde4792a4288e0f5bc466411b50b888de960bb6aa3a6a5a9",
+            "fileUrl": "https://github.com/getpatched/packaging-expat/blob/getpatched/debian-bookworm/patches/CVE-2026-117610.patch",
+            "cves": ["CVE-2026-117610"],
+            "upstream": {
+              "repository": "https://github.com/libexpat/libexpat",
+              "commit": "bfc28346fa3efeb8ca56c17437d24a7344e5feab",
+              "url": "https://github.com/libexpat/libexpat/commit/bfc28346fa3efeb8ca56c17437d24a7344e5feab"
+            },
+            "tests": [{
+              "id": "CVE-2026-117610-empty-nonfinal-subparser",
+              "baselineExpectation": "The exact installed baseline crashes with SIGSEGV when an external-entity callback parses an empty non-final subparser chunk and resumes with a processing instruction.",
+              "patchedExpectation": "The exact installed patched package completes the same parse and invokes the processing-instruction handler once; xmlwf -v reports the matching patched Expat version."
+            }]
+          }],
+          "access": "public",
+          "delayHours": 0,
+          "sponsorEligibility": null,
+          "earlyBinaryLicenseId": null,
+          "publicContributionSpdx": "MIT",
+          "earlyUse": ["private", "commercial"],
+          "earlyRedistributionAllowed": false,
+          "status": "development-verified-production-release-pending",
+          "verification": "https://github.com/getpatched/platform/actions/runs/41540361532",
+          "sourceUrl": "https://github.com/getpatched/packaging-expat/tree/getpatched/debian-bookworm",
+          "patchUrl": "https://github.com/getpatched/packaging-expat/blob/getpatched/debian-bookworm/patches/CVE-2026-117610.patch",
+          "testsUrl": "https://github.com/getpatched/packaging-expat/tree/getpatched/debian-bookworm/tests",
+          "releasesUrl": "https://github.com/getpatched/packaging-expat/releases",
+          "releaseStatus": "No production release",
+          "publicLicenseScope": "getpatched-authored-contributions-only",
+          "ubuntuProEsmCompatibility": "not-applicable"
+        },
+        "debian-trixie-amd64": {
+          "baseVersion": "2.9.0-1~deb13u1",
+          "version": "2.9.0-1~deb13u1+getpatched1",
+          "cves": ["CVE-2026-117610"],
+          "vulnerabilities": [{
+            "id": "CVE-2026-117610",
+            "slug": "cve-2026-117610",
+            "summary": "An external-entity subparser can crash when it receives empty non-final input before document data.",
+            "advisoryUrl": "https://security-tracker.debian.org/tracker/CVE-2026-117610",
+            "patchSlugs": ["cve-2026-117610-expat"],
+            "patched": true
+          }],
+          "patches": [{
+            "id": "cve-2026-117610",
+            "slug": "cve-2026-117610-expat",
+            "kind": "security",
+            "title": "Handle empty non-final input in external-entity subparsers",
+            "description": "Handles XML_TOK_NONE during subparser initialization so later input is parsed without dereferencing an unset event pointer.",
+            "sha256": "365988ba0fb36bf8fde4792a4288e0f5bc466411b50b888de960bb6aa3a6a5a9",
+            "fileUrl": "https://github.com/getpatched/packaging-expat/blob/getpatched/debian-trixie/patches/CVE-2026-117610.patch",
+            "cves": ["CVE-2026-117610"],
+            "upstream": {
+              "repository": "https://github.com/libexpat/libexpat",
+              "commit": "bfc28346fa3efeb8ca56c17437d24a7344e5feab",
+              "url": "https://github.com/libexpat/libexpat/commit/bfc28346fa3efeb8ca56c17437d24a7344e5feab"
+            },
+            "tests": [{
+              "id": "CVE-2026-117610-empty-nonfinal-subparser",
+              "baselineExpectation": "The exact installed baseline crashes with SIGSEGV when an external-entity callback parses an empty non-final subparser chunk and resumes with a processing instruction.",
+              "patchedExpectation": "The exact installed patched package completes the same parse and invokes the processing-instruction handler once; xmlwf -v reports the matching patched Expat version."
+            }]
+          }],
+          "access": "public",
+          "delayHours": 0,
+          "sponsorEligibility": null,
+          "earlyBinaryLicenseId": null,
+          "publicContributionSpdx": "MIT",
+          "earlyUse": ["private", "commercial"],
+          "earlyRedistributionAllowed": false,
+          "status": "development-verified-production-release-pending",
+          "verification": "https://github.com/getpatched/platform/actions/runs/41541584205",
+          "sourceUrl": "https://github.com/getpatched/packaging-expat/tree/getpatched/debian-trixie",
+          "patchUrl": "https://github.com/getpatched/packaging-expat/blob/getpatched/debian-trixie/patches/CVE-2026-117610.patch",
+          "testsUrl": "https://github.com/getpatched/packaging-expat/tree/getpatched/debian-trixie/tests",
+          "releasesUrl": "https://github.com/getpatched/packaging-expat/releases",
+          "releaseStatus": "No production release",
+          "publicLicenseScope": "getpatched-authored-contributions-only",
+          "ubuntuProEsmCompatibility": "not-applicable"
+        }
+      }
     }
   ]
 }
