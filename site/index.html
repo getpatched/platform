@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="theme-color" content="#fffefa">
-    <meta name="description" content="GetPatched maintains tested backports of selected Ubuntu packages, with public source and transparent build evidence.">
+    <meta name="description" content="GetPatched maintains tested security backports for selected Ubuntu and Debian packages, with public source and transparent build evidence.">
     <title>GetPatched — maintained package backports</title>
     <script src="/theme-init.js"></script>
     <link rel="stylesheet" href="/styles.css">
@@ -29,9 +29,9 @@
     <main>
       <section class="intro" aria-labelledby="page-title">
         <div class="intro-copy">
-          <p class="eyebrow"><span class="eyebrow-mark" aria-hidden="true"></span>INDEPENDENT UBUNTU PACKAGE MAINTENANCE</p>
+          <p class="eyebrow"><span class="eyebrow-mark" aria-hidden="true"></span>INDEPENDENT UBUNTU + DEBIAN PACKAGE MAINTENANCE</p>
           <h1 id="page-title">Good software<br>deserves a<br><span>longer life.</span></h1>
-          <p class="lede">We backport and test security fixes for selected Ubuntu packages.</p>
+          <p class="lede">We backport and test security fixes for selected Ubuntu and Debian packages.</p>
         </div>
         <ol class="maintenance-flow" aria-label="Our maintenance process">
           <li class="flow-step">
@@ -55,14 +55,14 @@
 
       <section class="notice" role="status" aria-live="polite">
         <span class="notice-symbol" aria-hidden="true">i</span>
-        <p><strong>Hosted verification passed.</strong> Four Focal package candidates and one Jammy libgit2 target have hosted builds, installed target regressions, package-aware before/after CVE scans and signed APT-client checks. Production repository access setup remains incomplete; no production package release has been published.</p>
+        <p><strong>Hosted verification passed.</strong> Six Focal package candidates, one Debian Trixie c-ares target and one Jammy libgit2 target have hosted builds, installed target regressions, package-aware before/after CVE scans and signed APT-client checks. Sponsor-first release flow and production repository access setup remain incomplete; no production package release has been published.</p>
         <a href="https://github.com/getpatched/platform/actions">View build runs <span aria-hidden="true">↗</span></a>
       </section>
 
       <section class="catalogue" id="catalogue" aria-labelledby="catalogue-title">
         <div class="section-heading">
           <h2 id="catalogue-title">Package catalogue</h2>
-          <p class="scope-inline"><svg class="ubuntu-mark" viewBox="0 0 40 40" aria-hidden="true"><circle cx="20" cy="20" r="12"/><circle cx="20" cy="6" r="2.5"/><circle cx="8" cy="27" r="2.5"/><circle cx="32" cy="27" r="2.5"/><path d="M20 8.5v5m-10.7 12.5 4.3-2.5m13.1 0 4.3 2.5"/></svg><span>Ubuntu 20.04 focal <span class="scope-dot">·</span> amd64</span></p>
+          <p class="scope-inline"><span>Ubuntu + Debian <span class="scope-dot">·</span> amd64</span></p>
         </div>
 
         <div class="catalogue-controls">
@@ -108,7 +108,7 @@
             <a href="https://github.com/getpatched">Browse getpatched on GitHub ↗</a>
           </div>
         </div>
-        <p class="table-caption"><span class="caption-mark" aria-hidden="true">↳</span> Each row links to its source, patch, regression tests and release history. These candidates use publicly available Ubuntu Focal package sources; Ubuntu Pro/ESM compatibility is not tested or supported. Hosted verification has passed for all four Focal candidates, including temporary signed-client checks. Live package publication and downloads remain disabled until GitHub sponsor sign-in and production access setup are complete; the protected signing key also passed a disposable self-test. Any sponsor delay starts only after sponsor publication. GetPatched-authored recipes, patches, tests and documentation are MIT from day one. Sponsor-first official binaries allow private and commercial use; redistribution is prohibited until public release. Upstream and distribution licenses continue to apply.</p>
+        <p class="table-caption"><span class="caption-mark" aria-hidden="true">↳</span> Each row links to its source, patch, regression tests and release history. These candidates use publicly available Ubuntu and Debian package sources; Ubuntu Pro/ESM compatibility is not tested or supported. Hosted verification has passed for all six Focal candidates, including temporary signed-client checks, plus the Debian Trixie and Jammy targets. Live package publication and downloads remain disabled until sponsor sign-in, sponsor-first flow verification and production access setup are complete; the protected signing key also passed a disposable self-test. Any sponsor delay starts only after sponsor publication. GetPatched-authored recipes, patches, tests and documentation are MIT from day one. Sponsor-first official binaries allow private and commercial use; redistribution is prohibited until public release. Upstream and distribution licenses continue to apply.</p>
       </section>
 
       <section class="how-it-works" id="process" aria-labelledby="process-title">

@@ -131,7 +131,7 @@ class ReleaseCandidateOutput(unittest.TestCase):
                 self.assertFalse(eligibility["releaseEligible"])
                 self.assertEqual(eligibility["candidateStatus"], package["candidateStatus"])
                 self.assertEqual(eligibility["candidateVerified"],
-                                 package["candidateStatus"] == "development-verified-production-release-pending")
+                                 package["candidateStatus"].startswith("development-verified"))
                 eligibility = BUILD_PACKAGE.release_eligibility(policy, verification_checks_passed=True, publication_enabled=True)
                 verified = package["candidateStatus"] == "development-verified-production-release-pending"
                 self.assertEqual(eligibility["releaseEligible"], verified)
@@ -139,7 +139,12 @@ class ReleaseCandidateOutput(unittest.TestCase):
                 self.assertEqual(eligibility["supportScope"], target_id)
                 self.assertEqual(eligibility["targetId"], target_id)
                 self.assertEqual(eligibility["ubuntuProEsmCompatibility"], package.get("ubuntuProEsmCompatibility", "not-applicable"))
-                self.assertEqual(eligibility["reason"], None if verified else "candidate status is not approved for release")
+                expected_reason = None if verified else (
+                    "sponsor-first release flow has not been verified"
+                    if package["candidateStatus"] == "development-verified-sponsor-flow-pending"
+                    else "candidate status is not approved for release"
+                )
+                self.assertEqual(eligibility["reason"], expected_reason)
 
     def test_package_identity_and_sponsor_policy_must_match_project_policy(self):
         for source, package_record in CONFIG["packages"].items():

@@ -736,7 +736,7 @@ raise SystemExit(3)
         self.assertEqual({item["id"] for item in committed["vulns"]}, {
             "CVE-2025-49794", "CVE-2025-49796", "CVE-2026-4111",
             "CVE-2026-53584", "CVE-2026-53585", "CVE-2026-53586",
-            "CVE-2025-52885",
+            "CVE-2025-52885", "CVE-2026-69184", "CVE-2026-111497",
         })
         for advisory in committed["vulns"]:
             self.assertEqual(
@@ -744,8 +744,7 @@ raise SystemExit(3)
                 "development-verified-production-release-pending",
             )
             self.assertTrue(all(
-                affected["database_specific"]["candidate_status"]
-                == "development-verified-production-release-pending"
+                affected["database_specific"]["candidate_status"].startswith("development-verified")
                 for affected in advisory["affected"]
             ))
         ecosystems = {

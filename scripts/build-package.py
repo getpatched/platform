@@ -185,11 +185,15 @@ def validate_release_policy(policy, config):
 
 def release_eligibility(policy, verification_checks_passed=False, publication_enabled=False):
     checks_passed = verification_checks_passed is True
-    candidate_verified = policy.get("candidateStatus") == "development-verified-production-release-pending"
-    release_eligible = checks_passed and publication_enabled is True and candidate_verified
+    candidate_status = policy.get("candidateStatus")
+    candidate_verified = isinstance(candidate_status, str) and candidate_status.startswith("development-verified")
+    release_approved = candidate_status == "development-verified-production-release-pending"
+    release_eligible = checks_passed and publication_enabled is True and release_approved
     if not checks_passed:
         reason = "target verification checks have not passed"
-    elif not candidate_verified:
+    elif candidate_status == "development-verified-sponsor-flow-pending":
+        reason = "sponsor-first release flow has not been verified"
+    elif not release_approved:
         reason = "candidate status is not approved for release"
     elif not publication_enabled:
         reason = "repository publication is disabled for this target"

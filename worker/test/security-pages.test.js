@@ -113,6 +113,23 @@ test("vulnerability and patch pages expose linked HTML and machine-readable reco
   assert.equal(patchRecord.vulnerabilities[0].url, "https://getpatched.dev/vulnerabilities/cve-2025-10001");
 });
 
+test("verified patches are visible while sponsor-flow-pending targets remain unreleased", async () => {
+  const fixture = fixtureCatalogue();
+  const target = fixture.packages[0].targets[TARGET];
+  target.status = "development-verified-sponsor-flow-pending";
+  target.releaseStatus = "No production release; sponsor flow verification pending";
+  const env = { ASSETS: assets(fixture), PUBLIC_ORIGIN: "https://getpatched.dev" };
+  const vulnerability = await gateway.fetch(new Request("https://getpatched.dev/vulnerabilities/cve-2025-10001.json"), env);
+  const record = await vulnerability.json();
+  assert.equal(vulnerability.status, 200);
+  assert.equal(record.patched, true);
+  assert.equal(record.targets[0].patched, true);
+  assert.equal(record.targets[0].releaseStatus, "No production release; sponsor flow verification pending");
+
+  const badge = await gateway.fetch(new Request("https://getpatched.dev/vulnerabilities/cve-2025-10001/badge.svg"), env);
+  assert.match(await badge.text(), /aria-label="Patched"/);
+});
+
 test("duplicate patch slugs fail closed", async () => {
   const catalogue = fixtureCatalogue();
   const secondPackage = structuredClone(catalogue.packages[0]);

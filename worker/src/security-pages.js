@@ -2,11 +2,14 @@ const PUBLIC_CACHE = "public, max-age=60";
 const EMPTY_BADGE = '<svg xmlns="http://www.w3.org/2000/svg"></svg>';
 const PATCHED_BADGE = '<svg xmlns="http://www.w3.org/2000/svg" width="66" height="20" viewBox="0 0 66 20" role="img" aria-label="Patched"><title>Patched</title><rect width="66" height="20" rx="3" fill="#216b4c"/><text x="33" y="14" fill="#fff" font-family="ui-monospace, SFMono-Regular, Consolas, monospace" font-size="11" font-weight="700" text-anchor="middle">patched</text></svg>';
 const SAFE_SLUG = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
-const VERIFIED_TARGET_STATUS = "development-verified-production-release-pending";
+const VERIFIED_TARGET_STATUSES = new Set([
+  "development-verified-production-release-pending",
+  "development-verified-sponsor-flow-pending",
+]);
 const VERIFIED_RUN_URL = /^https:\/\/github\.com\/getpatched\/platform\/actions\/runs\/[1-9][0-9]*$/;
 
 function hasVerifiedRun(target) {
-  return target?.status === VERIFIED_TARGET_STATUS
+  return VERIFIED_TARGET_STATUSES.has(target?.status)
     && typeof target.verification === "string"
     && VERIFIED_RUN_URL.test(target.verification);
 }

@@ -168,11 +168,11 @@ class PublicCatalogueContract(unittest.TestCase):
         entries = {item["source"]: item for item in catalogue["packages"]}
         expected_catalogue = {
             source for source, record in platform["packages"].items()
-            if any(target.get("candidateStatus") == "development-verified-production-release-pending"
+            if any(target.get("candidateStatus", "").startswith("development-verified")
                    for target in record["targets"].values())
         }
         self.assertEqual(set(entries), expected_catalogue)
-        self.assertEqual(expected_catalogue, {"libxml2", "libarchive", "libgit2", "poppler"})
+        self.assertEqual(expected_catalogue, {"libxml2", "libarchive", "libgit2", "poppler", "c-ares", "brotli"})
         self.assertIn("libpng1.6", set(platform["packages"]) - set(entries))
         self.assertNotIn("libgit2", set(platform["packages"]) - set(entries))
         self.assertIn("ubuntu-jammy-amd64", entries["libgit2"]["targets"])
@@ -197,7 +197,7 @@ class PublicCatalogueContract(unittest.TestCase):
             package = platform["packages"][source]
             expected_targets = {
                 target_id for target_id, policy in package["targets"].items()
-                if policy.get("candidateStatus") == "development-verified-production-release-pending"
+                if policy.get("candidateStatus", "").startswith("development-verified")
             }
             self.assertEqual(set(entry_package["targets"]), expected_targets)
             for target_id, entry in entry_package["targets"].items():
@@ -221,34 +221,40 @@ class PublicCatalogueContract(unittest.TestCase):
                 self.assertEqual(entry["earlyBinaryLicenseId"], access["earlyBinaryLicenseId"])
                 self.assertEqual(entry["publicLicenseScope"], access["publicLicenseScope"])
                 self.assertEqual(entry["earlyRedistributionAllowed"], False)
-                self.assertEqual(entry["status"], "development-verified-production-release-pending")
+                self.assertEqual(entry["status"], policy["candidateStatus"])
                 expected_run = {
                     ("libxml2", "ubuntu-focal-amd64"): "40899705050",
                     ("libarchive", "ubuntu-focal-amd64"): "40899709850",
                     ("libgit2", "ubuntu-focal-amd64"): "41162605227",
                     ("libgit2", "ubuntu-jammy-amd64"): "41167536831",
                     ("poppler", "ubuntu-focal-amd64"): "41149614570",
+                    ("c-ares", "ubuntu-focal-amd64"): "41492142682",
+                    ("c-ares", "debian-trixie-amd64"): "41494211851",
+                    ("brotli", "ubuntu-focal-amd64"): "41492184315",
                 }[(source, target_id)]
                 self.assertEqual(entry["verification"], f"https://github.com/getpatched/platform/actions/runs/{expected_run}")
                 self.assertEqual(
-                    entry["ubuntuProEsmCompatibility"],
-                    policy.get("ubuntuProEsmCompatibility", "not-tested-out-of-scope"),
+                    entry.get("ubuntuProEsmCompatibility", "not-applicable" if target_id.startswith("debian-") else "not-tested-out-of-scope"),
+                    policy.get("ubuntuProEsmCompatibility", "not-applicable" if target_id.startswith("debian-") else "not-tested-out-of-scope"),
                 )
                 self.assertNotIn("verificationUrl", entry)
                 self.assertTrue(entry["sourceUrl"].startswith(f"https://github.com/getpatched/packaging-{source}/tree/"))
                 self.assertTrue(entry["patchUrl"].startswith(f"https://github.com/getpatched/packaging-{source}/blob/"))
-                branch = "jammy" if target_id == "ubuntu-jammy-amd64" else "focal"
-                self.assertEqual(entry["testsUrl"], f"https://github.com/getpatched/packaging-{source}/tree/getpatched/{branch}/tests")
+                branch = target_profile(platform, target_id)["sourceBranch"]
+                self.assertEqual(entry["testsUrl"], f"https://github.com/getpatched/packaging-{source}/tree/{branch}/tests")
                 self.assertEqual(entry["releasesUrl"], f"https://github.com/getpatched/packaging-{source}/releases")
-                self.assertEqual(entry["releaseStatus"], "No production release")
+                if policy["candidateStatus"] == "development-verified-sponsor-flow-pending":
+                    self.assertEqual(entry["releaseStatus"], "No production release; sponsor flow verification pending")
+                else:
+                    self.assertEqual(entry["releaseStatus"], "No production release")
 
         page = (ROOT / "site/index.html").read_text()
         self.assertIn("Hosted verification passed.", page)
-        self.assertIn("Four Focal package candidates and one Jammy libgit2 target have hosted builds", page)
-        self.assertIn("Production repository access setup remains incomplete", page)
+        self.assertIn("Six Focal package candidates, one Debian Trixie c-ares target and one Jammy libgit2 target have hosted builds", page)
+        self.assertIn("Sponsor-first release flow and production repository access setup remain incomplete", page)
         self.assertIn("no production package release has been published", page)
-        self.assertIn("Live package publication and downloads remain disabled until GitHub sponsor sign-in and production access setup are complete", page)
-        self.assertIn("Hosted verification has passed for all four Focal candidates", page)
+        self.assertIn("Live package publication and downloads remain disabled until sponsor sign-in, sponsor-first flow verification and production access setup are complete", page)
+        self.assertIn("Hosted verification has passed for all six Focal candidates", page)
         self.assertIn("Ubuntu Pro/ESM compatibility is not tested or supported", page)
         self.assertIn("Each row links to its source, patch, regression tests and release history", page)
         self.assertIn("Any sponsor delay starts only after sponsor publication", page)
