@@ -47,6 +47,22 @@ class PublicCatalogueContract(unittest.TestCase):
         self.assertFalse(profile["repository"]["enabled"])
         self.assertIn("[arch=arm64] https://snapshot.debian.org/archive/debian/20261025T000000Z/", apt_source_list(profile))
 
+    def test_debian_fastly_snapshot_mirror_is_allowed_and_keeps_snapshot_pinned(self):
+        platform = deepcopy(json.loads((ROOT / "packages.json").read_text()))
+        profile = platform["targets"]["debian-trixie-amd64"]
+        profile["aptSources"][0]["uri"] = profile["aptSources"][0]["uri"].replace(
+            "snapshot.debian.org", "snapshot-fastly.debian.org"
+        )
+        resolved = target_profile(platform, "debian-trixie-amd64")
+        self.assertTrue(all("20261030T000000Z" in source["uri"] for source in resolved["aptSources"]))
+        self.assertIn("snapshot-fastly.debian.org", apt_source_list(resolved))
+
+        profile["aptSources"][0]["uri"] = profile["aptSources"][0]["uri"].replace(
+            "20261030T000000Z", "20261031T000000Z"
+        )
+        with self.assertRaises(ValueError):
+            target_profile(platform, "debian-trixie-amd64")
+
     def test_all_distribution_snapshot_sources_require_https(self):
         platform = json.loads((ROOT / "packages.json").read_text())
         for target_id in platform["targets"]:
@@ -228,6 +244,8 @@ class PublicCatalogueContract(unittest.TestCase):
                     ("libgit2", "ubuntu-focal-amd64"): "41162605227",
                     ("libgit2", "ubuntu-jammy-amd64"): "41167536831",
                     ("poppler", "ubuntu-focal-amd64"): "41149614570",
+                    ("poppler", "debian-bookworm-amd64"): "41518910177",
+                    ("poppler", "debian-trixie-amd64"): "41531130479",
                     ("c-ares", "ubuntu-focal-amd64"): "41492142682",
                     ("c-ares", "debian-trixie-amd64"): "41494211851",
                     ("brotli", "ubuntu-focal-amd64"): "41492184315",
@@ -250,10 +268,10 @@ class PublicCatalogueContract(unittest.TestCase):
 
         page = (ROOT / "site/index.html").read_text()
         self.assertIn("Hosted verification passed.", page)
-        self.assertIn("Six Focal package candidates, one Debian Trixie c-ares target and one Jammy libgit2 target have hosted builds", page)
-        self.assertIn("Sponsor-first release flow and production repository access setup remain incomplete", page)
+        self.assertIn("Six Focal package candidates, one Debian Trixie c-ares target, two Debian Poppler targets and one Jammy libgit2 target have hosted builds", page)
+        self.assertIn("Live package publication and downloads remain disabled", page)
         self.assertIn("no production package release has been published", page)
-        self.assertIn("Live package publication and downloads remain disabled until sponsor sign-in, sponsor-first flow verification and production access setup are complete", page)
+        self.assertIn("Live package publication and downloads remain disabled", page)
         self.assertIn("Hosted verification has passed for all six Focal candidates", page)
         self.assertIn("Ubuntu Pro/ESM compatibility is not tested or supported", page)
         self.assertIn("Each row links to its source, patch, regression tests and release history", page)

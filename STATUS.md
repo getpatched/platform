@@ -1,5 +1,17 @@
 # GetPatched implementation status
 
+## Active 100-CVE goal checkpoint — 2 Nov 2026
+
+- **Poppler / Debian Bookworm and Trixie amd64, CVE-2026-107705:** hosted runs [41518910177](https://github.com/getpatched/platform/actions/runs/41518910177) and [41531130479](https://github.com/getpatched/platform/actions/runs/41531130479) passed exact-source builds, installed baseline overflow reproductions, patched regressions, package-aware before/after scans, consumer checks, and isolated signed APT-client verification. Policy and catalogue now mark only these exact Debian targets as development-verified. Raw Trivy 0.70 still reports CVE-2026-107705 in 14 Poppler package records in each image; this is not a Trivy-clean claim. The target repository profiles are disabled, so release eligibility remains false and nothing was published. Independent review and CI for this metadata update remain pending.
+- **Expat / Debian Bookworm and Trixie amd64, CVE-2026-117610:** recipe/platform review passed, and platform quality run [41538049083](https://github.com/getpatched/platform/actions/runs/41538049083) passed on PR #110. Corrected hosted package verification for Bookworm and Trixie is still required; Expat does not count yet.
+- **Completed count:** 0/100. Poppler still awaits review/merge of this evidence reconciliation; Expat awaits both target verification runs; no other candidate has completed every objective gate.
+
+### Next actions
+
+1. Obtain fresh independent review and passing CI for the Poppler policy, catalogue, advisory, and evidence update; merge only after findings are resolved.
+2. Dispatch Expat Bookworm hosted verification from recipe commit `ed35d4b85f8cb08c2b252868d366cd6ec34cf463`, then Trixie, and retain/inspect both artifacts.
+3. Continue to the next revalidated leaf-library candidate after the in-progress Poppler and Expat work.
+
 ## Latest development checkpoint — 31 Oct 2026
 
 - **libgit2 / Ubuntu Focal amd64:** hosted run [41162605227](https://github.com/getpatched/platform/actions/runs/41162605227) passed the exact-source build, all three installed baseline/patched regressions, package-aware scan (six baseline findings, zero candidate findings), and isolated signed APT binary/source client checks. Trivy 0.70.0 reported none of the three target CVEs on either image. The candidate is verified for development; production publication remains disabled.
@@ -413,3 +425,15 @@ The advisory scanner now treats an exact reviewed vulnerable baseline as affecte
 ### Next actions
 
 1. Inspect run 41083191679 through terminal state and review its retained artifacts. Then push and quality-check the reviewed Poppler advisory-scope correction and rerun Poppler. Keep TIFF and libpng blocked on accurate baseline reproductions; do not publish packages.
+
+## Active 100-CVE goal — Poppler CVE-2026-107705 — 2 Nov 2026
+
+- Debian Security Tracker currently lists the exact Bookworm and Trixie Poppler sources as vulnerable. Canonical says Ubuntu Focal needs evaluation, so no Focal target is proposed for this CVE.
+- Added target recipes for Bookworm security amd64 `22.12.0-2+deb12u3` and Trixie amd64 `25.03.0-5+deb13u4`, pinned to Debian Snapshot `20261030T000000Z`. Their signed `InRelease` files and `Sources.xz` hash chains were verified; details and archive digests are in `evidence/poppler-cve-2026-107705-research-20261102/README.md`.
+- Added a minimal target-scoped 127-byte password clamp backport of upstream commit `60e19a30152560fcccfb2ae7f7559eda560c0160`, plus a `PDFDoc`-based encrypted R6 fixture probe and baseline/patched scanner classification. The upstream patch does not apply verbatim because these distro sources predate its `GooString` refactor.
+- Local patch dry-runs pass for both source versions; both recipes load; the probe syntax-checks against both header sets; and 96 focused platform tests pass. These checks do not prove installed behavior.
+- The candidate has not yet reproduced against the installed baseline or passed a patched build, scan, or consumer check. Docker Desktop is unavailable locally; run the exact commit through GitHub-hosted verification before counting it. No binary or production advisory was published.
+
+### Next actions
+
+1. Obtain a fresh independent review of the current two-repository diff. Address findings, then publish reviewable source and platform branches and run the non-publishing Bookworm and Trixie workflows. Count this CVE only after both target runs pass all gates.

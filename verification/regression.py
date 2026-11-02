@@ -404,6 +404,73 @@ def poppler_uaf_reproduced(check):
             and "StructTreeRoot" in log and "parentTreeAdd" in log)
 
 
+def poppler_revision6_probe_command(check):
+    command = check.get("command", [])
+    if (not isinstance(command, list) or len(command) != 8
+            or not all(isinstance(argument, str) for argument in command)):
+        return False
+    return (
+        Path(command[0]).name == "valgrind"
+        and command[1:5] == ["--tool=memcheck", "--error-exitcode=97", "--leak-check=no", "--read-var-info=yes"]
+        and command[5].startswith("--log-file=")
+        and Path(command[5][len("--log-file="):]).name == "revision6-password.valgrind"
+        and Path(command[6]).name == "poppler-revision6-password"
+        and Path(command[7]).name == "CVE-2026-107705-r6-encrypted.pdf"
+    )
+
+
+def poppler_revision6_password_overflow_reproduced(check):
+    log = check.get("memoryLog", "")
+    stderr = check.get("stderr", "")
+    # The vulnerable write is performed while filling the fixed K1/E buffers
+    # in revision6Hash(). A library mapping alone is too broad: require the
+    # offending Valgrind error context to identify that implementation frame.
+    error_contexts = re.findall(
+        r"(?ms)^==\d+== Invalid write[^\n]*\n(.*?)(?=^==\d+== (?:Invalid |ERROR SUMMARY:))",
+        log,
+    )
+    expected_hash_frame = any(
+        re.search(r"(?:revision6Hash|Decrypt\.cc:17(?:6[4-9]|[7-9][0-9]))", context)
+        for context in error_contexts
+    )
+    instrumented_write = (
+        check.get("returncode") == 97
+        and bool(error_contexts)
+        and expected_hash_frame
+        and re.search(r"(?m)^==\d+== ERROR SUMMARY: [1-9]\d* errors?", log)
+    )
+    stack_canary_abort = (
+        check.get("returncode") == -6
+        and stderr.strip() == "*** stack smashing detected ***: terminated"
+        and re.search(r"Process terminating with default action of signal 6 \(SIGABRT\)", log)
+        and "__stack_chk_fail" in log
+    )
+    return (
+        not check.get("timedOut", False)
+        and check.get("cve") == "CVE-2026-107705"
+        and check.get("testId") == "CVE-2026-107705-revision6-long-owner-password"
+        and poppler_revision6_probe_command(check)
+        and re.search(r"\(in /usr/lib(?:/[^ )]+)?/libpoppler\.so(?:\.[0-9]+)*\)", log)
+        and (instrumented_write or stack_canary_abort)
+    )
+
+
+def compile_poppler_revision6_probe(source, binary):
+    pkg_flags = shlex.split(subprocess.check_output(
+        ["pkg-config", "--cflags", "--libs", "poppler"], text=True
+    ))
+    flags = []
+    for flag in pkg_flags:
+        if flag.startswith("-I") and len(flag) > 2:
+            flags.extend(["-isystem", flag[2:]])
+        else:
+            flags.append(flag)
+    command = ["c++", "-std=c++20", "-Wall", "-Wextra", "-Werror", str(source), *flags,
+               "-o", str(binary)]
+    subprocess.run(command, check=True, timeout=30)
+    return binary
+
+
 def compile_libgit2_probe(source, binary, patched):
     flags = shlex.split(subprocess.check_output(
         ["pkg-config", "--cflags", "--libs", "libgit2"], text=True
@@ -815,29 +882,57 @@ def main():
                 checks.append(check)
                 checks[1]["testId"] = "CVE-2026-22695-padded-stride-follow-up"
         elif package == "poppler":
-            fixture = fixtures / "bug.pdf"
-            if not fixture.is_file() or not 0 < fixture.stat().st_size < 1024 * 1024:
-                raise RuntimeError("Poppler CVE regression fixture is missing or exceeds its size bound")
-            memory_log = temp / "pdfinfo.valgrind"
-            check = execute([
-                "valgrind", "--tool=memcheck", "--error-exitcode=97", "--leak-check=no",
-                "--read-var-info=yes", "--log-file=" + str(memory_log),
-                "pdfinfo", "-struct", str(fixture),
-            ])
-            check["memoryLog"] = memory_log.read_text() if memory_log.exists() else ""
-            check["cve"] = "CVE-2025-52885"
-            check["testId"] = "CVE-2025-52885-structtree-uaf"
-            check["passed"] = (
-                poppler_uaf_reproduced(check)
-                if args.phase == "baseline"
-                else not check.get("timedOut") and check.get("returncode") == 0
-                and "ERROR SUMMARY: 0 errors" in check["memoryLog"]
-            )
-            checks.append(check)
-            if args.phase == "patched":
-                consumer = execute(["pdfinfo", "-v"])
-                consumer["passed"] = consumer_version_succeeded(consumer, "pdfinfo version")
-                checks.append(consumer)
+            target_cves = set(policy.get("targetCves", []))
+            if "CVE-2025-52885" in target_cves:
+                fixture = fixtures / "bug.pdf"
+                if not fixture.is_file() or not 0 < fixture.stat().st_size < 1024 * 1024:
+                    raise RuntimeError("Poppler CVE regression fixture is missing or exceeds its size bound")
+                memory_log = temp / "pdfinfo.valgrind"
+                check = execute([
+                    "valgrind", "--tool=memcheck", "--error-exitcode=97", "--leak-check=no",
+                    "--read-var-info=yes", "--log-file=" + str(memory_log),
+                    "pdfinfo", "-struct", str(fixture),
+                ])
+                check["memoryLog"] = memory_log.read_text() if memory_log.exists() else ""
+                check["cve"] = "CVE-2025-52885"
+                check["testId"] = "CVE-2025-52885-structtree-uaf"
+                check["passed"] = (
+                    poppler_uaf_reproduced(check)
+                    if args.phase == "baseline"
+                    else not check.get("timedOut") and check.get("returncode") == 0
+                    and "ERROR SUMMARY: 0 errors" in check["memoryLog"]
+                )
+                checks.append(check)
+                if args.phase == "patched":
+                    consumer = execute(["pdfinfo", "-v"])
+                    consumer["passed"] = consumer_version_succeeded(consumer, "pdfinfo version")
+                    checks.append(consumer)
+            if "CVE-2026-107705" in target_cves:
+                probe_source = fixtures / "CVE-2026-107705-revision6-password.cpp"
+                fixture = fixtures / "CVE-2026-107705-r6-encrypted.pdf"
+                if (not probe_source.is_file() or not 0 < probe_source.stat().st_size < 64 * 1024
+                        or not fixture.is_file() or not 0 < fixture.stat().st_size < 1024 * 1024):
+                    raise RuntimeError("Poppler revision 6 probe or encrypted PDF fixture is missing or exceeds its size bound")
+                probe = compile_poppler_revision6_probe(probe_source, temp / "poppler-revision6-password")
+                memory_log = temp / "revision6-password.valgrind"
+                check = execute([
+                    "valgrind", "--tool=memcheck", "--error-exitcode=97", "--leak-check=no",
+                    "--read-var-info=yes", "--log-file=" + str(memory_log), str(probe), str(fixture),
+                ])
+                check["memoryLog"] = memory_log.read_text() if memory_log.exists() else ""
+                check["cve"] = "CVE-2026-107705"
+                check["testId"] = "CVE-2026-107705-revision6-long-owner-password"
+                check["passed"] = (
+                    poppler_revision6_password_overflow_reproduced(check)
+                    if args.phase == "baseline"
+                    else not check.get("timedOut") and check.get("returncode") == 0
+                    and "ERROR SUMMARY: 0 errors" in check["memoryLog"]
+                )
+                checks.append(check)
+                if args.phase == "patched":
+                    consumer = execute(["pdfinfo", "-v"])
+                    consumer["passed"] = consumer_version_succeeded(consumer, "pdfinfo version")
+                    checks.append(consumer)
         elif package == "libgit2":
             patched = args.phase == "patched"
             pack_probe = compile_libgit2_probe(
