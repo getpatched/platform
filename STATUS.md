@@ -1,5 +1,17 @@
 # GetPatched implementation status
 
+## Active 100-CVE goal checkpoint — 2 Nov 2026
+
+- **Poppler / Debian Bookworm and Trixie amd64, CVE-2026-107705:** hosted runs [41518910177](https://github.com/getpatched/platform/actions/runs/41518910177) and [41531130479](https://github.com/getpatched/platform/actions/runs/41531130479) passed exact-source builds, installed baseline overflow reproductions, patched regressions, package-aware before/after scans, consumer checks, and isolated signed APT-client verification. Policy and catalogue now mark only these exact Debian targets as development-verified. Raw Trivy 0.70 still reports CVE-2026-107705 in 14 Poppler package records in each image; this is not a Trivy-clean claim. The target repository profiles are disabled, so release eligibility remains false and nothing was published. Independent review and CI for this metadata update remain pending.
+- **Expat / Debian Bookworm and Trixie amd64, CVE-2026-117610:** recipe/platform review passed, and platform quality run [41538049083](https://github.com/getpatched/platform/actions/runs/41538049083) passed on PR #110. Corrected hosted package verification for Bookworm and Trixie is still required; Expat does not count yet.
+- **Completed count:** 0/100. Poppler still awaits review/merge of this evidence reconciliation; Expat awaits both target verification runs; no other candidate has completed every objective gate.
+
+### Next actions
+
+1. Obtain fresh independent review and passing CI for the Poppler policy, catalogue, advisory, and evidence update; merge only after findings are resolved.
+2. Dispatch Expat Bookworm hosted verification from recipe commit `ed35d4b85f8cb08c2b252868d366cd6ec34cf463`, then Trixie, and retain/inspect both artifacts.
+3. Continue to the next revalidated leaf-library candidate after the in-progress Poppler and Expat work.
+
 ## Latest development checkpoint — 31 Oct 2026
 
 - **libgit2 / Ubuntu Focal amd64:** hosted run [41162605227](https://github.com/getpatched/platform/actions/runs/41162605227) passed the exact-source build, all three installed baseline/patched regressions, package-aware scan (six baseline findings, zero candidate findings), and isolated signed APT binary/source client checks. Trivy 0.70.0 reported none of the three target CVEs on either image. The candidate is verified for development; production publication remains disabled.

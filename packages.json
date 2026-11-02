@@ -367,7 +367,7 @@
           "targetCves": ["CVE-2026-107705"],
           "advisory": "https://security-tracker.debian.org/tracker/CVE-2026-107705",
           "advisories": {"CVE-2026-107705": "https://security-tracker.debian.org/tracker/CVE-2026-107705"},
-          "candidateStatus": "unverified-development-candidate",
+          "candidateStatus": "development-verified-production-release-pending",
           "releaseAccess": {"policy": "public-after-checks", "sponsorDelayHours": 0, "sponsorEligibility": null, "earlyBinaryLicenseId": null, "publicContributionSpdx": "MIT", "earlyUse": ["private", "commercial"], "earlyRedistributionAllowed": false, "publicLicenseScope": "getpatched-authored-contributions-only"}
         },
         "debian-trixie-amd64": {
@@ -383,7 +383,7 @@
           "targetCves": ["CVE-2026-107705"],
           "advisory": "https://security-tracker.debian.org/tracker/CVE-2026-107705",
           "advisories": {"CVE-2026-107705": "https://security-tracker.debian.org/tracker/CVE-2026-107705"},
-          "candidateStatus": "unverified-development-candidate",
+          "candidateStatus": "development-verified-production-release-pending",
           "releaseAccess": {"policy": "public-after-checks", "sponsorDelayHours": 0, "sponsorEligibility": null, "earlyBinaryLicenseId": null, "publicContributionSpdx": "MIT", "earlyUse": ["private", "commercial"], "earlyRedistributionAllowed": false, "publicLicenseScope": "getpatched-authored-contributions-only"}
         }
       }

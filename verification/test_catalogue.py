@@ -244,6 +244,8 @@ class PublicCatalogueContract(unittest.TestCase):
                     ("libgit2", "ubuntu-focal-amd64"): "41162605227",
                     ("libgit2", "ubuntu-jammy-amd64"): "41167536831",
                     ("poppler", "ubuntu-focal-amd64"): "41149614570",
+                    ("poppler", "debian-bookworm-amd64"): "41518910177",
+                    ("poppler", "debian-trixie-amd64"): "41531130479",
                     ("c-ares", "ubuntu-focal-amd64"): "41492142682",
                     ("c-ares", "debian-trixie-amd64"): "41494211851",
                     ("brotli", "ubuntu-focal-amd64"): "41492184315",
@@ -266,10 +268,10 @@ class PublicCatalogueContract(unittest.TestCase):
 
         page = (ROOT / "site/index.html").read_text()
         self.assertIn("Hosted verification passed.", page)
-        self.assertIn("Six Focal package candidates, one Debian Trixie c-ares target and one Jammy libgit2 target have hosted builds", page)
-        self.assertIn("Sponsor-first release flow and production repository access setup remain incomplete", page)
+        self.assertIn("Six Focal package candidates, one Debian Trixie c-ares target, two Debian Poppler targets and one Jammy libgit2 target have hosted builds", page)
+        self.assertIn("Live package publication and downloads remain disabled", page)
         self.assertIn("no production package release has been published", page)
-        self.assertIn("Live package publication and downloads remain disabled until sponsor sign-in, sponsor-first flow verification and production access setup are complete", page)
+        self.assertIn("Live package publication and downloads remain disabled", page)
         self.assertIn("Hosted verification has passed for all six Focal candidates", page)
         self.assertIn("Ubuntu Pro/ESM compatibility is not tested or supported", page)
         self.assertIn("Each row links to its source, patch, regression tests and release history", page)
