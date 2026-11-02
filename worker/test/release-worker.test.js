@@ -904,6 +904,18 @@ test("sponsor snapshot prefers an installed GitHub App over a configured static 
   } finally { globalThis.fetch = originalFetch; }
 });
 
+test("GitHub App token errors report a safe category without exposing response text", async () => {
+  const originalFetch = globalThis.fetch;
+  const { privateKey } = generateKeyPairSync("rsa", { modulusLength: 2048 });
+  const env = { SPONSOR_GITHUB_APP_ID: "67890", SPONSOR_GITHUB_INSTALLATION_ID: "12345", SPONSOR_GITHUB_PRIVATE_KEY: privateKey.export({ type: "pkcs1", format: "pem" }).toString() };
+  try {
+    globalThis.fetch = async () => Response.json({ message: "API rate limit exceeded for secret-value" }, { status: 403 });
+    await assert.rejects(fetchSponsorSnapshot(env, new Date()), /returned 403: rate limit$/);
+    globalThis.fetch = async () => Response.json({ message: "secret-value" }, { status: 403 });
+    await assert.rejects(fetchSponsorSnapshot(env, new Date()), /returned 403: unrecognized GitHub response$/);
+  } finally { globalThis.fetch = originalFetch; }
+});
+
 test("scheduled sponsor reconciliation persists an authoritative snapshot and consumes webhook markers", async () => {
   const bucket = new MemoryBucket({
     "sponsor-deliveries/delivery-12345678.json": {

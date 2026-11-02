@@ -1176,7 +1176,17 @@ async function createGitHubAppInstallationToken(env) {
     },
     body: "{}",
   });
-  if (!response.ok) throw new Error(`GitHub App installation token request returned ${response.status}`);
+  if (!response.ok) {
+    let message = "";
+    try { message = String((await response.json()).message || "").toLowerCase(); } catch { /* response may not be JSON */ }
+    const reason = message.includes("secondary rate limit") ? "secondary rate limit"
+      : message.includes("rate limit") ? "rate limit"
+      : message.includes("bad credentials") ? "bad credentials"
+      : message.includes("suspend") ? "installation suspended"
+      : message.includes("resource not accessible") ? "resource not accessible"
+      : "unrecognized GitHub response";
+    throw new Error(`GitHub App installation token request returned ${response.status}: ${reason}`);
+  }
   const result = await response.json();
   if (typeof result.token !== "string" || !result.token) throw new Error("GitHub App installation token response is incomplete");
   return result.token;
