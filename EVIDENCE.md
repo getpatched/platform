@@ -1,5 +1,12 @@
 # GetPatched evidence index
 
+## Expat CVE-2026-117610 source-level candidate evidence — 2 Nov 2026
+
+- Debian's tracker lists Bookworm Security `2.5.0-1+deb12u5` and Trixie Security `2.9.0-1~deb13u1` as vulnerable. Signed Debian Security source indexes authenticate all six pinned source archives; local SHA-256 values match the indexes. The original index/signature evidence is retained in the GetPatched workspace evidence directory, outside this repository.
+- Each distro quilt series followed by `CVE-2026-117610.patch` applies with zero fuzz. The same C API reproducer exits with SIGSEGV against each unpatched source build and exits successfully against each patched build; Debian packaging's Autotools flow builds both patched versions and `xmlwf -v` reports the expected Expat version.
+- These builds ran natively on a macOS arm64 host and prove source-level behavior only. No Debian amd64 `.deb`, installed package, package-aware scan, fresh APT install, or hosted package-verification artifact has passed yet. The policy remains `unverified-development-candidate`; no public security claim or binary publication is supported by this evidence.
+- The public source-only recipe is available at [getpatched/packaging-expat](https://github.com/getpatched/packaging-expat), commit `3354168001dbf911cafaea8006e2a1bb7c52a97a`, with Bookworm and Trixie target branches at that same commit. An independent review of the recipe and platform wiring found no critical issues; it explicitly left Debian package builds, installed regressions, package-aware scans, and signed APT client verification open. Focused local checks passed; the complete local platform suite had two unrelated temporary-key-generation errors because `gpg-agent` could not start on this macOS host.
+
 ## Production repository gate and release prerequisites — 31 October 2026
 
 - Platform PR [#97](https://github.com/getpatched/platform/pull/97) merged as `0ad16a5a79681aeda7d799846c613117fb50d0be`, enabling the Focal and Jammy amd64 repository profiles while leaving Debian profiles disabled. Main quality run [41171884254](https://github.com/getpatched/platform/actions/runs/41171884254) passed.

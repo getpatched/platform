@@ -1,5 +1,13 @@
 # GetPatched implementation status
 
+## Expat candidate integration — 2 Nov 2026
+
+- CVE-2026-117610 has passed source-level applicability checks for Debian Bookworm `2.5.0-1+deb12u5` and Trixie `2.9.0-1~deb13u1`: signed-index source hashes match, both Debian quilt series and the GetPatched patch apply without fuzz, and the exact reproducer crashes before and passes after the patch in local packaging-style source builds.
+- Added an unreleased Expat candidate recipe and platform policy for Debian amd64, plus exact baseline/patched crash and `xmlwf` consumer classifiers. Candidate-only advisory coverage is generated only after the platform’s paired installed regressions pass. The candidate remains unverified; it is not in the public catalogue and no package/index was published.
+- Public source repository [getpatched/packaging-expat](https://github.com/getpatched/packaging-expat) and target branches `getpatched/debian-bookworm` and `getpatched/debian-trixie` point to recipe commit `3354168001dbf911cafaea8006e2a1bb7c52a97a`.
+- Local package-recipe validation succeeded for both targets. The focused Expat, scanner, release-policy, and catalogue checks passed (22 tests). The complete platform suite ran 196 tests: 194 passed; two signing tests could not generate temporary keys because this macOS environment could not start `gpg-agent`. A fresh independent review reported no critical findings and confirmed the package-build, installed-regression, scan, and signed-client gates are still pending.
+- Local source evidence is not a Debian `.deb` build. Next: push the platform PR, resolve CI findings, then run sequential hosted Bookworm and Trixie builds/scans and inspect retained artifacts. Keep both targets unverified until those reports prove the package-level gates.
+
 ## Latest development checkpoint — 31 Oct 2026
 
 - **libgit2 / Ubuntu Focal amd64:** hosted run [41162605227](https://github.com/getpatched/platform/actions/runs/41162605227) passed the exact-source build, all three installed baseline/patched regressions, package-aware scan (six baseline findings, zero candidate findings), and isolated signed APT binary/source client checks. Trivy 0.70.0 reported none of the three target CVEs on either image. The candidate is verified for development; production publication remains disabled.

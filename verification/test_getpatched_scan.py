@@ -3,6 +3,7 @@ import json
 import hashlib
 from pathlib import Path
 import subprocess
+import signal
 import sys
 import tempfile
 import unittest
@@ -45,6 +46,22 @@ SCANNER_SPEC.loader.exec_module(SCANNER_MODULE)
 
 
 class GetPatchedScannerContract(unittest.TestCase):
+    def test_expat_candidate_requires_exact_crash_or_patched_consumer(self):
+        baseline = {"cve": "CVE-2026-117610", "testId": "CVE-2026-117610-empty-nonfinal-subparser",
+                    "returncode": -signal.SIGSEGV, "timedOut": False, "passed": True}
+        self.assertTrue(SCANNER_MODULE.expat_candidate_checks_succeeded(
+            baseline, [baseline], "baseline", "2.5.0"))
+        patched = {**baseline, "returncode": 0}
+        consumer = {"testId": "expat-xmlwf-version", "returncode": 0, "timedOut": False,
+                    "stdout": "xmlwf using expat_2.5.0\n", "passed": True}
+        self.assertTrue(SCANNER_MODULE.expat_candidate_checks_succeeded(
+            patched, [patched, consumer], "patched", "2.5.0"))
+        self.assertFalse(SCANNER_MODULE.expat_candidate_checks_succeeded(
+            patched, [patched], "patched", "2.5.0"))
+        wrong_version = {**consumer, "stdout": "xmlwf using expat_2.9.0\n"}
+        self.assertFalse(SCANNER_MODULE.expat_candidate_checks_succeeded(
+            patched, [patched, wrong_version], "patched", "2.5.0"))
+
     def make_tiff_recipe(self, root, target_id="ubuntu-focal-amd64", signature=("0x114980", "0x116FB2", "0x10AC12")):
         root = Path(root)
         (root / "patches").mkdir(parents=True, exist_ok=True)
