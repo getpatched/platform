@@ -1115,8 +1115,79 @@ async function hasActiveSponsorship(bucket, snapshot, githubUserId) {
   return Number.isFinite(snapshotAt) && Number.isFinite(revokedAt) && snapshotAt > revokedAt;
 }
 
+function base64UrlEncode(bytes) {
+  let binary = "";
+  for (const byte of bytes) binary += String.fromCharCode(byte);
+  return btoa(binary).replace(/=/g, "").replace(/\+/g, "-").replace(/\//g, "_");
+}
+
+function derLength(length) {
+  if (length < 0x80) return Uint8Array.of(length);
+  const bytes = [];
+  for (let value = length; value > 0; value = Math.floor(value / 256)) bytes.unshift(value & 0xff);
+  return Uint8Array.of(0x80 | bytes.length, ...bytes);
+}
+
+function der(tag, value) {
+  const length = derLength(value.length);
+  const result = new Uint8Array(1 + length.length + value.length);
+  result[0] = tag;
+  result.set(length, 1);
+  result.set(value, 1 + length.length);
+  return result;
+}
+
+function rsaPkcs1ToPkcs8(pkcs1) {
+  const algorithm = Uint8Array.of(0x30, 0x0d, 0x06, 0x09, 0x2a, 0x86, 0x48, 0x86, 0xf7, 0x0d, 0x01, 0x01, 0x01, 0x05, 0x00);
+  const version = Uint8Array.of(0x02, 0x01, 0x00);
+  const privateKey = der(0x04, pkcs1);
+  const contents = new Uint8Array(version.length + algorithm.length + privateKey.length);
+  contents.set(version);
+  contents.set(algorithm, version.length);
+  contents.set(privateKey, version.length + algorithm.length);
+  return der(0x30, contents);
+}
+
+async function createGitHubAppInstallationToken(env) {
+  const appId = env.SPONSOR_GITHUB_APP_ID;
+  const installationId = env.SPONSOR_GITHUB_INSTALLATION_ID;
+  const privateKeyPem = env.SPONSOR_GITHUB_PRIVATE_KEY;
+  if (!/^\d+$/.test(appId || "") || !/^\d+$/.test(installationId || "") || !privateKeyPem) {
+    throw new Error("GitHub Sponsors reconciliation credentials are not configured");
+  }
+  const pemMatch = privateKeyPem.match(/-----BEGIN (RSA )?PRIVATE KEY-----([\s\S]+?)-----END (RSA )?PRIVATE KEY-----/);
+  if (!pemMatch) throw new Error("GitHub App private key is invalid");
+  const keyBytes = Uint8Array.from(atob(pemMatch[2].replace(/\s/g, "")), (char) => char.charCodeAt(0));
+  const pkcs8 = pemMatch[1] ? rsaPkcs1ToPkcs8(keyBytes) : keyBytes;
+  const key = await crypto.subtle.importKey("pkcs8", pkcs8, { name: "RSASSA-PKCS1-v1_5", hash: "SHA-256" }, false, ["sign"]);
+  const issuedAt = Math.floor(Date.now() / 1000) - 60;
+  const header = base64UrlEncode(new TextEncoder().encode(JSON.stringify({ alg: "RS256", typ: "JWT" })));
+  const payload = base64UrlEncode(new TextEncoder().encode(JSON.stringify({ iat: issuedAt, exp: issuedAt + 600, iss: appId })));
+  const unsignedToken = `${header}.${payload}`;
+  const signature = await crypto.subtle.sign("RSASSA-PKCS1-v1_5", key, new TextEncoder().encode(unsignedToken));
+  const appJwt = `${unsignedToken}.${base64UrlEncode(new Uint8Array(signature))}`;
+  const response = await fetch(`https://api.github.com/app/installations/${installationId}/access_tokens`, {
+    method: "POST",
+    headers: {
+      accept: "application/vnd.github+json",
+      authorization: `Bearer ${appJwt}`,
+      "content-type": "application/json",
+      "x-github-api-version": "2022-11-28",
+    },
+    body: "{}",
+  });
+  if (!response.ok) throw new Error(`GitHub App installation token request returned ${response.status}`);
+  const result = await response.json();
+  if (typeof result.token !== "string" || !result.token) throw new Error("GitHub App installation token response is incomplete");
+  return result.token;
+}
+
 async function fetchSponsorSnapshot(env, now) {
-  if (!env.SPONSOR_GRAPHQL_TOKEN) throw new Error("GitHub Sponsors reconciliation token is not configured");
+  const hasAppCredentials = Boolean(env.SPONSOR_GITHUB_APP_ID || env.SPONSOR_GITHUB_INSTALLATION_ID || env.SPONSOR_GITHUB_PRIVATE_KEY);
+  const sponsorToken = hasAppCredentials
+    ? await createGitHubAppInstallationToken(env)
+    : env.SPONSOR_GRAPHQL_TOKEN;
+  if (!sponsorToken) throw new Error("GitHub Sponsors reconciliation credentials are not configured");
   let after = null;
   const sponsors = new Map();
   let pages = 0;
@@ -1126,7 +1197,7 @@ async function fetchSponsorSnapshot(env, now) {
       method: "POST",
       headers: {
         accept: "application/json",
-        authorization: `Bearer ${env.SPONSOR_GRAPHQL_TOKEN}`,
+        authorization: `Bearer ${sponsorToken}`,
         "content-type": "application/json",
       },
       body: JSON.stringify({
