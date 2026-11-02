@@ -16,7 +16,7 @@ import uuid
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from package_recipe import download_source_assets, load_recipe
-from build_environment import runner_ca_bundle
+from build_environment import offline_resolver_config, runner_ca_bundle
 from platform_policy import apt_source_list_b64, package_target_policy, scanner_config, target_profile
 
 
@@ -249,6 +249,9 @@ def main():
         scan_images = []
         originals = temp / "originals"
         originals.mkdir()
+        # Keep resolver-dependent upstream tests deterministic while the build
+        # container remains network-isolated.
+        offline_resolver_mount = offline_resolver_config(temp)
         downloaded_sources = download_source_assets(recipe, originals)
         source_provenance = {
             "schemaVersion": 1,
@@ -302,6 +305,7 @@ def main():
                 "docker", "run", "--name", container, "--platform", container_platform,
                 "--network", "none", "--cpus", "2", "--memory", "4g", "--pids-limit", "512",
                 "--security-opt", "no-new-privileges:true",
+                *offline_resolver_mount,
                 "--mount", "type=bind,source=" + str(source) + ",target=/recipe,readonly",
                 "--mount", "type=bind,source=" + str(originals) + ",target=/originals,readonly",
                 "--mount", "type=bind,source=" + str(ROOT / "verification") + ",target=/verification,readonly",
