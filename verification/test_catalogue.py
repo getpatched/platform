@@ -28,8 +28,8 @@ class PublicCatalogueContract(unittest.TestCase):
                          "development-verified-production-release-pending")
 
         expected_runs = {
-            "debian-bookworm-amd64": "41540361532",
-            "debian-trixie-amd64": "41541584205",
+            "debian-bookworm-amd64": "41543751522",
+            "debian-trixie-amd64": "41546270294",
         }
         for target_id, target_policy in policy.items():
             with self.subTest(target=target_id):
@@ -297,8 +297,8 @@ class PublicCatalogueContract(unittest.TestCase):
                     ("c-ares", "ubuntu-focal-amd64"): "41492142682",
                     ("c-ares", "debian-trixie-amd64"): "41494211851",
                     ("brotli", "ubuntu-focal-amd64"): "41492184315",
-                    ("expat", "debian-bookworm-amd64"): "41540361532",
-                    ("expat", "debian-trixie-amd64"): "41541584205",
+                    ("expat", "debian-bookworm-amd64"): "41543751522",
+                    ("expat", "debian-trixie-amd64"): "41546270294",
                 }[(source, target_id)]
                 self.assertEqual(entry["verification"], f"https://github.com/getpatched/platform/actions/runs/{expected_run}")
                 self.assertEqual(
