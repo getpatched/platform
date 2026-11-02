@@ -57,3 +57,13 @@ class OfflineResolverConfigTests(unittest.TestCase):
         self.assertIn("target=/etc/resolv.conf,readonly", mount[1])
         self.assertIn("/resolv.conf", mount[1])
 
+
+class PinnedAptSourceTests(unittest.TestCase):
+    def test_container_builds_remove_image_default_apt_sources(self):
+        for name in ("packaging", "baseline", "patched-scan"):
+            with self.subTest(container=name):
+                containerfile = (ROOT / "build" / f"{name}.Containerfile").read_text()
+                clear_sources = containerfile.index("rm -f /etc/apt/sources.list.d/*")
+                configure_sources = containerfile.index("> /etc/apt/sources.list")
+                self.assertLess(clear_sources, configure_sources)
+
