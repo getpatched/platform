@@ -385,6 +385,93 @@
           "releaseAccess": {"policy": "public-after-checks", "sponsorDelayHours": 0, "sponsorEligibility": null, "earlyBinaryLicenseId": null, "publicContributionSpdx": "MIT", "earlyUse": ["private", "commercial"], "earlyRedistributionAllowed": false, "publicLicenseScope": "getpatched-authored-contributions-only"}
         }
       }
+    },
+    "c-ares": {
+      "targets": {
+        "ubuntu-focal-amd64": {
+          "baselineVersion": "1.15.0-1ubuntu0.5",
+          "sourcePocket": "updates",
+          "packageEcosystem": "Ubuntu:20.04:LTS",
+          "packageVersion": "1.15.0-1ubuntu0.5+getpatched1",
+          "releaseSerial": 1,
+          "ubuntuProEsmCompatibility": "not-tested-out-of-scope",
+          "binaryPackages": ["libc-ares2", "libc-ares-dev"],
+          "advisoryPackages": ["libc-ares2"],
+          "targetCve": "CVE-2026-69184",
+          "targetCves": ["CVE-2026-69184"],
+          "advisory": "https://ubuntu.com/security/CVE-2026-69184",
+          "advisories": {"CVE-2026-69184": "https://ubuntu.com/security/CVE-2026-69184"},
+          "candidateStatus": "unverified-development-candidate",
+          "releaseAccess": {
+            "policy": "sponsor-first",
+            "sponsorDelayHours": 168,
+            "sponsorEligibility": "any-active-individual-github-sponsorship-tier",
+            "earlyBinaryLicenseId": "LicenseRef-GetPatched-Early-Binary-1.2",
+            "publicContributionSpdx": "MIT",
+            "earlyUse": ["private", "commercial"],
+            "earlyRedistributionAllowed": false,
+            "publicLicenseScope": "getpatched-authored-contributions-only"
+          }
+        },
+        "debian-trixie-amd64": {
+          "baselineVersion": "1.34.5-1+deb13u1",
+          "sourcePocket": "security",
+          "packageEcosystem": "Debian:13",
+          "packageVersion": "1.34.5-1+deb13u1+getpatched1",
+          "releaseSerial": 1,
+          "binaryPackages": ["libcares2", "libc-ares-dev", "libc-ares2"],
+          "advisoryPackages": ["libcares2"],
+          "builderPackages": ["libc-ares-dev"],
+          "targetCve": "CVE-2026-69184",
+          "targetCves": ["CVE-2026-69184"],
+          "advisory": "https://security-tracker.debian.org/tracker/CVE-2026-69184",
+          "advisories": {
+            "CVE-2026-69184": "https://security-tracker.debian.org/tracker/CVE-2026-69184"
+          },
+          "candidateStatus": "unverified-development-candidate",
+          "releaseAccess": {
+            "policy": "sponsor-first",
+            "sponsorDelayHours": 168,
+            "sponsorEligibility": "any-active-individual-github-sponsorship-tier",
+            "earlyBinaryLicenseId": "LicenseRef-GetPatched-Early-Binary-1.2",
+            "publicContributionSpdx": "MIT",
+            "earlyUse": ["private", "commercial"],
+            "earlyRedistributionAllowed": false,
+            "publicLicenseScope": "getpatched-authored-contributions-only"
+          }
+        }
+      }
+    },
+    "brotli": {
+      "targets": {
+        "ubuntu-focal-amd64": {
+          "baselineVersion": "1.0.7-6ubuntu0.1",
+          "sourcePocket": "updates",
+          "packageEcosystem": "Ubuntu:20.04:LTS",
+          "packageVersion": "1.0.7-6ubuntu0.1+getpatched1",
+          "releaseSerial": 1,
+          "binaryPackages": ["python3-brotli", "brotli", "libbrotli-dev", "libbrotli1"],
+          "advisoryPackages": ["python3-brotli", "brotli", "libbrotli1"],
+          "builderPackages": ["libbrotli-dev"],
+          "targetCve": "CVE-2026-111497",
+          "targetCves": ["CVE-2026-111497"],
+          "advisory": "https://ubuntu.com/security/CVE-2026-111497",
+          "advisories": {
+            "CVE-2026-111497": "https://ubuntu.com/security/CVE-2026-111497"
+          },
+          "candidateStatus": "unverified-development-candidate",
+          "releaseAccess": {
+            "policy": "sponsor-first",
+            "sponsorDelayHours": 168,
+            "sponsorEligibility": "any-active-individual-github-sponsorship-tier",
+            "earlyBinaryLicenseId": "LicenseRef-GetPatched-Early-Binary-1.2",
+            "publicContributionSpdx": "MIT",
+            "earlyUse": ["private", "commercial"],
+            "earlyRedistributionAllowed": false,
+            "publicLicenseScope": "getpatched-authored-contributions-only"
+          }
+        }
+      }
     }
   }
 }

@@ -238,6 +238,35 @@ def consumer_version_succeeded(check, expected_banner):
     return not check.get("timedOut", False) and check.get("returncode") == 0 and expected_banner in output
 
 
+def cares_regression_succeeded(check, target_id, phase):
+    if (target_id not in ("ubuntu-focal-amd64", "debian-trixie-amd64")
+            or phase not in ("baseline", "patched")
+            or check.get("cve") != "CVE-2026-69184"
+            or check.get("timedOut") is not False
+            or check.get("returncode") != 0):
+        return False
+    output = check.get("stdout", "")
+    if target_id == "ubuntu-focal-amd64":
+        expected_test = "c-ares-overlong-expanded-name-focal"
+        outcome = "overlong_status=0 rejected=no" if phase == "baseline" else "overlong_status=8 rejected=yes"
+        expected_flag = "vulnerabilityReproduced" if phase == "baseline" else "patchedBehavior"
+        return (
+            check.get("testId") == expected_test
+            and check.get(expected_flag) is True
+            and outcome in output
+            and "maximum_name_accepted=yes" in output
+        )
+    expected_test = "c-ares-unbounded-pointer-chain"
+    outcome = "status=0 record=present" if phase == "baseline" else "status=8 record=null"
+    expected_flag = "vulnerabilityReproduced" if phase == "baseline" else "patchedBehavior"
+    return (
+        check.get("testId") == expected_test
+        and check.get(expected_flag) is True
+        and outcome in output
+        and "valid_status=0 valid_record=present" in output
+    )
+
+
 def libpng_probe_command_matches(check, test_id, executable, arguments):
     command = check.get("command")
     prefix = ["valgrind", "--tool=memcheck", "--error-exitcode=97", "--leak-check=no", "--read-var-info=yes"]
@@ -348,6 +377,15 @@ def compile_libgit2_probe(source, binary, patched):
     if patched:
         command.append("-DGETPATCHED_PATCHED=1")
     command.extend([str(source), *flags, "-o", str(binary)])
+    subprocess.run(command, check=True, timeout=30)
+    return binary
+
+
+def compile_pkg_config_probe(source, binary, modules):
+    cflags = subprocess.check_output(["pkg-config", "--cflags", *modules], text=True).split()
+    libraries = subprocess.check_output(["pkg-config", "--libs", *modules], text=True).split()
+    command = ["cc", "-std=c99", "-Wall", "-Wextra", "-Werror", *cflags,
+               str(source), *libraries, "-o", str(binary)]
     subprocess.run(command, check=True, timeout=30)
     return binary
 
@@ -532,6 +570,70 @@ def main():
                 create["passed"] = create["returncode"] == 0
                 extract["passed"] = extract["returncode"] == 0 and extract["stdout"] == item.read_text()
                 checks.extend([create, extract])
+        elif package == "c-ares":
+            if policy["targetId"] == "ubuntu-focal-amd64":
+                probe = compile_pkg_config_probe(
+                    fixtures / "c-ares-name-length.c", temp / "c-ares-name-length", ["libcares"]
+                )
+                check = execute([str(probe)], timeout=5)
+                output = check["stdout"]
+                check["testId"] = "c-ares-overlong-expanded-name-focal"
+                check["vulnerabilityReproduced"] = (
+                    "overlong_status=0 rejected=no" in output
+                    and "maximum_name_accepted=yes" in output
+                )
+                check["patchedBehavior"] = (
+                    "overlong_status=8 rejected=yes" in output
+                    and "maximum_name_accepted=yes" in output
+                )
+            else:
+                probe = compile_pkg_config_probe(
+                    fixtures / "c-ares-pointer-chain.c", temp / "c-ares-pointer-chain", ["libcares"]
+                )
+                check = execute([str(probe)], timeout=5)
+                output = check["stdout"]
+                check["testId"] = "c-ares-unbounded-pointer-chain"
+                check["vulnerabilityReproduced"] = (
+                    "status=0 record=present" in output
+                    and "valid_status=0 valid_record=present" in output
+                )
+                check["patchedBehavior"] = (
+                    "status=8 record=null" in output
+                    and "valid_status=0 valid_record=present" in output
+                )
+            check["cve"] = "CVE-2026-69184"
+            check["passed"] = cares_regression_succeeded(check, policy["targetId"], args.phase)
+            checks.append(check)
+        elif package == "brotli":
+            probe = compile_pkg_config_probe(
+                fixtures / "brotli-stream-probe.c", temp / "brotli-stream-probe",
+                ["libbrotlidec", "libbrotlienc"],
+            )
+            check = execute([str(probe), str(fixtures / "invalid-block-switch.hex")], timeout=5)
+            check["cve"] = "CVE-2026-111497"
+            check["testId"] = "brotli-invalid-block-switch"
+            match = re.search(
+                r"malformed_result=(-?\d+) error=(-?\d+) format_error=(-?\d+)",
+                check["stdout"],
+            )
+            if match:
+                result, error, expected_format_error = map(int, match.groups())
+                check["decoderResult"] = result
+                check["decoderError"] = error
+                check["formatBlockSwitchError"] = expected_format_error
+                check["vulnerabilityReproduced"] = error != expected_format_error
+                check["patchedBehavior"] = result == 0 and error == expected_format_error
+            else:
+                check["vulnerabilityReproduced"] = False
+                check["patchedBehavior"] = False
+            check["normalStreamCompatible"] = "compatible=yes" in check["stdout"]
+            check["passed"] = (
+                not check["timedOut"] and check["returncode"] == 0
+                and check["normalStreamCompatible"]
+                and (check["vulnerabilityReproduced"] if args.phase == "baseline"
+                     else check["patchedBehavior"])
+            )
+            checks.append(check)
         elif package == "tiff":
             fixture = fixtures / "multisample.tif"
             if not fixture.is_file() or not 0 < fixture.stat().st_size < 1024 * 1024:

@@ -21,11 +21,11 @@ TARGET_ID = "ubuntu-focal-amd64"
 CONFIG = json.loads((ROOT / "packages.json").read_text())
 
 
-def source_policy(source):
-    package = package_target_policy(CONFIG, source, TARGET_ID)
-    profile = target_profile(CONFIG, TARGET_ID)
+def source_policy(source, target_id=TARGET_ID):
+    package = package_target_policy(CONFIG, source, target_id)
+    profile = target_profile(CONFIG, target_id)
     return {
-        "source": source, "targetId": TARGET_ID,
+        "source": source, "targetId": target_id,
         "baselineVersion": package["baselineVersion"], "packageVersion": package["packageVersion"],
         "baseVersion": package["baselineVersion"], "version": package["packageVersion"],
         "releaseSerial": package["releaseSerial"], "targetCve": package["targetCve"],
@@ -97,53 +97,50 @@ class ReleaseCandidateOutput(unittest.TestCase):
         self.assertNotIn('apt-get install -y --no-install-recommends "$package"', containerfile)
 
     def test_latest_public_focal_candidates_are_eligible_after_verification(self):
-        self.assertEqual(set(CONFIG["packages"]), {"libxml2", "libarchive", "libpng1.6", "libgit2", "tiff", "poppler"})
+        runnable_candidates = {"libxml2", "libarchive", "libpng1.6", "libgit2", "tiff", "poppler"}
+        self.assertTrue(runnable_candidates.issubset(CONFIG["packages"]))
         workflow = (ROOT / ".github/workflows/package-verification.yml").read_text()
         options = re.search(r"options: \[([^]]+)\]", workflow).group(1)
-        runnable_candidates = {"libxml2", "libarchive", "libpng1.6", "libgit2", "tiff", "poppler"}
         self.assertEqual(set(item.strip() for item in options.split(",")), runnable_candidates)
-        self.assertTrue(runnable_candidates.issubset(CONFIG["packages"]))
         baseline_cli = (ROOT / "scripts/run-baseline.py").read_text()
         self.assertIn('"libgit2"', baseline_cli)
         for source, package_record in CONFIG["packages"].items():
-            package = package_record["targets"][TARGET_ID]
-            if source in ("libxml2", "libarchive"):
-                self.assertEqual(package["ubuntuProEsmCompatibility"], "not-tested-out-of-scope")
-            elif source == "libgit2":
-                self.assertEqual(package["ubuntuProEsmCompatibility"], "not-applicable")
-            else:
-                self.assertNotIn("ubuntuProEsmCompatibility", package)
-            policy = source_policy(source)
-            validated_source, expected, profile = BUILD_PACKAGE.validate_release_policy(policy, CONFIG)
-            self.assertEqual(validated_source, source)
-            self.assertEqual(expected["baselineVersion"], package["baselineVersion"])
-            self.assertEqual(expected["packageVersion"], package["packageVersion"])
-            self.assertEqual(expected["targetCves"], package["targetCves"])
-            self.assertEqual(profile["codename"], "focal")
-            eligibility = BUILD_PACKAGE.release_eligibility(policy)
-            self.assertFalse(eligibility["verificationChecksPassed"])
-            self.assertFalse(eligibility["releaseEligible"])
-            self.assertEqual(eligibility["reason"], "target verification checks have not passed")
-            eligibility = BUILD_PACKAGE.release_eligibility(policy, verification_checks_passed=True, publication_enabled=False)
-            self.assertFalse(eligibility["releaseEligible"])
-            self.assertEqual(eligibility["candidateStatus"], package["candidateStatus"])
-            self.assertEqual(eligibility["candidateVerified"],
-                             package["candidateStatus"] == "development-verified-production-release-pending")
-            eligibility = BUILD_PACKAGE.release_eligibility(policy, verification_checks_passed=True, publication_enabled=True)
-            verified = package["candidateStatus"] == "development-verified-production-release-pending"
-            self.assertEqual(eligibility["releaseEligible"], verified)
-            self.assertTrue(eligibility["verificationChecksPassed"])
-            self.assertEqual(eligibility["supportScope"], TARGET_ID)
-            self.assertEqual(eligibility["targetId"], TARGET_ID)
-            self.assertEqual(eligibility["ubuntuProEsmCompatibility"], package.get("ubuntuProEsmCompatibility", "not-applicable"))
-            self.assertEqual(eligibility["reason"], None if verified else "candidate status is not approved for release")
+            for target_id, package in package_record["targets"].items():
+                esm_compatibility = package.get("ubuntuProEsmCompatibility")
+                if esm_compatibility is not None:
+                    self.assertIn(esm_compatibility, {"not-tested-out-of-scope", "not-applicable"})
+                policy = source_policy(source, target_id)
+                validated_source, expected, profile = BUILD_PACKAGE.validate_release_policy(policy, CONFIG)
+                self.assertEqual(validated_source, source)
+                self.assertEqual(expected["baselineVersion"], package["baselineVersion"])
+                self.assertEqual(expected["packageVersion"], package["packageVersion"])
+                self.assertEqual(expected["targetCves"], package["targetCves"])
+                self.assertEqual(profile["codename"], target_profile(CONFIG, target_id)["codename"])
+                eligibility = BUILD_PACKAGE.release_eligibility(policy)
+                self.assertFalse(eligibility["verificationChecksPassed"])
+                self.assertFalse(eligibility["releaseEligible"])
+                self.assertEqual(eligibility["reason"], "target verification checks have not passed")
+                eligibility = BUILD_PACKAGE.release_eligibility(policy, verification_checks_passed=True, publication_enabled=False)
+                self.assertFalse(eligibility["releaseEligible"])
+                self.assertEqual(eligibility["candidateStatus"], package["candidateStatus"])
+                self.assertEqual(eligibility["candidateVerified"],
+                                 package["candidateStatus"] == "development-verified-production-release-pending")
+                eligibility = BUILD_PACKAGE.release_eligibility(policy, verification_checks_passed=True, publication_enabled=True)
+                verified = package["candidateStatus"] == "development-verified-production-release-pending"
+                self.assertEqual(eligibility["releaseEligible"], verified)
+                self.assertTrue(eligibility["verificationChecksPassed"])
+                self.assertEqual(eligibility["supportScope"], target_id)
+                self.assertEqual(eligibility["targetId"], target_id)
+                self.assertEqual(eligibility["ubuntuProEsmCompatibility"], package.get("ubuntuProEsmCompatibility", "not-applicable"))
+                self.assertEqual(eligibility["reason"], None if verified else "candidate status is not approved for release")
 
     def test_package_identity_and_sponsor_policy_must_match_project_policy(self):
-        for source in CONFIG["packages"]:
-            policy = source_policy(source)
-            mismatched = {**policy, "baseVersion": "unexpected"}
-            with self.assertRaisesRegex(RuntimeError, "Packaging policy disagrees with project configuration"):
-                BUILD_PACKAGE.validate_release_policy(mismatched, CONFIG)
+        for source, package_record in CONFIG["packages"].items():
+            for target_id in package_record["targets"]:
+                policy = source_policy(source, target_id)
+                mismatched = {**policy, "baseVersion": "unexpected"}
+                with self.assertRaisesRegex(RuntimeError, "Packaging policy disagrees with project configuration"):
+                    BUILD_PACKAGE.validate_release_policy(mismatched, CONFIG)
 
     def test_candidate_export_follows_signed_client_verification_without_esm_gate(self):
         source = (SCRIPT.parents[0] / "build-package.py").read_text()

@@ -24,6 +24,12 @@ SUMMARIES = {
     "CVE-2025-61144": "tiffcrop out-of-bounds read while producing level-2 debug output",
     "CVE-2025-61143": "tiffcrop null-pointer read when debug logging follows output-open failure",
     "CVE-2025-52885": "Poppler structure-tree use-after-free on duplicate parent-tree keys",
+    "CVE-2026-69184": "c-ares CPU exhaustion from unbounded DNS compression-pointer chains",
+    "CVE-2026-111497": "Brotli decoder out-of-bounds write on invalid block switches",
+}
+SEVERITIES = {
+    "CVE-2026-69184": "HIGH",
+    "CVE-2026-111497": "CRITICAL",
 }
 
 
@@ -52,7 +58,7 @@ def build_feed(config, verified_candidates=frozenset()):
                 "details": "GetPatched records exact affected package versions and exact reviewed fixes per distribution, release, and architecture. A new target or fixed package version is accepted only after its own build and regression evidence.",
                 "affected": [], "references": [],
                 "database_specific": {
-                    "severity": "MEDIUM",
+                    "severity": SEVERITIES.get(cve, "MEDIUM"),
                     "verification_status": "development-verified-production-release-pending",
                 },
             })

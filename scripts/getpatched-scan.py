@@ -18,7 +18,7 @@ from package_recipe import load_json, recipe_path
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "verification"))
-from regression import (consumer_version_succeeded, libpng_overwrite_reproduced, libpng_stride_read_reproduced,
+from regression import (cares_regression_succeeded, consumer_version_succeeded, libpng_overwrite_reproduced, libpng_stride_read_reproduced,
                         libpng_patched_checks_succeeded, poppler_uaf_reproduced,
                         schematron_baseline_reproduced, tiff_baseline_reproduced,
                         valid_tiff_baseline_stack_signature,
@@ -390,6 +390,18 @@ def regression_verified_candidate(directory, scan_images_path, target_id, recipe
             if not libgit2_regression_checks_succeeded(cve_checks, phase):
                 description = "baseline evidence does not reproduce" if phase == "baseline" else "patched evidence does not prove"
                 raise ValueError(f"libgit2 {description} all three configured issues/fixes")
+        elif source == "c-ares":
+            check = cve_checks.get("CVE-2026-69184", {})
+            if (check.get("passed") is not True
+                    or not cares_regression_succeeded(check, target_id, phase)):
+                raise ValueError(f"c-ares {phase} evidence lacks the expected target-specific vulnerability outcome or valid-name compatibility check")
+        elif source == "brotli":
+            check = cve_checks.get("CVE-2026-111497", {})
+            expected = "vulnerabilityReproduced" if phase == "baseline" else "patchedBehavior"
+            if (check.get("passed") is not True or check.get(expected) is not True
+                    or check.get("returncode") != 0 or check.get("timedOut") is not False
+                    or check.get("normalStreamCompatible") is not True):
+                raise ValueError(f"Brotli {phase} evidence lacks the expected invalid-block-switch outcome or valid-stream compatibility check")
         else:
             raise ValueError("candidate regression runner has no package-specific evidence classifier")
     directory.mkdir(parents=True, exist_ok=True)

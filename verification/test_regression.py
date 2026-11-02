@@ -7,7 +7,7 @@ import unittest
 
 from regression import (LIBPNG_CVE_2025_65018_FIXTURE, libpng_followup_read_is_clean, libpng_output_buffer_result, libpng_overwrite_reproduced, libpng_stride_read_reproduced, memcheck_has_no_errors,
                         libpng_patched_checks_succeeded, tiff_patched_regression_succeeded,
-                        consumer_version_succeeded, poppler_uaf_reproduced, schematron_baseline_reproduced,
+                        cares_regression_succeeded, consumer_version_succeeded, poppler_uaf_reproduced, schematron_baseline_reproduced,
                         tiff_baseline_reproduced, tiff_null_output_baseline_reproduced,
                         tiff_null_output_patched_succeeded, parse_callback_url,
                         libgit2_redirect_reproduced, tiff_cve_required, execute)
@@ -20,6 +20,32 @@ class TiffPolicySelection(unittest.TestCase):
         self.assertFalse(tiff_cve_required(policy, "CVE-2025-61143"))
         self.assertFalse(tiff_cve_required({}, "CVE-2025-61143"))
         self.assertFalse(tiff_cve_required({"targetCves": "CVE-2025-61143"}, "CVE-2025-61143"))
+
+
+class CaresTargetRegression(unittest.TestCase):
+    def test_focal_requires_overlong_name_reproduction_and_valid_boundary(self):
+        baseline = {
+            "cve": "CVE-2026-69184", "testId": "c-ares-overlong-expanded-name-focal",
+            "returncode": 0, "timedOut": False, "vulnerabilityReproduced": True,
+            "stdout": "overlong_status=0 rejected=no\nmaximum_name_accepted=yes\n",
+        }
+        patched = {
+            **baseline, "vulnerabilityReproduced": False, "patchedBehavior": True,
+            "stdout": "overlong_status=8 rejected=yes\nmaximum_name_accepted=yes\n",
+        }
+        self.assertTrue(cares_regression_succeeded(baseline, "ubuntu-focal-amd64", "baseline"))
+        self.assertTrue(cares_regression_succeeded(patched, "ubuntu-focal-amd64", "patched"))
+        self.assertFalse(cares_regression_succeeded({**patched, "stdout": "overlong_status=8 rejected=yes\n"}, "ubuntu-focal-amd64", "patched"))
+        self.assertFalse(cares_regression_succeeded(baseline, "debian-trixie-amd64", "baseline"))
+
+    def test_trixie_requires_pointer_chain_reproduction_and_valid_record(self):
+        check = {
+            "cve": "CVE-2026-69184", "testId": "c-ares-unbounded-pointer-chain",
+            "returncode": 0, "timedOut": False, "vulnerabilityReproduced": True,
+            "stdout": "status=0 record=present\nvalid_status=0 valid_record=present\n",
+        }
+        self.assertTrue(cares_regression_succeeded(check, "debian-trixie-amd64", "baseline"))
+        self.assertFalse(cares_regression_succeeded(check, "ubuntu-focal-amd64", "baseline"))
 
 
 class ExecuteTimeout(unittest.TestCase):
