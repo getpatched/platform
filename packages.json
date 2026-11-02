@@ -355,10 +355,10 @@
           "releaseAccess": {"policy": "public-after-checks", "sponsorDelayHours": 0, "sponsorEligibility": null, "earlyBinaryLicenseId": null, "publicContributionSpdx": "MIT", "earlyUse": ["private", "commercial"], "earlyRedistributionAllowed": false, "publicLicenseScope": "getpatched-authored-contributions-only"}
         },
         "debian-bookworm-amd64": {
-          "baselineVersion": "22.12.0-2+deb12u2",
-          "sourcePocket": "release",
+          "baselineVersion": "22.12.0-2+deb12u3",
+          "sourcePocket": "security",
           "packageEcosystem": "Debian:12",
-          "packageVersion": "22.12.0-2+deb12u2+getpatched1",
+          "packageVersion": "22.12.0-2+deb12u3+getpatched1",
           "releaseSerial": 1,
           "binaryPackages": ["libpoppler126", "libpoppler-dev", "libpoppler-private-dev", "libpoppler-glib8", "libpoppler-glib-dev", "libpoppler-glib-doc", "gir1.2-poppler-0.18", "libpoppler-qt5-1", "libpoppler-qt5-dev", "libpoppler-qt6-3", "libpoppler-qt6-dev", "libpoppler-cpp0v5", "libpoppler-cpp-dev", "poppler-utils"],
           "advisoryPackages": ["libpoppler126"],
