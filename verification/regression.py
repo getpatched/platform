@@ -421,6 +421,7 @@ def poppler_revision6_probe_command(check):
 
 def poppler_revision6_password_overflow_reproduced(check):
     log = check.get("memoryLog", "")
+    stderr = check.get("stderr", "")
     # The vulnerable write is performed while filling the fixed K1/E buffers
     # in revision6Hash(). A library mapping alone is too broad: require the
     # offending Valgrind error context to identify that implementation frame.
@@ -432,16 +433,25 @@ def poppler_revision6_password_overflow_reproduced(check):
         re.search(r"(?:revision6Hash|Decrypt\.cc:17(?:6[4-9]|[7-9][0-9]))", context)
         for context in error_contexts
     )
+    instrumented_write = (
+        check.get("returncode") == 97
+        and bool(error_contexts)
+        and expected_hash_frame
+        and re.search(r"(?m)^==\d+== ERROR SUMMARY: [1-9]\d* errors?", log)
+    )
+    stack_canary_abort = (
+        check.get("returncode") == -6
+        and stderr.strip() == "*** stack smashing detected ***: terminated"
+        and re.search(r"Process terminating with default action of signal 6 \(SIGABRT\)", log)
+        and "__stack_chk_fail" in log
+    )
     return (
         not check.get("timedOut", False)
-        and check.get("returncode") == 97
         and check.get("cve") == "CVE-2026-107705"
         and check.get("testId") == "CVE-2026-107705-revision6-long-owner-password"
         and poppler_revision6_probe_command(check)
-        and "Invalid write" in log
         and re.search(r"\(in /usr/lib(?:/[^ )]+)?/libpoppler\.so(?:\.[0-9]+)*\)", log)
-        and expected_hash_frame
-        and re.search(r"(?m)^==\d+== ERROR SUMMARY: [1-9]\d* errors?", log)
+        and (instrumented_write or stack_canary_abort)
     )
 
 

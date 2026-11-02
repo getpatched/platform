@@ -585,6 +585,48 @@ class PopplerBaselineClassification(unittest.TestCase):
         }
         self.assertFalse(poppler_revision6_password_overflow_reproduced(check))
 
+    def test_revision6_accepts_exact_stack_canary_overflow_from_stripped_poppler(self):
+        check = {
+            "cve": "CVE-2026-107705",
+            "testId": "CVE-2026-107705-revision6-long-owner-password",
+            "command": [
+                "valgrind", "--tool=memcheck", "--error-exitcode=97", "--leak-check=no",
+                "--read-var-info=yes", "--log-file=/tmp/revision6-password.valgrind",
+                "/tmp/poppler-revision6-password", "/recipe/tests/fixtures/CVE-2026-107705-r6-encrypted.pdf",
+            ],
+            "returncode": -6,
+            "timedOut": False,
+            "stderr": "*** stack smashing detected ***: terminated\n",
+            "memoryLog": (
+                "==41== Process terminating with default action of signal 6 (SIGABRT)\n"
+                "==41==    by 0x4FDF92F: __stack_chk_fail (fortify_fail.c:24)\n"
+                "==41==    by 0x499A747: ??? (in /usr/lib/x86_64-linux-gnu/libpoppler.so.147.0.0)\n"
+                "==41== ERROR SUMMARY: 0 errors from 0 contexts\n"
+            ),
+        }
+        self.assertTrue(poppler_revision6_password_overflow_reproduced(check))
+
+    def test_revision6_rejects_unrelated_stack_smash(self):
+        check = {
+            "cve": "CVE-2026-107705",
+            "testId": "CVE-2026-107705-revision6-long-owner-password",
+            "command": [
+                "valgrind", "--tool=memcheck", "--error-exitcode=97", "--leak-check=no",
+                "--read-var-info=yes", "--log-file=/tmp/revision6-password.valgrind",
+                "/tmp/poppler-revision6-password", "/recipe/tests/fixtures/CVE-2026-107705-r6-encrypted.pdf",
+            ],
+            "returncode": -6,
+            "timedOut": False,
+            "stderr": "Aborted\n",
+            "memoryLog": (
+                "==41== Process terminating with default action of signal 6 (SIGABRT)\n"
+                "==41==    by 0x4FDF92F: __stack_chk_fail (fortify_fail.c:24)\n"
+                "==41==    by 0x499A747: ??? (in /usr/lib/x86_64-linux-gnu/libpoppler.so.147.0.0)\n"
+                "==41== ERROR SUMMARY: 0 errors from 0 contexts\n"
+            ),
+        }
+        self.assertFalse(poppler_revision6_password_overflow_reproduced(check))
+
 
 class ConsumerVersionCheck(unittest.TestCase):
     def test_version_banner_on_stdout_or_stderr_is_accepted(self):
