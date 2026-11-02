@@ -875,6 +875,7 @@ test("sponsor snapshot prefers an installed GitHub App over a configured static 
   const requests = [];
   globalThis.fetch = async (url, options) => {
     requests.push(String(url));
+    assert.equal(options.headers["user-agent"], "getpatched-release-gateway");
     if (String(url).includes("/app/installations/12345/access_tokens")) {
       const appJwt = options.headers.authorization.replace("Bearer ", "");
       const [header, payload, signature] = appJwt.split(".");

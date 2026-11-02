@@ -1172,6 +1172,7 @@ async function createGitHubAppInstallationToken(env) {
       accept: "application/vnd.github+json",
       authorization: `Bearer ${appJwt}`,
       "content-type": "application/json",
+      "user-agent": "getpatched-release-gateway",
       "x-github-api-version": "2022-11-28",
     },
     body: "{}",
@@ -1209,6 +1210,7 @@ async function fetchSponsorSnapshot(env, now) {
         accept: "application/json",
         authorization: `Bearer ${sponsorToken}`,
         "content-type": "application/json",
+        "user-agent": "getpatched-release-gateway",
       },
       body: JSON.stringify({
         query: `query GetPatchedSponsorReconciliation($after: String) {
