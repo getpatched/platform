@@ -7,6 +7,7 @@ import unittest
 
 from regression import (LIBPNG_CVE_2025_65018_FIXTURE, libpng_followup_read_is_clean, libpng_output_buffer_result, libpng_overwrite_reproduced, libpng_stride_read_reproduced, memcheck_has_no_errors,
                         libpng_patched_checks_succeeded, tiff_patched_regression_succeeded,
+                        brotli_baseline_reproduced, brotli_patched_succeeded,
                         cares_regression_succeeded, consumer_version_succeeded, poppler_uaf_reproduced, schematron_baseline_reproduced,
                         tiff_baseline_reproduced, tiff_null_output_baseline_reproduced,
                         tiff_null_output_patched_succeeded, parse_callback_url,
@@ -46,6 +47,32 @@ class CaresTargetRegression(unittest.TestCase):
         }
         self.assertTrue(cares_regression_succeeded(check, "debian-trixie-amd64", "baseline"))
         self.assertFalse(cares_regression_succeeded(check, "ubuntu-focal-amd64", "baseline"))
+
+
+class BrotliRegression(unittest.TestCase):
+    def test_baseline_requires_the_bounded_needs_more_output_signature(self):
+        check = {
+            "cve": "CVE-2026-111497", "testId": "brotli-invalid-block-switch",
+            "timedOut": False, "returncode": 0, "decoderResult": 3,
+            "decoderError": 3, "formatBlockSwitchError": -17,
+            "decoderOutputBytes": 32 * 1024 * 1024, "decoderCalls": 8192,
+            "normalStreamCompatible": True,
+        }
+        self.assertTrue(brotli_baseline_reproduced(check))
+        self.assertFalse(brotli_baseline_reproduced({**check, "decoderError": -15}))
+        self.assertFalse(brotli_baseline_reproduced({**check, "decoderOutputBytes": 4096}))
+        self.assertFalse(brotli_baseline_reproduced({**check, "decoderCalls": 1}))
+
+    def test_patched_requires_the_specific_format_error_and_compatibility(self):
+        check = {
+            "cve": "CVE-2026-111497", "testId": "brotli-invalid-block-switch",
+            "timedOut": False, "returncode": 0, "decoderResult": 0,
+            "decoderError": -17, "formatBlockSwitchError": -17,
+            "normalStreamCompatible": True,
+        }
+        self.assertTrue(brotli_patched_succeeded(check))
+        self.assertFalse(brotli_patched_succeeded({**check, "decoderResult": 3}))
+        self.assertFalse(brotli_patched_succeeded({**check, "normalStreamCompatible": False}))
 
 
 class ExecuteTimeout(unittest.TestCase):

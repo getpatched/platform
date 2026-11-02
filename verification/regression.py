@@ -238,6 +238,34 @@ def consumer_version_succeeded(check, expected_banner):
     return not check.get("timedOut", False) and check.get("returncode") == 0 and expected_banner in output
 
 
+def brotli_baseline_reproduced(check):
+    return (
+        check.get("cve") == "CVE-2026-111497"
+        and check.get("testId") == "brotli-invalid-block-switch"
+        and check.get("timedOut") is False
+        and check.get("returncode") == 0
+        and check.get("decoderResult") == 3  # BROTLI_DECODER_RESULT_NEEDS_MORE_OUTPUT
+        and check.get("decoderError") == 3
+        and check.get("formatBlockSwitchError") == -17
+        and check.get("decoderOutputBytes") == 32 * 1024 * 1024
+        and check.get("decoderCalls") == 8192
+        and check.get("normalStreamCompatible") is True
+    )
+
+
+def brotli_patched_succeeded(check):
+    return (
+        check.get("cve") == "CVE-2026-111497"
+        and check.get("testId") == "brotli-invalid-block-switch"
+        and check.get("timedOut") is False
+        and check.get("returncode") == 0
+        and check.get("decoderResult") == 0  # BROTLI_DECODER_RESULT_ERROR
+        and check.get("decoderError") == -17
+        and check.get("formatBlockSwitchError") == -17
+        and check.get("normalStreamCompatible") is True
+    )
+
+
 def cares_regression_succeeded(check, target_id, phase):
     if (target_id not in ("ubuntu-focal-amd64", "debian-trixie-amd64")
             or phase not in ("baseline", "patched")
@@ -613,20 +641,28 @@ def main():
             check["cve"] = "CVE-2026-111497"
             check["testId"] = "brotli-invalid-block-switch"
             match = re.search(
-                r"malformed_result=(-?\d+) error=(-?\d+) format_error=(-?\d+)",
+                r"malformed_result=(-?\d+) error=(-?\d+) format_error=(-?\d+) "
+                r"input_remaining=(\d+) output=(\d+) calls=(\d+)",
                 check["stdout"],
             )
             if match:
-                result, error, expected_format_error = map(int, match.groups())
+                result, error, expected_format_error, input_remaining, output_bytes, calls = map(int, match.groups())
                 check["decoderResult"] = result
                 check["decoderError"] = error
                 check["formatBlockSwitchError"] = expected_format_error
-                check["vulnerabilityReproduced"] = error != expected_format_error
-                check["patchedBehavior"] = result == 0 and error == expected_format_error
+                check["inputRemaining"] = input_remaining
+                check["decoderOutputBytes"] = output_bytes
+                check["decoderCalls"] = calls
             else:
-                check["vulnerabilityReproduced"] = False
-                check["patchedBehavior"] = False
+                check["decoderResult"] = None
+                check["decoderError"] = None
+                check["formatBlockSwitchError"] = None
+                check["inputRemaining"] = None
+                check["decoderOutputBytes"] = None
+                check["decoderCalls"] = None
             check["normalStreamCompatible"] = "compatible=yes" in check["stdout"]
+            check["vulnerabilityReproduced"] = brotli_baseline_reproduced(check)
+            check["patchedBehavior"] = brotli_patched_succeeded(check)
             check["passed"] = (
                 not check["timedOut"] and check["returncode"] == 0
                 and check["normalStreamCompatible"]
