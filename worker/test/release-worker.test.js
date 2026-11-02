@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { createHash, createHmac, generateKeyPairSync, sign as signJwt } from "node:crypto";
+import { createHash, createHmac, generateKeyPairSync, sign as signJwt, verify as verifyJwt } from "node:crypto";
 import gateway, { beginSponsorPublication, canonicalAssets, fetchSponsorSnapshot, githubActionsIdentity, hasActiveSponsorship, parseUtc, publishOne, readFreshSponsorSnapshot, reconcile, reconcileSponsors, releaseAssets, requireImmutableReleasesEnabled, updateState, verifyGithubSignature, verifyPackageRun, verifySignedSourceTag } from "../src/index.js";
 
 const TEST_RELEASE_TAG_SIGNER = "getpatched-release-maintainer";
@@ -864,6 +864,43 @@ test("sponsor snapshot paginates all active sponsorship tiers, including one-tim
     assert.deepEqual(snapshot.sponsors.map((sponsor) => sponsor.github_user_id), [17, 18, 20]);
     assert.equal(snapshot.sponsors[2].has_one_time_sponsorship, true);
     assert.equal(snapshot.tier_policy, "any-active-individual-github-sponsorship-tier");
+  } finally { globalThis.fetch = originalFetch; }
+});
+
+test("sponsor snapshot prefers an installed GitHub App over a configured static compatibility token", async () => {
+  const originalFetch = globalThis.fetch;
+  const { privateKey, publicKey } = generateKeyPairSync("rsa", { modulusLength: 2048 });
+  const privateKeyPem = privateKey.export({ type: "pkcs1", format: "pem" }).toString();
+  const publicKeyPem = publicKey.export({ type: "spki", format: "pem" });
+  const requests = [];
+  globalThis.fetch = async (url, options) => {
+    requests.push(String(url));
+    if (String(url).includes("/app/installations/12345/access_tokens")) {
+      const appJwt = options.headers.authorization.replace("Bearer ", "");
+      const [header, payload, signature] = appJwt.split(".");
+      assert.deepEqual(JSON.parse(Buffer.from(header, "base64url").toString()), { alg: "RS256", typ: "JWT" });
+      assert.equal(JSON.parse(Buffer.from(payload, "base64url").toString()).iss, "67890");
+      assert.equal(verifyJwt("RSA-SHA256", Buffer.from(`${header}.${payload}`), publicKeyPem, Buffer.from(signature, "base64url")), true);
+      return Response.json({ token: "installation-token" }, { status: 201 });
+    }
+    assert.equal(options.headers.authorization, "Bearer installation-token");
+    return Response.json({ data: { organization: {
+      login: "getpatched", hasSponsorsListing: true,
+      sponsorshipsAsMaintainer: { nodes: [], pageInfo: { hasNextPage: false, endCursor: null } },
+    } } });
+  };
+  try {
+    const snapshot = await fetchSponsorSnapshot({
+      SPONSOR_GITHUB_APP_ID: "67890",
+      SPONSOR_GITHUB_INSTALLATION_ID: "12345",
+      SPONSOR_GITHUB_PRIVATE_KEY: privateKeyPem,
+      SPONSOR_GRAPHQL_TOKEN: "must-not-be-used",
+    }, new Date("2026-10-25T16:00:00Z"));
+    assert.deepEqual(requests, [
+      "https://api.github.com/app/installations/12345/access_tokens",
+      "https://api.github.com/graphql",
+    ]);
+    assert.deepEqual(snapshot.sponsors, []);
   } finally { globalThis.fetch = originalFetch; }
 });
 
