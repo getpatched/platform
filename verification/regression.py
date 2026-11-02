@@ -732,12 +732,11 @@ def main():
             check["testId"] = "CVE-2026-117610-empty-nonfinal-subparser"
             check["passed"] = expat_regression_succeeded(check, args.phase)
             checks.append(check)
-            if args.phase == "patched":
-                source_version = policy["baseVersion"].split("-", 1)[0]
-                consumer = execute(["xmlwf", "-v"])
-                consumer["testId"] = "expat-xmlwf-version"
-                consumer["passed"] = expat_consumer_succeeded(consumer, source_version)
-                checks.append(consumer)
+            source_version = policy["baseVersion"].split("-", 1)[0]
+            consumer = execute(["xmlwf", "-v"])
+            consumer["testId"] = "expat-xmlwf-version"
+            consumer["passed"] = expat_consumer_succeeded(consumer, source_version)
+            checks.append(consumer)
         elif package == "tiff":
             fixture = fixtures / "multisample.tif"
             if not fixture.is_file() or not 0 < fixture.stat().st_size < 1024 * 1024:

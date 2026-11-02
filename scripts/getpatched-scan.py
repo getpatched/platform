@@ -145,10 +145,9 @@ def poppler_patched_checks_succeeded(cve_check, checks):
 
 
 def expat_candidate_checks_succeeded(cve_check, checks, phase, expected_version):
-    if not expat_regression_succeeded(cve_check, phase):
+    if (sum(item.get("cve") == "CVE-2026-117610" for item in checks) != 1
+            or not expat_regression_succeeded(cve_check, phase)):
         return False
-    if phase == "baseline":
-        return True
     consumers = [item for item in checks if item.get("testId") == "expat-xmlwf-version"]
     return len(consumers) == 1 and expat_consumer_succeeded(consumers[0], expected_version)
 

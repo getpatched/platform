@@ -36,6 +36,12 @@ class ExpatRegressionEvidence(unittest.TestCase):
         self.assertFalse(expat_regression_succeeded({**check, "timedOut": True}, "baseline"))
         self.assertFalse(expat_regression_succeeded({**check, "cve": "CVE-2026-999999"}, "baseline"))
 
+    def test_consumer_version_check_accepts_only_the_matching_installed_version(self):
+        consumer = {"testId": "expat-xmlwf-version", "returncode": 0, "timedOut": False,
+                    "stdout": "xmlwf using expat_2.5.0\n", "passed": True}
+        self.assertTrue(expat_consumer_succeeded(consumer, "2.5.0"))
+        self.assertFalse(expat_consumer_succeeded(consumer, "2.9.0"))
+
     def test_patched_probe_and_matching_xmlwf_consumer_are_required(self):
         probe = {"cve": "CVE-2026-117610", "testId": "CVE-2026-117610-empty-nonfinal-subparser",
                  "returncode": 0, "timedOut": False}
@@ -43,7 +49,6 @@ class ExpatRegressionEvidence(unittest.TestCase):
         consumer = {"testId": "expat-xmlwf-version", "returncode": 0, "timedOut": False,
                     "stdout": "xmlwf using expat_2.5.0\n", "passed": True}
         self.assertTrue(expat_consumer_succeeded(consumer, "2.5.0"))
-        self.assertFalse(expat_consumer_succeeded(consumer, "2.9.0"))
         self.assertFalse(expat_consumer_succeeded({**consumer, "timedOut": True}, "2.5.0"))
 
 
