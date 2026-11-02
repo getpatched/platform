@@ -11,16 +11,44 @@ from regression import (LIBPNG_CVE_2025_65018_FIXTURE, libpng_followup_read_is_c
                         cares_regression_succeeded, consumer_version_succeeded, poppler_uaf_reproduced, schematron_baseline_reproduced,
                         tiff_baseline_reproduced, tiff_null_output_baseline_reproduced,
                         tiff_null_output_patched_succeeded, parse_callback_url,
-                        libgit2_redirect_reproduced, tiff_cve_required, execute)
+                        libgit2_redirect_reproduced, tiff_cve_required,
+                        tiff_subdivision_baseline_reproduced, tiff_subdivision_patched_succeeded, execute)
 
 
 class TiffPolicySelection(unittest.TestCase):
     def test_only_configured_target_cves_require_installed_checks(self):
         policy = {"targetCves": ["CVE-2025-61144"]}
         self.assertTrue(tiff_cve_required(policy, "CVE-2025-61144"))
+        self.assertTrue(tiff_cve_required({"targetCves": ["CVE-2026-52490"]}, "CVE-2026-52490"))
         self.assertFalse(tiff_cve_required(policy, "CVE-2025-61143"))
         self.assertFalse(tiff_cve_required({}, "CVE-2025-61143"))
         self.assertFalse(tiff_cve_required({"targetCves": "CVE-2025-61143"}, "CVE-2025-61143"))
+
+
+class TiffSubdivisionOverflowRegression(unittest.TestCase):
+    command = ["tiffcrop", "-S", "134217729:32", "-h"]
+
+    def test_exact_baseline_accepts_wrapped_count_and_prints_help(self):
+        check = {
+            "cve": "CVE-2026-52490", "testId": "tiffcrop-subdivision-overflow-check",
+            "command": self.command, "returncode": 0, "timedOut": False,
+            "stdout": "TIFF 4.5.0\\nusage: tiffcrop [options] source1 destination\\n", "stderr": "",
+        }
+        self.assertTrue(tiff_subdivision_baseline_reproduced(check))
+        self.assertFalse(tiff_subdivision_baseline_reproduced({**check, "command": [*self.command, "extra"]}))
+        self.assertFalse(tiff_subdivision_baseline_reproduced({**check, "stdout": "usage missing"}))
+        self.assertFalse(tiff_subdivision_baseline_reproduced({**check, "timedOut": True}))
+
+    def test_patched_package_rejects_wrapped_count_before_help(self):
+        check = {
+            "cve": "CVE-2026-52490", "testId": "tiffcrop-subdivision-overflow-check",
+            "command": self.command, "returncode": 1, "timedOut": False,
+            "stdout": "", "stderr": "Limit for subdivisions, ie rows x columns, exceeded: 32\\n",
+        }
+        self.assertTrue(tiff_subdivision_patched_succeeded(check))
+        self.assertFalse(tiff_subdivision_patched_succeeded({**check, "returncode": 0}))
+        self.assertFalse(tiff_subdivision_patched_succeeded({**check, "stderr": "usage: tiffcrop"}))
+        self.assertFalse(tiff_subdivision_patched_succeeded({**check, "command": ["other"]}))
 
 
 class CaresTargetRegression(unittest.TestCase):

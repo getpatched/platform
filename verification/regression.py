@@ -148,6 +148,35 @@ def tiff_cve_required(policy, cve):
     return isinstance(configured, list) and cve in configured
 
 
+TIFF_SUBDIVISION_OVERFLOW_COMMAND = ["tiffcrop", "-S", "134217729:32", "-h"]
+
+
+def tiff_subdivision_baseline_reproduced(check):
+    output = check.get("stdout", "") + check.get("stderr", "")
+    return (
+        check.get("cve") == "CVE-2026-52490"
+        and check.get("testId") == "tiffcrop-subdivision-overflow-check"
+        and check.get("command") == TIFF_SUBDIVISION_OVERFLOW_COMMAND
+        and not check.get("timedOut", False)
+        and check.get("returncode") == 0
+        and "usage: tiffcrop" in output.lower()
+        and "Limit for subdivisions" not in output
+    )
+
+
+def tiff_subdivision_patched_succeeded(check):
+    output = check.get("stdout", "") + check.get("stderr", "")
+    return (
+        check.get("cve") == "CVE-2026-52490"
+        and check.get("testId") == "tiffcrop-subdivision-overflow-check"
+        and check.get("command") == TIFF_SUBDIVISION_OVERFLOW_COMMAND
+        and not check.get("timedOut", False)
+        and check.get("returncode") == 1
+        and "Limit for subdivisions" in output
+        and "usage: tiffcrop" not in output.lower()
+    )
+
+
 def valgrind_invalid_access_blocks(log):
     pattern = re.compile(
         r"(?ms)^==\d+== (?P<kind>Invalid (?:read|write) of size \d+)\n"
@@ -729,6 +758,17 @@ def main():
                     if args.phase == "baseline"
                     else tiff_patched_regression_succeeded(check)
                     and output.is_file() and output.stat().st_size > 0
+                )
+                checks.append(check)
+
+            if tiff_cve_required(policy, "CVE-2026-52490"):
+                check = execute(TIFF_SUBDIVISION_OVERFLOW_COMMAND, timeout=10)
+                check["cve"] = "CVE-2026-52490"
+                check["testId"] = "tiffcrop-subdivision-overflow-check"
+                check["passed"] = (
+                    tiff_subdivision_baseline_reproduced(check)
+                    if args.phase == "baseline"
+                    else tiff_subdivision_patched_succeeded(check)
                 )
                 checks.append(check)
 

@@ -91,6 +91,47 @@ class GetPatchedScannerContract(unittest.TestCase):
             metadata_path.write_text(json.dumps(metadata))
             self.assertIsNone(SCANNER_MODULE.tiff_baseline_stack_signature(recipe, "ubuntu-focal-amd64"))
 
+    def test_tiff_candidate_scanner_requires_subdivision_overflow_checks(self):
+        target = {"targetCves": ["CVE-2025-61144", "CVE-2026-52490"]}
+        stack = ["0x114980", "0x116FB2", "0x10AC12"]
+        baseline = [
+            {
+                "cve": "CVE-2025-61144", "passed": True, "returncode": 97, "timedOut": False,
+                "command": TIFF_BASELINE_COMMAND, "memoryLog": TIFF_BASELINE_LOG,
+                "baselineStackFrames": stack,
+            },
+            {
+                "cve": "CVE-2026-52490", "testId": "tiffcrop-subdivision-overflow-check",
+                "passed": True, "command": ["tiffcrop", "-S", "134217729:32", "-h"],
+                "returncode": 0, "timedOut": False,
+                "stdout": "usage: tiffcrop [options] source1 destination\\n", "stderr": "",
+            },
+        ]
+        SCANNER_MODULE.validate_tiff_regression_checks(target, baseline, "baseline", stack)
+        with self.assertRaisesRegex(ValueError, "baseline evidence"):
+            SCANNER_MODULE.validate_tiff_regression_checks(target, baseline[:1], "baseline", stack)
+
+        patched = [
+            {
+                "cve": "CVE-2025-61144", "passed": True, "returncode": 0, "timedOut": False,
+                "command": ["valgrind", "--tool=memcheck", "--error-exitcode=97", "--leak-check=no",
+                            "--read-var-info=yes", "--log-file=/tmp/tiffcrop.log", "tiffcrop", "-D",
+                            "format:txt,level:2,input:/tmp/debug", "multisample.tif", "output.tif"],
+                "memoryLog": TIFF_PATCHED_LOG, "baselineStackFrames": stack,
+            },
+            {
+                "cve": "CVE-2026-52490", "testId": "tiffcrop-subdivision-overflow-check",
+                "passed": True, "command": ["tiffcrop", "-S", "134217729:32", "-h"],
+                "returncode": 1, "timedOut": False, "stdout": "",
+                "stderr": "Limit for subdivisions, ie rows x columns, exceeded: 32\\n",
+            },
+            {"passed": True, "command": ["tiffinfo", "output.tif"], "returncode": 0,
+             "timedOut": False, "stdout": "Image Width: 16\\n"},
+        ]
+        SCANNER_MODULE.validate_tiff_regression_checks(target, patched, "patched", stack)
+        with self.assertRaisesRegex(ValueError, "patched evidence"):
+            SCANNER_MODULE.validate_tiff_regression_checks(target, patched[:1], "patched", stack)
+
     def test_poppler_candidate_accepts_pdfinfo_version_on_stderr(self):
         cve_check = {
             "returncode": 0,
@@ -354,7 +395,7 @@ Architecture: i386
         self.assertEqual(records, [])
 
     def test_unverified_candidate_requires_version_match_and_regression_evidence(self):
-        candidate = "4.1.0+git191117-2ubuntu0.20.04.14+getpatched1"
+        candidate = "4.1.0+git191117-2ubuntu0.20.04.14+getpatched2"
 
         with tempfile.TemporaryDirectory(prefix="getpatched-tiff-regression-proof-") as directory:
             proof = Path(directory)
@@ -473,10 +514,10 @@ Architecture: i386
             self.make_tiff_recipe(recipe_directory)
             (Path(directory) / "images.json").write_text(json.dumps({"baselineImageId": "image-baseline", "patchedImageId": "image-patched"}))
             (Path(directory) / "policy.json").write_text(json.dumps({"source": "tiff", "targetId": "ubuntu-focal-amd64"}))
-            (Path(directory) / "status").write_text("Package: libtiff-tools\nStatus: install ok installed\nVersion: 4.1.0+git191117-2ubuntu0.20.04.14+getpatched1\nArchitecture: amd64\n")
+            (Path(directory) / "status").write_text("Package: libtiff-tools\nStatus: install ok installed\nVersion: 4.1.0+git191117-2ubuntu0.20.04.14+getpatched2\nArchitecture: amd64\n")
             for phase, version, code, log in (("baseline", "4.1.0+git191117-2ubuntu0.20.04.14", 97,
                                                TIFF_BASELINE_LOG),
-                                              ("patched", "4.1.0+git191117-2ubuntu0.20.04.14+getpatched1", 0,
+                                              ("patched", "4.1.0+git191117-2ubuntu0.20.04.14+getpatched2", 0,
                                               TIFF_PATCHED_LOG)):
                 is_baseline = phase == "baseline"
                 null_log_path = str(Path(directory) / "null-output.log")
@@ -547,7 +588,7 @@ raise SystemExit(3)
     def test_candidate_generic_passing_reports_without_target_cve_proof_are_rejected(self):
         with tempfile.TemporaryDirectory(prefix="getpatched-tiff-regression-proof-") as directory:
             proof = Path(directory)
-            for phase, version in (("baseline", "4.1.0+git191117-2ubuntu0.20.04.14"), ("patched", "4.1.0+git191117-2ubuntu0.20.04.14+getpatched1")):
+            for phase, version in (("baseline", "4.1.0+git191117-2ubuntu0.20.04.14"), ("patched", "4.1.0+git191117-2ubuntu0.20.04.14+getpatched2")):
                 (proof / f"{phase}-regression.json").write_text(json.dumps({
                     "runner": "getpatched-platform-regression/1",
                     "runnerSha256": hashlib.sha256((ROOT / "verification/regression.py").read_bytes()).hexdigest(),
@@ -563,10 +604,10 @@ raise SystemExit(3)
             policy_file = proof / "package-policy.json"
             policy_file.write_text(json.dumps({"source": "tiff", "targetId": "ubuntu-focal-amd64",
                                                "baseVersion": "4.1.0+git191117-2ubuntu0.20.04.14",
-                                               "version": "4.1.0+git191117-2ubuntu0.20.04.14+getpatched1"}))
+                                               "version": "4.1.0+git191117-2ubuntu0.20.04.14+getpatched2"}))
             docker_stub = self.docker_stub(proof, proof)
             result = self.scan(
-                "Package: libtiff-tools\nStatus: install ok installed\nVersion: 4.1.0+git191117-2ubuntu0.20.04.14+getpatched1\nArchitecture: amd64\n",
+                "Package: libtiff-tools\nStatus: install ok installed\nVersion: 4.1.0+git191117-2ubuntu0.20.04.14+getpatched2\nArchitecture: amd64\n",
                 target_id="ubuntu-focal-amd64", regression_directory=proof, image_id="image-patched",
                 regression_phase="after", scan_images=scan_images, recipe_directory=proof,
                 policy_file=policy_file, docker_stub_dir=docker_stub, docker_report_dir=proof,
@@ -579,7 +620,7 @@ raise SystemExit(3)
             proof = Path(directory)
             recipe_directory = proof / "recipe"
             self.make_tiff_recipe(recipe_directory)
-            for phase, version in (("baseline", "4.1.0+git191117-2ubuntu0.20.04.14"), ("patched", "4.1.0+git191117-2ubuntu0.20.04.14+getpatched1")):
+            for phase, version in (("baseline", "4.1.0+git191117-2ubuntu0.20.04.14"), ("patched", "4.1.0+git191117-2ubuntu0.20.04.14+getpatched2")):
                 checks = [{"cve": "CVE-2025-61144", "passed": True, "returncode": 97 if phase == "baseline" else 0,
                            "timedOut": False, "command": TIFF_BASELINE_COMMAND,
                            "memoryLog": (TIFF_BASELINE_LOG if phase == "baseline" else TIFF_PATCHED_LOG),
@@ -613,8 +654,8 @@ raise SystemExit(3)
             (Path(directory) / "patched-regression.json").write_bytes((proof / "patched-regression.json").read_bytes())
             (proof / "scan-images.json").write_text(json.dumps({"baselineImageId": "image-baseline", "patchedImageId": "image-patched"}))
             (proof / "package-policy.json").write_text(json.dumps({"source": "tiff", "targetId": "ubuntu-focal-amd64",
-                "baseVersion": "4.1.0+git191117-2ubuntu0.20.04.14", "version": "4.1.0+git191117-2ubuntu0.20.04.14+getpatched1"}))
-            (proof / "patched-status.txt").write_text("Package: libtiff-tools\nStatus: install ok installed\nVersion: 4.1.0+git191117-2ubuntu0.20.04.14+getpatched1\nArchitecture: amd64\n")
+                "baseVersion": "4.1.0+git191117-2ubuntu0.20.04.14", "version": "4.1.0+git191117-2ubuntu0.20.04.14+getpatched2"}))
+            (proof / "patched-status.txt").write_text("Package: libtiff-tools\nStatus: install ok installed\nVersion: 4.1.0+git191117-2ubuntu0.20.04.14+getpatched2\nArchitecture: amd64\n")
             stub = proof / "bin"
             stub.mkdir()
             docker = stub / "docker"
@@ -650,7 +691,7 @@ raise SystemExit(3)
 ''')
             docker.chmod(0o755)
             result = self.scan(
-                "Package: libtiff-tools\nStatus: install ok installed\nVersion: 4.1.0+git191117-2ubuntu0.20.04.14+getpatched1\nArchitecture: amd64\n",
+                "Package: libtiff-tools\nStatus: install ok installed\nVersion: 4.1.0+git191117-2ubuntu0.20.04.14+getpatched2\nArchitecture: amd64\n",
                 target_id="ubuntu-focal-amd64", regression_directory=proof, image_id="image-patched",
                 regression_phase="after", scan_images=proof / "scan-images.json", recipe_directory=recipe_directory,
                 policy_file=proof / "package-policy.json", docker_stub_dir=stub, docker_report_dir=proof,
@@ -663,7 +704,7 @@ raise SystemExit(3)
         with tempfile.TemporaryDirectory(prefix="getpatched-forged-regression-proof-") as directory:
             proof = Path(directory)
             for phase, version in (("baseline", "4.1.0+git191117-2ubuntu0.20.04.14"),
-                                   ("patched", "4.1.0+git191117-2ubuntu0.20.04.14+getpatched1")):
+                                   ("patched", "4.1.0+git191117-2ubuntu0.20.04.14+getpatched2")):
                 (proof / f"{phase}-regression.json").write_text(json.dumps({
                     "runner": "getpatched-platform-regression/1",
                     "runnerSha256": hashlib.sha256((ROOT / "verification/regression.py").read_bytes()).hexdigest(),
@@ -682,14 +723,14 @@ raise SystemExit(3)
             policy_file = proof / "package-policy.json"
             policy_file.write_text(json.dumps({"source": "tiff", "targetId": "ubuntu-focal-amd64",
                                                "baseVersion": "4.1.0+git191117-2ubuntu0.20.04.14",
-                                               "version": "4.1.0+git191117-2ubuntu0.20.04.14+getpatched1"}))
+                                               "version": "4.1.0+git191117-2ubuntu0.20.04.14+getpatched2"}))
             stub = proof / "bin"
             stub.mkdir()
             docker = stub / "docker"
             docker.write_text("#!" + sys.executable + "\nraise SystemExit(1)\n")
             docker.chmod(0o755)
             result = self.scan(
-                "Package: libtiff-tools\nStatus: install ok installed\nVersion: 4.1.0+git191117-2ubuntu0.20.04.14+getpatched1\nArchitecture: amd64\n",
+                "Package: libtiff-tools\nStatus: install ok installed\nVersion: 4.1.0+git191117-2ubuntu0.20.04.14+getpatched2\nArchitecture: amd64\n",
                 target_id="ubuntu-focal-amd64", regression_directory=proof, image_id="invented-patched",
                 regression_phase="after", scan_images=scan_images, recipe_directory=proof,
                 policy_file=policy_file, docker_stub_dir=stub,
