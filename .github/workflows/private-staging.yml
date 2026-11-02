@@ -35,7 +35,7 @@ jobs:
           RUN_WORKFLOW_ID: ${{ github.event.workflow_run.workflow_id }}
         run: |
           test "$RUN_WORKFLOW_ID" = "395891327"
-          [[ "$RUN_TITLE" =~ ^Verify\ (libxml2|libarchive|libpng1\.6|libgit2|tiff|poppler)\ on\ ([a-z0-9-]+)\ at\ ([0-9a-f]{40})$ ]]
+          [[ "$RUN_TITLE" =~ ^Verify\ (libxml2|libarchive|libpng1\.6|libgit2|tiff|poppler|c-ares|brotli)\ on\ ([a-z0-9-]+)\ at\ ([0-9a-f]{40})$ ]]
           package="${BASH_REMATCH[1]}"
           target_id="${BASH_REMATCH[2]}"
           source_commit="${BASH_REMATCH[3]}"

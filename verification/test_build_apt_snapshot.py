@@ -78,7 +78,7 @@ class SnapshotAssemblyContract(unittest.TestCase):
             BUILD.validate_release(invalid)
 
     def test_inventory_accepts_selected_public_batch_recipe_repositories(self):
-        for package in ("libpng1.6", "libgit2", "tiff", "poppler"):
+        for package in ("libpng1.6", "libgit2", "tiff", "poppler", "c-ares", "brotli"):
             release = release_record()
             release["repository"] = f"getpatched/packaging-{package}"
             BUILD.validate_release(release)
