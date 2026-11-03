@@ -10,7 +10,7 @@ from unittest import mock
 from regression import (LIBPNG_CVE_2025_65018_FIXTURE, pixarlog_baseline_reproduced, pixarlog_patched_succeeded, libpng_followup_read_is_clean, libpng_output_buffer_result, libpng_overwrite_reproduced, libpng_stride_read_reproduced, memcheck_has_no_errors,
                         libpng_patched_checks_succeeded, tiff_patched_regression_succeeded,
                         brotli_baseline_reproduced, brotli_patched_succeeded,
-                        cares_regression_succeeded, consumer_version_succeeded, expat_consumer_succeeded, expat_regression_succeeded, expat_reset_regression_succeeded,
+                        cares_regression_succeeded, consumer_version_succeeded, expat_consumer_succeeded, expat_entropy_regression_succeeded, expat_regression_succeeded, expat_reset_regression_succeeded,
                         libxml2_catalog_baseline_reproduced, libxml2_catalog_patched_succeeded,
                         libxml2_python_sax_baseline_reproduced, libxml2_python_sax_patched_succeeded,
                         libxml2_check_cardinality_valid,
@@ -299,6 +299,38 @@ class ExpatRegressionEvidence(unittest.TestCase):
                                       "fresh_parser_status=ok error=no error\n")}
         self.assertTrue(expat_reset_regression_succeeded(fixed, "patched"))
         self.assertFalse(expat_reset_regression_succeeded({**fixed, "stdout": "after_reset_status=error error=out of memory"}, "patched"))
+
+    def test_hash_salt_requires_16_bytes_and_the_new_api(self):
+        base = {"cve": "CVE-2026-41080",
+                "testId": "CVE-2026-41080-16-byte-hash-salt",
+                "returncode": 0, "timedOut": False}
+        baseline = {
+            **base,
+            "stderr": "expat: Entropy: getrandom (8 bytes)\n",
+            "stdout": "hash_salt16_api=unavailable\n",
+        }
+        self.assertTrue(expat_entropy_regression_succeeded(baseline, "baseline"))
+        self.assertFalse(expat_entropy_regression_succeeded({
+            **baseline, "stderr": "expat: Entropy: getrandom (16 bytes)\n",
+        }, "baseline"))
+        self.assertFalse(expat_entropy_regression_succeeded({
+            **baseline, "stdout": "hash_salt16_api=available\n",
+        }, "baseline"))
+        patched = {
+            **base,
+            "stderr": "expat: Entropy: getrandom (16 bytes)\n",
+            "stdout": "hash_salt16_api=available null_inputs=rejected late_call=rejected\n",
+        }
+        self.assertTrue(expat_entropy_regression_succeeded(patched, "patched"))
+        self.assertFalse(expat_entropy_regression_succeeded({
+            **patched, "stderr": "expat: Entropy: getrandom (8 bytes)\n",
+        }, "patched"))
+        self.assertFalse(expat_entropy_regression_succeeded({
+            **patched, "stdout": "hash_salt16_api=unavailable\n",
+        }, "patched"))
+        self.assertFalse(expat_entropy_regression_succeeded({
+            **patched, "timedOut": True,
+        }, "patched"))
 
     def test_consumer_version_check_accepts_only_the_matching_installed_version(self):
         consumer = {"testId": "expat-xmlwf-version", "returncode": 0, "timedOut": False,

@@ -1025,8 +1025,8 @@
           "baselineVersion": "2.5.0-1+deb12u5",
           "sourcePocket": "security",
           "packageEcosystem": "Debian:12",
-          "packageVersion": "2.5.0-1+deb12u5+getpatched1",
-          "releaseSerial": 1,
+          "packageVersion": "2.5.0-1+deb12u5+getpatched2",
+          "releaseSerial": 2,
           "binaryPackages": [
             "libexpat1",
             "libexpat1-dev",
@@ -1040,13 +1040,15 @@
           "builderPackages": [],
           "targetCve": "CVE-2026-117610",
           "targetCves": [
-            "CVE-2026-117610"
+            "CVE-2026-117610",
+            "CVE-2026-41080"
           ],
           "advisory": "https://security-tracker.debian.org/tracker/CVE-2026-117610",
           "advisories": {
-            "CVE-2026-117610": "https://security-tracker.debian.org/tracker/CVE-2026-117610"
+            "CVE-2026-117610": "https://security-tracker.debian.org/tracker/CVE-2026-117610",
+            "CVE-2026-41080": "https://security-tracker.debian.org/tracker/CVE-2026-41080"
           },
-          "candidateStatus": "development-verified-production-release-pending",
+          "candidateStatus": "unverified-development-candidate",
           "releaseAccess": {
             "policy": "public-after-checks",
             "sponsorDelayHours": 0,
@@ -1059,7 +1061,25 @@
             ],
             "earlyRedistributionAllowed": false,
             "publicLicenseScope": "getpatched-authored-contributions-only"
-          }
+          },
+          "verifiedReleases": [
+            {
+              "version": "2.5.0-1+deb12u5+getpatched1",
+              "releaseSerial": 1,
+              "status": "development-verified-production-release-pending",
+              "targetCves": [
+                "CVE-2026-117610"
+              ],
+              "advisoryPackagesByCve": {
+                "CVE-2026-117610": [
+                  "expat",
+                  "libexpat1",
+                  "libexpat1-dev"
+                ]
+              },
+              "verification": "https://github.com/getpatched/platform/actions/runs/41543751522"
+            }
+          ]
         },
         "debian-trixie-amd64": {
           "baselineVersion": "2.9.0-1~deb13u1",
