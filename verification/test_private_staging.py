@@ -61,7 +61,7 @@ class PrivateStagingManifest(unittest.TestCase):
         producer = (ROOT / ".github/workflows/package-verification.yml").read_text()
         staging = (ROOT / ".github/workflows/private-staging.yml").read_text()
         self.assertIn('name: source-${{ matrix.package }}-${{ inputs.target_id }}-${{ github.run_id }}-${{ github.run_attempt }}', producer)
-        self.assertIn('source_branch="$(python3 scripts/resolve-target-branch.py --target "$TARGET_ID")"', producer)
+        self.assertIn('source_branch="$(python3 scripts/resolve-target-branch.py --target "$TARGET_ID" --package "$PACKAGE")"', producer)
         self.assertIn('source_branch="$(python3 scripts/resolve-target-branch.py --target "$target_id")"', staging)
         self.assertIn('"refs/heads/$source_branch"', producer + staging)
         self.assertIn('gh run download "$RUN_ID" --repo getpatched/platform --name "source-${package}-${target_id}-${RUN_ID}-${RUN_ATTEMPT}" --dir "$RUNNER_TEMP/candidate/source"', staging)
