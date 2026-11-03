@@ -297,11 +297,15 @@ class PublicCatalogueContract(unittest.TestCase):
             set(entries["tiff"]["targets"]),
             {"debian-bookworm-amd64", "debian-trixie-amd64"},
         )
-        for target in entries["tiff"]["targets"].values():
-            self.assertEqual(target["cves"], ["CVE-2025-61144", "CVE-2026-52490"])
+        expected_tiff_cves = {
+            "debian-bookworm-amd64": ["CVE-2025-61144", "CVE-2026-52490", "CVE-2026-12912"],
+            "debian-trixie-amd64": ["CVE-2025-61144", "CVE-2026-52490"],
+        }
+        for target_id, target in entries["tiff"]["targets"].items():
+            self.assertEqual(target["cves"], expected_tiff_cves[target_id])
             self.assertEqual(
                 {v["slug"] for v in target["vulnerabilities"]},
-                {"cve-2025-61144", "cve-2026-52490"},
+                {cve.lower() for cve in expected_tiff_cves[target_id]},
             )
             self.assertEqual(target["status"], "development-verified-production-release-pending")
         self.assertEqual(set(catalogue["targets"]), set(platform["targets"]))
@@ -362,7 +366,7 @@ class PublicCatalogueContract(unittest.TestCase):
                     ("brotli", "ubuntu-focal-amd64"): "41492184315",
                     ("expat", "debian-bookworm-amd64"): "41543751522",
                     ("expat", "debian-trixie-amd64"): "41546270294",
-("tiff", "debian-bookworm-amd64"): "41553176585",
+                    ("tiff", "debian-bookworm-amd64"): "41584790178",
                     ("tiff", "debian-trixie-amd64"): "41554198692",
                 }[(source, target_id)]
                 self.assertEqual(entry["verification"], f"https://github.com/getpatched/platform/actions/runs/{expected_run}")
@@ -375,7 +379,7 @@ class PublicCatalogueContract(unittest.TestCase):
                 self.assertTrue(entry["patchUrl"].startswith(f"https://github.com/getpatched/packaging-{source}/blob/"))
                 branch = target_profile(platform, target_id)["sourceBranch"]
                 if source == "tiff" and target_id in {"debian-bookworm-amd64", "debian-trixie-amd64"}:
-                    patch_file = "CVE-2026-52490-bookworm.patch" if target_id == "debian-bookworm-amd64" else "CVE-2026-52490-trixie.patch"
+                    patch_file = "CVE-2026-12912-bookworm.patch" if target_id == "debian-bookworm-amd64" else "CVE-2026-52490-trixie.patch"
                     expected_branch = "getpatched/debian-bookworm" if target_id == "debian-bookworm-amd64" else "getpatched/debian-trixie"
                     self.assertEqual(entry["patchUrl"], f"https://github.com/getpatched/packaging-tiff/blob/{expected_branch}/patches/{patch_file}")
                     self.assertEqual(entry["testsUrl"], f"https://github.com/getpatched/packaging-tiff/blob/{expected_branch}/patches/metadata.json")

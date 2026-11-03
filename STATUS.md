@@ -1,3 +1,15 @@
+## TIFF CVE-2026-12912 candidate verification — 3 Nov 2026
+
+- Debian Bookworm amd64 policy-matched hosted run [41584790178](https://github.com/getpatched/platform/actions/runs/41584790178) passed exact-source build, installed baseline/patched PixarLog regression, package-aware scan, TIFF consumers, and isolated signed APT client. candidateVerified=true; releaseEligible=false.
+- The TIFF-only package-aware scan changed three target CVEs to zero; the full scan retains unrelated Expat CVE-2026-117610. Raw Trivy 0.70 still reports three TIFF CVEs on candidate package records. This discrepancy remains a production-release blocker; no Trivy-clean claim is made.
+- Catalogue, per-CVE/patch records, and verification tests now reference this run in the open nonproduction PR #109. Public recipe PR #4 is merged. Campaign count stays 4/100 pending full CI and fresh independent review. No binaries or signed production indexes were published.
+- Evidence: evidence/tiff-cve-2026-12912-2026-11-03.md.
+
+### Next actions
+
+1. Run the complete platform quality workflow, then obtain fresh independent review of the final PR diff.
+2. Keep PR #109 unmerged while its merge would deploy the Worker/site.
+
 # GetPatched implementation status
 
 ## Expat CVE-2026-117610 policy-matched development verification — 3 Nov 2026

@@ -1034,10 +1034,11 @@
       "targets": {
         "debian-bookworm-amd64": {
           "baseVersion": "4.5.0-6+deb12u4",
-          "version": "4.5.0-6+deb12u4+getpatched3",
+          "version": "4.5.0-6+deb12u4+getpatched4",
           "cves": [
             "CVE-2025-61144",
-            "CVE-2026-52490"
+            "CVE-2026-52490",
+            "CVE-2026-12912"
           ],
           "vulnerabilities": [
             {
@@ -1057,6 +1058,16 @@
               "advisoryUrl": "https://security-tracker.debian.org/tracker/CVE-2026-52490",
               "patchSlugs": [
                 "cve-2026-52490-bookworm"
+              ],
+              "patched": true
+            },
+            {
+              "id": "CVE-2026-12912",
+              "slug": "cve-2026-12912",
+              "summary": "Certain PixarLog-compressed RGB TIFF strips can cause an out-of-bounds write in the 8BITABGR decoder.",
+              "advisoryUrl": "https://security-tracker.debian.org/tracker/CVE-2026-12912",
+              "patchSlugs": [
+                "cve-2026-12912-bookworm"
               ],
               "patched": true
             }
@@ -1109,6 +1120,30 @@
                   "patchedExpectation": "The same bounded command returns nonzero and reports that the MAX_SECTIONS limit was exceeded."
                 }
               ]
+            },
+            {
+              "id": "cve-2026-12912-bookworm",
+              "slug": "cve-2026-12912-bookworm",
+              "kind": "security",
+              "title": "Bound PixarLog 8BITABGR output for RGB strips (Bookworm)",
+              "description": "Corrects the ABGR output cursor and bounds multi-row decoding against the caller's buffer size.",
+              "sha256": "afe2b4ddedd20cd27da6926a5aea1385b2876aad25df198e3abbafb169f2655d",
+              "fileUrl": "https://github.com/getpatched/packaging-tiff/blob/getpatched/debian-bookworm/patches/CVE-2026-12912-bookworm.patch",
+              "cves": [
+                "CVE-2026-12912"
+              ],
+              "upstream": {
+                "repository": "https://gitlab.com/libtiff/libtiff",
+                "commit": "90601d9a23382d98f3695ec14441145c37a77574",
+                "url": "https://gitlab.com/libtiff/libtiff/-/commit/90601d9a23382d98f3695ec14441145c37a77574"
+              },
+              "tests": [
+                {
+                  "id": "pixarlog-abgr-rgb-multirow-strip-overflow",
+                  "baselineExpectation": "The exact installed Bookworm baseline reaches the PixarLog decoder and Memcheck reports invalid writes beyond the 24,576-byte caller buffer.",
+                  "patchedExpectation": "The patched installed package rejects the undersized output buffer, returns nonzero from the decoder, and has zero Memcheck errors."
+                }
+              ]
             }
           ],
           "access": "public",
@@ -1122,9 +1157,9 @@
           ],
           "earlyRedistributionAllowed": false,
           "status": "development-verified-production-release-pending",
-          "verification": "https://github.com/getpatched/platform/actions/runs/41553176585",
+          "verification": "https://github.com/getpatched/platform/actions/runs/41584790178",
           "sourceUrl": "https://github.com/getpatched/packaging-tiff/tree/getpatched/debian-bookworm",
-          "patchUrl": "https://github.com/getpatched/packaging-tiff/blob/getpatched/debian-bookworm/patches/CVE-2026-52490-bookworm.patch",
+          "patchUrl": "https://github.com/getpatched/packaging-tiff/blob/getpatched/debian-bookworm/patches/CVE-2026-12912-bookworm.patch",
           "testsUrl": "https://github.com/getpatched/packaging-tiff/blob/getpatched/debian-bookworm/patches/metadata.json",
           "releasesUrl": "https://github.com/getpatched/packaging-tiff/releases",
           "releaseStatus": "No production release",
