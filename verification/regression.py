@@ -1124,6 +1124,9 @@ def main():
                     injection_build = subprocess.run(
                         ["cc", "-std=c11", "-O1", "-g", "-fPIC", "-shared",
                          str(fixtures / "cve-2026-86141-xmlstrdup-interposer.c"),
+                         *shlex.split(subprocess.check_output(
+                             ["pkg-config", "--cflags", "libxml-2.0"], text=True, timeout=15
+                         )),
                          "-o", str(injector), "-ldl"],
                         capture_output=True, text=True, timeout=30, check=False,
                     )
