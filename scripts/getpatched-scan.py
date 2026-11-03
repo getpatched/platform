@@ -20,6 +20,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "verification"))
 from regression import (cares_regression_succeeded, consumer_version_succeeded, libpng_overwrite_reproduced, libpng_stride_read_reproduced,
                         libpng_patched_checks_succeeded, poppler_revision6_password_overflow_reproduced, poppler_revision6_probe_command, poppler_uaf_reproduced,
+                        expat_consumer_succeeded, expat_regression_succeeded,
                         schematron_baseline_reproduced, tiff_baseline_reproduced,
                         tiff_subdivision_baseline_reproduced, tiff_subdivision_patched_succeeded,
                         valid_tiff_baseline_stack_signature,
@@ -141,6 +142,14 @@ def poppler_patched_checks_succeeded(cve_check, checks):
         and any(item.get("passed") is True and item.get("command", [None])[0] == "pdfinfo"
                 and consumer_version_succeeded(item, "pdfinfo version") for item in checks)
     )
+
+
+def expat_candidate_checks_succeeded(cve_check, checks, phase, expected_version):
+    if (sum(item.get("cve") == "CVE-2026-117610" for item in checks) != 1
+            or not expat_regression_succeeded(cve_check, phase)):
+        return False
+    consumers = [item for item in checks if item.get("testId") == "expat-xmlwf-version"]
+    return len(consumers) == 1 and expat_consumer_succeeded(consumers[0], expected_version)
 
 
 def poppler_revision6_patched_succeeded(cve_check, checks):
@@ -439,6 +448,11 @@ def regression_verified_candidate(directory, scan_images_path, target_id, recipe
                     or check.get("returncode") != 0 or check.get("timedOut") is not False
                     or check.get("normalStreamCompatible") is not True):
                 raise ValueError(f"Brotli {phase} evidence lacks the expected invalid-block-switch outcome or valid-stream compatibility check")
+        elif source == "expat":
+            check = cve_checks.get("CVE-2026-117610", {})
+            expected_version = target["baselineVersion"].split("-", 1)[0]
+            if not expat_candidate_checks_succeeded(check, checks, phase, expected_version):
+                raise ValueError(f"Expat {phase} evidence lacks its exact vulnerability or matching xmlwf consumer result")
         else:
             raise ValueError("candidate regression runner has no package-specific evidence classifier")
     directory.mkdir(parents=True, exist_ok=True)

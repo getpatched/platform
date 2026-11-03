@@ -269,6 +269,23 @@ def consumer_version_succeeded(check, expected_banner):
     return not check.get("timedOut", False) and check.get("returncode") == 0 and expected_banner in output
 
 
+def expat_regression_succeeded(check, phase):
+    if (check.get("cve") != "CVE-2026-117610"
+            or check.get("testId") != "CVE-2026-117610-empty-nonfinal-subparser"
+            or check.get("timedOut") is not False):
+        return False
+    if phase == "baseline":
+        return check.get("returncode") == -signal.SIGSEGV
+    return phase == "patched" and check.get("returncode") == 0
+
+
+def expat_consumer_succeeded(check, expected_version):
+    output = check.get("stdout", "") + check.get("stderr", "")
+    return (not check.get("timedOut", False)
+            and check.get("returncode") == 0
+            and f"xmlwf using expat_{expected_version}" in output)
+
+
 def brotli_baseline_reproduced(check):
     return (
         check.get("cve") == "CVE-2026-111497"
@@ -773,6 +790,20 @@ def main():
                      else check["patchedBehavior"])
             )
             checks.append(check)
+        elif package == "expat":
+            probe = compile_pkg_config_probe(
+                fixtures / "CVE-2026-117610-empty-subparser.c", temp / "expat-empty-subparser", ["expat"]
+            )
+            check = execute([str(probe)])
+            check["cve"] = "CVE-2026-117610"
+            check["testId"] = "CVE-2026-117610-empty-nonfinal-subparser"
+            check["passed"] = expat_regression_succeeded(check, args.phase)
+            checks.append(check)
+            source_version = policy["baseVersion"].split("-", 1)[0]
+            consumer = execute(["xmlwf", "-v"])
+            consumer["testId"] = "expat-xmlwf-version"
+            consumer["passed"] = expat_consumer_succeeded(consumer, source_version)
+            checks.append(consumer)
         elif package == "tiff":
             fixture = fixtures / "multisample.tif"
             if not fixture.is_file() or not 0 < fixture.stat().st_size < 1024 * 1024:

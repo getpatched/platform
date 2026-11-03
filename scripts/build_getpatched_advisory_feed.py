@@ -28,6 +28,7 @@ SUMMARIES = {
     "CVE-2026-107705": "Poppler revision 6 PDF password-length stack buffer overflow",
     "CVE-2026-69184": "c-ares CPU exhaustion from unbounded DNS compression-pointer chains",
     "CVE-2026-111497": "Brotli decoder out-of-bounds write on invalid block switches",
+    "CVE-2026-117610": "Expat NULL dereference when an external-entity subparser starts with empty non-final input",
 }
 SEVERITIES = {
     "CVE-2026-69184": "HIGH",

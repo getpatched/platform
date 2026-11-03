@@ -820,6 +820,64 @@
           }
         }
       }
+    },
+    "expat": {
+      "targets": {
+        "debian-bookworm-amd64": {
+          "baselineVersion": "2.5.0-1+deb12u5",
+          "sourcePocket": "security",
+          "packageEcosystem": "Debian:12",
+          "packageVersion": "2.5.0-1+deb12u5+getpatched1",
+          "releaseSerial": 1,
+          "binaryPackages": ["libexpat1", "libexpat1-dev", "expat"],
+          "advisoryPackages": ["libexpat1", "libexpat1-dev", "expat"],
+          "builderPackages": [],
+          "targetCve": "CVE-2026-117610",
+          "targetCves": ["CVE-2026-117610"],
+          "advisory": "https://security-tracker.debian.org/tracker/CVE-2026-117610",
+          "advisories": {
+            "CVE-2026-117610": "https://security-tracker.debian.org/tracker/CVE-2026-117610"
+          },
+          "candidateStatus": "development-verified-production-release-pending",
+          "releaseAccess": {
+            "policy": "public-after-checks",
+            "sponsorDelayHours": 0,
+            "sponsorEligibility": null,
+            "earlyBinaryLicenseId": null,
+            "publicContributionSpdx": "MIT",
+            "earlyUse": ["private", "commercial"],
+            "earlyRedistributionAllowed": false,
+            "publicLicenseScope": "getpatched-authored-contributions-only"
+          }
+        },
+        "debian-trixie-amd64": {
+          "baselineVersion": "2.9.0-1~deb13u1",
+          "sourcePocket": "security",
+          "packageEcosystem": "Debian:13",
+          "packageVersion": "2.9.0-1~deb13u1+getpatched1",
+          "releaseSerial": 1,
+          "binaryPackages": ["libexpat1", "libexpat1-dev", "expat"],
+          "advisoryPackages": ["libexpat1", "libexpat1-dev", "expat"],
+          "builderPackages": [],
+          "targetCve": "CVE-2026-117610",
+          "targetCves": ["CVE-2026-117610"],
+          "advisory": "https://security-tracker.debian.org/tracker/CVE-2026-117610",
+          "advisories": {
+            "CVE-2026-117610": "https://security-tracker.debian.org/tracker/CVE-2026-117610"
+          },
+          "candidateStatus": "development-verified-production-release-pending",
+          "releaseAccess": {
+            "policy": "public-after-checks",
+            "sponsorDelayHours": 0,
+            "sponsorEligibility": null,
+            "earlyBinaryLicenseId": null,
+            "publicContributionSpdx": "MIT",
+            "earlyUse": ["private", "commercial"],
+            "earlyRedistributionAllowed": false,
+            "publicLicenseScope": "getpatched-authored-contributions-only"
+          }
+        }
+      }
     }
   }
 }

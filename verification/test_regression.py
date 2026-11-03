@@ -8,7 +8,10 @@ import unittest
 from regression import (LIBPNG_CVE_2025_65018_FIXTURE, libpng_followup_read_is_clean, libpng_output_buffer_result, libpng_overwrite_reproduced, libpng_stride_read_reproduced, memcheck_has_no_errors,
                         libpng_patched_checks_succeeded, tiff_patched_regression_succeeded,
                         brotli_baseline_reproduced, brotli_patched_succeeded,
-                        cares_regression_succeeded, consumer_version_succeeded, poppler_revision6_password_overflow_reproduced, poppler_uaf_reproduced, poppler_revision6_probe_command, schematron_baseline_reproduced,
+                        cares_regression_succeeded, consumer_version_succeeded, expat_consumer_succeeded, expat_regression_succeeded,
+                        poppler_uaf_reproduced, schematron_baseline_reproduced,
+
+cares_regression_succeeded, consumer_version_succeeded, poppler_revision6_password_overflow_reproduced, poppler_uaf_reproduced, poppler_revision6_probe_command, schematron_baseline_reproduced,
                         tiff_baseline_reproduced, tiff_null_output_baseline_reproduced,
                         tiff_null_output_patched_succeeded, parse_callback_url,
                         libgit2_redirect_reproduced, tiff_cve_required,
@@ -23,6 +26,32 @@ class TiffPolicySelection(unittest.TestCase):
         self.assertFalse(tiff_cve_required(policy, "CVE-2025-61143"))
         self.assertFalse(tiff_cve_required({}, "CVE-2025-61143"))
         self.assertFalse(tiff_cve_required({"targetCves": "CVE-2025-61143"}, "CVE-2025-61143"))
+
+
+class ExpatRegressionEvidence(unittest.TestCase):
+    def test_only_exact_sigsegv_is_accepted_for_vulnerable_baseline(self):
+        check = {"cve": "CVE-2026-117610", "testId": "CVE-2026-117610-empty-nonfinal-subparser",
+                 "returncode": -signal.SIGSEGV, "timedOut": False}
+        self.assertTrue(expat_regression_succeeded(check, "baseline"))
+        self.assertFalse(expat_regression_succeeded({**check, "returncode": 139}, "baseline"))
+        self.assertFalse(expat_regression_succeeded({**check, "returncode": -signal.SIGABRT}, "baseline"))
+        self.assertFalse(expat_regression_succeeded({**check, "timedOut": True}, "baseline"))
+        self.assertFalse(expat_regression_succeeded({**check, "cve": "CVE-2026-999999"}, "baseline"))
+
+    def test_consumer_version_check_accepts_only_the_matching_installed_version(self):
+        consumer = {"testId": "expat-xmlwf-version", "returncode": 0, "timedOut": False,
+                    "stdout": "xmlwf using expat_2.5.0\n"}
+        self.assertTrue(expat_consumer_succeeded(consumer, "2.5.0"))
+        self.assertFalse(expat_consumer_succeeded(consumer, "2.9.0"))
+
+    def test_patched_probe_and_matching_xmlwf_consumer_are_required(self):
+        probe = {"cve": "CVE-2026-117610", "testId": "CVE-2026-117610-empty-nonfinal-subparser",
+                 "returncode": 0, "timedOut": False}
+        self.assertTrue(expat_regression_succeeded(probe, "patched"))
+        consumer = {"testId": "expat-xmlwf-version", "returncode": 0, "timedOut": False,
+                    "stdout": "xmlwf using expat_2.5.0\n"}
+        self.assertTrue(expat_consumer_succeeded(consumer, "2.5.0"))
+        self.assertFalse(expat_consumer_succeeded({**consumer, "timedOut": True}, "2.5.0"))
 
 
 class TiffSubdivisionOverflowRegression(unittest.TestCase):

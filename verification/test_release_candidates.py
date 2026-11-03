@@ -97,7 +97,7 @@ class ReleaseCandidateOutput(unittest.TestCase):
         self.assertNotIn('apt-get install -y --no-install-recommends "$package"', containerfile)
 
     def test_latest_public_focal_candidates_are_eligible_after_verification(self):
-        runnable_candidates = {"libxml2", "libarchive", "libpng1.6", "libgit2", "tiff", "poppler", "c-ares", "brotli"}
+        runnable_candidates = {"libxml2", "libarchive", "libpng1.6", "libgit2", "tiff", "poppler", "c-ares", "brotli", "expat"}
         self.assertTrue(runnable_candidates.issubset(CONFIG["packages"]))
         workflow = (ROOT / ".github/workflows/package-verification.yml").read_text()
         options = re.search(r"options: \[([^]]+)\]", workflow).group(1)
@@ -106,6 +106,7 @@ class ReleaseCandidateOutput(unittest.TestCase):
         self.assertIn('"libgit2"', baseline_cli)
         self.assertIn('"c-ares"', baseline_cli)
         self.assertIn('"brotli"', baseline_cli)
+        self.assertIn('"expat"', baseline_cli)
         preflight = (ROOT / ".github/workflows/candidate-preflight.yml").read_text()
         for package, target in (("c-ares", "ubuntu-focal-amd64"), ("c-ares", "debian-trixie-amd64"), ("brotli", "ubuntu-focal-amd64")):
             self.assertIn(f"package: {package}\n            target_id: {target}", preflight)

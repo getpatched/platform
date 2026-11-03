@@ -3,6 +3,7 @@ import json
 import hashlib
 from pathlib import Path
 import subprocess
+import signal
 import sys
 import tempfile
 import unittest
@@ -45,6 +46,29 @@ SCANNER_SPEC.loader.exec_module(SCANNER_MODULE)
 
 
 class GetPatchedScannerContract(unittest.TestCase):
+    def test_expat_candidate_requires_exact_crash_or_patched_consumer(self):
+        baseline = {"cve": "CVE-2026-117610", "testId": "CVE-2026-117610-empty-nonfinal-subparser",
+                    "returncode": -signal.SIGSEGV, "timedOut": False, "passed": True}
+        consumer = {"testId": "expat-xmlwf-version", "returncode": 0, "timedOut": False,
+                    "stdout": "xmlwf using expat_2.5.0\n", "passed": True}
+        self.assertTrue(SCANNER_MODULE.expat_candidate_checks_succeeded(
+            baseline, [baseline, consumer], "baseline", "2.5.0"))
+        self.assertFalse(SCANNER_MODULE.expat_candidate_checks_succeeded(
+            baseline, [baseline], "baseline", "2.5.0"))
+        self.assertFalse(SCANNER_MODULE.expat_candidate_checks_succeeded(
+            baseline, [baseline, {**baseline}, consumer], "baseline", "2.5.0"))
+        wrong_baseline_consumer = {**consumer, "stdout": "xmlwf using expat_2.9.0\n"}
+        self.assertFalse(SCANNER_MODULE.expat_candidate_checks_succeeded(
+            baseline, [baseline, wrong_baseline_consumer], "baseline", "2.5.0"))
+        patched = {**baseline, "returncode": 0}
+        self.assertTrue(SCANNER_MODULE.expat_candidate_checks_succeeded(
+            patched, [patched, consumer], "patched", "2.5.0"))
+        self.assertFalse(SCANNER_MODULE.expat_candidate_checks_succeeded(
+            patched, [patched], "patched", "2.5.0"))
+        wrong_version = {**consumer, "stdout": "xmlwf using expat_2.9.0\n"}
+        self.assertFalse(SCANNER_MODULE.expat_candidate_checks_succeeded(
+            patched, [patched, wrong_version], "patched", "2.5.0"))
+
     def test_poppler_revision6_candidate_requires_clean_regression_and_consumer(self):
         cve_check = {
             "cve": "CVE-2026-107705",
@@ -808,7 +832,10 @@ raise SystemExit(3)
         self.assertEqual({item["id"] for item in committed["vulns"]}, {
             "CVE-2025-49794", "CVE-2025-49796", "CVE-2026-4111",
             "CVE-2026-53584", "CVE-2026-53585", "CVE-2026-53586",
-            "CVE-2025-52885", "CVE-2026-107705", "CVE-2026-69184", "CVE-2026-111497",
+            "CVE-2025-52885", "CVE-2026-69184", "CVE-2026-111497",
+            "CVE-2026-117610",
+
+"CVE-2025-52885", "CVE-2026-107705", "CVE-2026-69184", "CVE-2026-111497",
             "CVE-2025-61144", "CVE-2026-52490",
         })
         for advisory in committed["vulns"]:

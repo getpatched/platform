@@ -1,5 +1,13 @@
 # GetPatched implementation status
 
+## Expat CVE-2026-117610 policy-matched development verification — 3 Nov 2026
+
+- CVE-2026-117610 has passed exact-source checks for Debian Bookworm `2.5.0-1+deb12u5` and Trixie `2.9.0-1~deb13u1`. Signed-index source hashes match; both quilt series and the GetPatched patch apply without fuzz.
+- Policy-matched hosted Bookworm [41543751522](https://github.com/getpatched/platform/actions/runs/41543751522) and Trixie [41546270294](https://github.com/getpatched/platform/actions/runs/41546270294) reports both say `candidateVerified=true`, `verificationChecksPassed=true`, and `releaseEligible=false` because production publication is disabled. Both exact package builds reproduced baseline SIGSEGV, passed the installed candidate regression and version-matched `xmlwf -v`, changed the candidate-only package-aware scan from three affected package records to zero, and passed isolated signed APT client checks. Trivy 0.70.0 does not contain this CVE; no Trivy-clean claim is made.
+- No package binary, production signed index, private staging object, or release was published. Reports and source packages are retained in workflow artifacts and `AptTo/evidence/`. Scope is Debian Bookworm/Trixie amd64; Ubuntu and other architectures remain unconfigured and unclaimed.
+- Recipe commit `ed35d4b85f8cb08c2b252868d366cd6ec34cf463` is public on both target branches. Catalogue and OSV integration is in platform PR [#110](https://github.com/getpatched/platform/pull/110); it remains unmerged pending updated run links, CI, and fresh independent review.
+- Trixie run [41545338753](https://github.com/getpatched/platform/actions/runs/41545338753) was cancelled before it generated reports; replacement run [41546270294](https://github.com/getpatched/platform/actions/runs/41546270294) passed. Earlier old-policy runs are not used for acceptance. Fixture, consumer-classifier, and review history is retained in `EVIDENCE.md`.
+
 ## Active 100-CVE goal checkpoint — 3 Nov 2026
 
 - **Poppler / Debian Bookworm and Trixie amd64, CVE-2026-107705:** hosted runs [41518910177](https://github.com/getpatched/platform/actions/runs/41518910177) and [41531130479](https://github.com/getpatched/platform/actions/runs/41531130479) passed exact-source builds, installed baseline overflow reproductions, patched regressions, package-aware before/after scans, consumer checks, and isolated signed APT-client verification. Package PR #2 and platform PR #108 are merged. Raw Trivy 0.70 still reports CVE-2026-107705 in 14 Poppler package records in each image; this is not a Trivy-clean claim. No binaries or production index were published.
