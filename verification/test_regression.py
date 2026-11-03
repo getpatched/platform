@@ -100,8 +100,8 @@ class Libxml2ParameterEntityRegression(unittest.TestCase):
                 "--read-var-info=yes", "--log-file=" + log_path,
                 "/tmp/libxml2-cve-2026-86141",
             ],
-            "injection": "xmlMemSetup:test_strdup",
-            "stderr": "GETPATCHED_XMLSTRDUP_FAILURE_INJECTED\n",
+            "injection": "xmlMemSetup:test_malloc:sizeof-regexp",
+            "stderr": "GETPATCHED_REGEXP_COPY_ALLOCATION_FAILURE_INJECTED\n",
             "memoryLogPath": log_path,
             "memoryLog": memory_log,
         }

@@ -182,7 +182,7 @@ def libxml2_regexp_alloc_failure_command(check):
         and memcheck_log_path_matches(check, command)
         and Path(command[6]).name == "libxml2-cve-2026-86141"
         and check.get("testId") == "regexp-allocation-failure-null-check"
-        and check.get("injection") == "xmlMemSetup:test_strdup"
+        and check.get("injection") == "xmlMemSetup:test_malloc:sizeof-regexp"
     )
 
 
@@ -191,7 +191,7 @@ def libxml2_regexp_alloc_failure_baseline_reproduced(check):
         not check.get("timedOut", False)
         and check.get("returncode") == 97
         and libxml2_regexp_alloc_failure_command(check)
-        and "GETPATCHED_XMLSTRDUP_FAILURE_INJECTED" in check.get("stderr", "")
+        and "GETPATCHED_REGEXP_COPY_ALLOCATION_FAILURE_INJECTED" in check.get("stderr", "")
         and any(
             block.group("kind").startswith("Invalid read")
             and re.search(r"(?m)^==\d+==\s+at .*\bstrlen(?:@|\s|\()", block.group("body"))
@@ -211,7 +211,7 @@ def libxml2_regexp_alloc_failure_patched_succeeded(check):
         not check.get("timedOut", False)
         and check.get("returncode") == 0
         and libxml2_regexp_alloc_failure_command(check)
-        and "GETPATCHED_XMLSTRDUP_FAILURE_INJECTED" in check.get("stderr", "")
+        and "GETPATCHED_REGEXP_COPY_ALLOCATION_FAILURE_INJECTED" in check.get("stderr", "")
         and "XML_REGEXP_COMPILE_REJECTED_ALLOCATION_FAILURE" in check.get("stdout", "")
         and not valgrind_invalid_access_blocks(check.get("memoryLog", ""))
         and re.search(r"(?m)^==\d+== ERROR SUMMARY: 0 errors?", check.get("memoryLog", ""))
@@ -1127,7 +1127,7 @@ def main():
                     ], timeout=15)
                     check["cve"] = cve
                     check["testId"] = "regexp-allocation-failure-null-check"
-                    check["injection"] = "xmlMemSetup:test_strdup"
+                    check["injection"] = "xmlMemSetup:test_malloc:sizeof-regexp"
                     check["memoryLogPath"] = str(log)
                     check["memoryLog"] = log.read_text() if log.exists() else ""
                     check["phase"] = args.phase
