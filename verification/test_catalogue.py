@@ -260,8 +260,8 @@ class PublicCatalogueContract(unittest.TestCase):
                     ("c-ares", "ubuntu-focal-amd64"): "41492142682",
                     ("c-ares", "debian-trixie-amd64"): "41494211851",
                     ("brotli", "ubuntu-focal-amd64"): "41492184315",
-                    ("tiff", "debian-bookworm-amd64"): "41549401946",
-                    ("tiff", "debian-trixie-amd64"): "41550809749",
+                    ("tiff", "debian-bookworm-amd64"): "41553176585",
+                    ("tiff", "debian-trixie-amd64"): "41554198692",
                 }[(source, target_id)]
                 self.assertEqual(entry["verification"], f"https://github.com/getpatched/platform/actions/runs/{expected_run}")
                 self.assertEqual(
