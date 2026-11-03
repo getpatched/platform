@@ -6,7 +6,7 @@ import sys
 import tempfile
 import unittest
 
-from regression import (LIBPNG_CVE_2025_65018_FIXTURE, libpng_followup_read_is_clean, libpng_output_buffer_result, libpng_overwrite_reproduced, libpng_stride_read_reproduced, memcheck_has_no_errors,
+from regression import (LIBPNG_CVE_2025_65018_FIXTURE, pixarlog_baseline_reproduced, pixarlog_patched_succeeded, libpng_followup_read_is_clean, libpng_output_buffer_result, libpng_overwrite_reproduced, libpng_stride_read_reproduced, memcheck_has_no_errors,
                         libpng_patched_checks_succeeded, tiff_patched_regression_succeeded,
                         brotli_baseline_reproduced, brotli_patched_succeeded,
                         cares_regression_succeeded, consumer_version_succeeded, expat_consumer_succeeded, expat_regression_succeeded,
@@ -211,6 +211,44 @@ class BrotliRegression(unittest.TestCase):
         self.assertFalse(brotli_patched_succeeded({**check, "decoderOutputBytes": 33 * 1024 * 1024}))
         self.assertFalse(brotli_patched_succeeded({**check, "decoderCalls": 8193}))
         self.assertFalse(brotli_patched_succeeded({key: value for key, value in check.items() if key != "decoderOutputBytes"}))
+
+
+class PixarLogCVERegressionClassification(unittest.TestCase):
+    def fixture(self, patched):
+        root = Path("/tmp/pixarlog-probe")
+        log = "==123== ERROR SUMMARY: 0 errors from 0 contexts (suppressed: 0 from 0)\n"
+        result = -1 if patched else 24576
+        return {
+            "command": ["valgrind", "--tool=memcheck", "--error-exitcode=97", "--leak-check=no",
+                        "--read-var-info=yes", f"--log-file={root / 'CVE-2026-12912.valgrind'}",
+                        str(root / "pixarlog-abgr"), "decode", str(root / "pixarlog-abgr.tif")],
+            "cve": "CVE-2026-12912", "testId": "pixarlog-abgr-rgb-multirow-strip-overflow",
+            "returncode": 0 if patched else 97, "timedOut": False,
+            "stdout": f"decode_called=1 result={result} strip_size=24576\n",
+            "stderr": "Output buffer too small for PixarLog ABGR data" if patched else "",
+            "memoryLog": log if patched else (
+                "==123== Invalid write of size 1\n"
+                "==123==    at 0x123: ??? (in /usr/lib/x86_64-linux-gnu/libtiff.so.6.4.0)\n"
+                "==123== ERROR SUMMARY: 8192 errors from 1 contexts\n"),
+        }
+
+    def test_baseline_requires_invalid_write_in_the_exact_multirow_probe(self):
+        self.assertTrue(pixarlog_baseline_reproduced(self.fixture(False)))
+        check = self.fixture(False)
+        check["command"][7] = "generate"
+        self.assertFalse(pixarlog_baseline_reproduced(check))
+        check = self.fixture(False)
+        check["memoryLog"] = "==123== ERROR SUMMARY: 0 errors from 0 contexts\n"
+        self.assertFalse(pixarlog_baseline_reproduced(check))
+
+    def test_candidate_must_reject_the_strip_buffer_and_have_zero_memcheck_errors(self):
+        self.assertTrue(pixarlog_patched_succeeded(self.fixture(True)))
+        check = self.fixture(True)
+        check["stderr"] = ""
+        self.assertFalse(pixarlog_patched_succeeded(check))
+        check = self.fixture(True)
+        check["memoryLog"] = "==123== Invalid write of size 1\n==123== ERROR SUMMARY: 1 errors\n"
+        self.assertFalse(pixarlog_patched_succeeded(check))
 
 
 class ExecuteTimeout(unittest.TestCase):

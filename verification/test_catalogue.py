@@ -153,6 +153,33 @@ class PublicCatalogueContract(unittest.TestCase):
         with self.assertRaises(ValueError):
             target_profile(insecure_ubuntu, "ubuntu-focal-amd64")
 
+    def test_tiff_verification_branch_is_candidate_only(self):
+        platform = json.loads((ROOT / "packages.json").read_text())
+        self.assertEqual(target_source_branch(platform, "debian-bookworm-amd64", "tiff"),
+                         "getpatched/cve-2026-12912-bookworm")
+        self.assertEqual(target_source_branch(platform, "debian-bookworm-amd64", "libxml2"),
+                         "getpatched/debian-bookworm")
+        verified = deepcopy(platform)
+        verified["packages"]["tiff"]["targets"]["debian-bookworm-amd64"]["candidateStatus"] = (
+            "development-verified-production-release-pending")
+        with self.assertRaisesRegex(ValueError, "unverified candidate"):
+            target_source_branch(verified, "debian-bookworm-amd64", "tiff")
+
+    def test_tiff_pending_candidate_keeps_historical_cves_scoped_to_their_binaries(self):
+        platform = json.loads((ROOT / "packages.json").read_text())
+        target = package_target_policy(platform, "tiff", "debian-bookworm-amd64")
+        self.assertEqual(target["candidateStatus"], "unverified-development-candidate")
+        self.assertEqual(target["advisoryPackagesByCve"], {
+            "CVE-2025-61144": ["libtiff-tools"],
+            "CVE-2026-52490": ["libtiff-tools"],
+            "CVE-2026-12912": ["libtiff6"],
+        })
+        self.assertEqual(target["verifiedReleases"][0]["version"], "4.5.0-6+deb12u4+getpatched3")
+        invalid = json.loads(json.dumps(platform))
+        invalid["packages"]["tiff"]["targets"]["debian-bookworm-amd64"]["advisoryPackagesByCve"]["CVE-2026-12912"] = ["libtiff-tools"]
+        with self.assertRaisesRegex(ValueError, "per-CVE advisory package scope"):
+            package_target_policy(invalid, "tiff", "debian-bookworm-amd64")
+
     def test_build_and_baseline_images_use_target_scoped_binary_package_names(self):
         platform = json.loads((ROOT / "packages.json").read_text())
         jammy = package_target_policy(platform, "libgit2", "ubuntu-jammy-amd64")
@@ -274,12 +301,21 @@ class PublicCatalogueContract(unittest.TestCase):
             package = platform["packages"][source]
             expected_targets = {
                 target_id for target_id, policy in package["targets"].items()
-                if policy.get("candidateStatus", "").startswith("development-verified")
+                if (policy.get("candidateStatus", "").startswith("development-verified")
+                    or policy.get("verifiedReleases"))
             }
             self.assertEqual(set(entry_package["targets"]), expected_targets)
             for target_id, entry in entry_package["targets"].items():
                 policy = package["targets"][target_id]
                 access = policy["releaseAccess"]
+                if policy.get("candidateStatus") == "unverified-development-candidate":
+                    history = policy.get("verifiedReleases", [])
+                    self.assertTrue(history)
+                    prior = history[-1]
+                    self.assertEqual(entry["version"], prior["version"])
+                    self.assertEqual(entry["cves"], prior["targetCves"])
+                    self.assertLess(debian_version_compare(entry["version"], policy["packageVersion"]), 0)
+                    continue
                 self.assertEqual(entry["version"], policy["packageVersion"])
                 old_version = policy["baselineVersion"]
                 self.assertLess(debian_version_compare(old_version, entry["version"]), 0)

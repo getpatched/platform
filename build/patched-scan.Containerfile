@@ -5,6 +5,7 @@ ARG BASELINE_VERSION
 ARG EXPECTED_VERSION
 ARG APT_SOURCES_B64
 ARG BINARY_PACKAGES
+ARG BUILDER_PACKAGES
 ENV DEBIAN_FRONTEND=noninteractive
 RUN --mount=type=secret,id=runner-ca,target=/tmp/getpatched-runner-ca.crt,required=true \
     set -eu; \
@@ -34,6 +35,7 @@ RUN set -eu; \
       packages="${packages}${packages:+ }$package"; \
     done; \
     apt-get install -y --no-install-recommends $packages; \
+    if [ -n "$BUILDER_PACKAGES" ]; then apt-get install -y --no-install-recommends $BUILDER_PACKAGES; fi; \
     for binary in $BINARY_PACKAGES; do \
       test "$(dpkg-query -W -f='${Version}' "$binary")" = "$EXPECTED_VERSION"; \
     done; \

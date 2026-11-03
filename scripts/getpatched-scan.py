@@ -22,7 +22,8 @@ from regression import (cares_regression_succeeded, consumer_version_succeeded, 
                         libpng_patched_checks_succeeded, poppler_revision6_password_overflow_reproduced, poppler_revision6_probe_command, poppler_uaf_reproduced,
                         expat_consumer_succeeded, expat_regression_succeeded,
                         libxml2_parameter_entity_baseline_reproduced, libxml2_parameter_entity_patched_succeeded,
-                        schematron_baseline_reproduced, tiff_baseline_reproduced,
+                        schematron_baseline_reproduced, pixarlog_baseline_reproduced, pixarlog_patched_succeeded,
+                        tiff_baseline_reproduced,
                         tiff_subdivision_baseline_reproduced, tiff_subdivision_patched_succeeded,
                         valid_tiff_baseline_stack_signature,
                         tiff_null_output_baseline_reproduced, tiff_null_output_patched_succeeded,
@@ -110,6 +111,7 @@ def validate_tiff_regression_checks(target, checks, phase, trusted_stack):
     null_output_check = cve_checks.get("CVE-2025-61143")
     sample_bounds_checks = [check for check in checks if check.get("cve") == "CVE-2025-61144"]
     subdivision_check = cve_checks.get("CVE-2026-52490")
+    pixarlog_check = cve_checks.get("CVE-2026-12912")
     if phase == "baseline":
         if (not trusted_stack
                 or not all(tiff_baseline_reproduced(check, trusted_stack)
@@ -117,9 +119,14 @@ def validate_tiff_regression_checks(target, checks, phase, trusted_stack):
                 or ("CVE-2026-52490" in target_cves
                     and not tiff_subdivision_baseline_reproduced(subdivision_check or {}))
                 or ("CVE-2025-61143" in target_cves
-                    and not tiff_null_output_baseline_reproduced(null_output_check or {}))):
+                    and not tiff_null_output_baseline_reproduced(null_output_check or {}))
+                or ("CVE-2026-12912" in target_cves
+                    and not pixarlog_baseline_reproduced(pixarlog_check or {}))):
             raise ValueError("TIFF baseline evidence does not reproduce all configured tiffcrop paths")
         return
+    if ("CVE-2026-12912" in target_cves
+            and (not pixarlog_check or not pixarlog_patched_succeeded(pixarlog_check))):
+        raise ValueError("TIFF patched evidence lacks the clean CVE-2026-12912 multi-row PixarLog regression")
     if ("CVE-2025-61143" in target_cves
             and (not null_output_check or not tiff_null_output_patched_succeeded(null_output_check))):
         raise ValueError("TIFF patched evidence lacks clean CVE regressions and a tiffinfo consumer check")
@@ -282,18 +289,33 @@ def load_feed(path, verified_candidates=frozenset()):
             except (KeyError, ValueError) as error:
                 raise ValueError(f"{advisory_id} names an unconfigured package target: {error}") from error
             vendor_fixed = expected.get("vendorFixedVersions", [])
-            candidate_status = expected.get("candidateStatus", "unverified")
-            if (source, target_id) in verified_candidates and not candidate_status.startswith("development-verified"):
-                candidate_status = "development-verified-production-release-pending"
-            candidate_verified = candidate_status.startswith("development-verified")
-            expected_fixed = [expected["packageVersion"], *vendor_fixed] if candidate_verified else vendor_fixed
+            current_status = expected.get("candidateStatus", "unverified")
+            if (source, target_id) in verified_candidates:
+                current_status = (current_status if current_status.startswith("development-verified")
+                                  else "development-verified-production-release-pending")
+                release = {"version": expected["packageVersion"], "status": current_status,
+                           "targetCves": expected["targetCves"],
+                           "advisoryPackagesByCve": expected["advisoryPackagesByCve"]}
+            elif current_status.startswith("development-verified"):
+                release = {"version": expected["packageVersion"], "status": current_status,
+                           "targetCves": expected["targetCves"],
+                           "advisoryPackagesByCve": expected["advisoryPackagesByCve"]}
+            else:
+                release = next((item for item in expected["verifiedReleases"]
+                                if advisory_id in item["targetCves"]), None)
+            if (release is None or advisory_id not in release["targetCves"]
+                    or package["name"] not in release["advisoryPackagesByCve"][advisory_id]):
+                raise ValueError(f"{advisory_id} does not apply to the affected package in the reviewed policy")
+            fixed_version = release["version"]
+            release_status = release["status"]
+            expected_fixed = [fixed_version, *vendor_fixed]
             if (package["ecosystem"] != package_ecosystem(config, source, target_id)
                     or scope["distribution"] != profile["distribution"] or scope["release"] != profile["codename"]
                     or scope["architecture"] != profile["architecture"]
                     or policy.get("source_package") != source
-                    or policy.get("candidate_version") != expected["packageVersion"]
-                    or policy.get("candidate_status") != candidate_status
-                    or policy.get("getpatched_fixed_version") != (expected["packageVersion"] if candidate_verified else None)
+                    or policy.get("candidate_version") != fixed_version
+                    or policy.get("candidate_status") != release_status
+                    or policy.get("getpatched_fixed_version") != fixed_version
                     or policy.get("vendor_fixed_versions") != vendor_fixed
                     or fixed != expected_fixed
                     or affected["versions"] != [expected["baselineVersion"]]):

@@ -4,6 +4,7 @@ FROM ${BASE_IMAGE}
 ARG SOURCE_PACKAGE
 ARG EXPECTED_VERSION
 ARG BINARY_PACKAGES
+ARG BUILDER_PACKAGES
 ARG APT_SOURCES_B64
 ENV DEBIAN_FRONTEND=noninteractive
 RUN --mount=type=secret,id=runner-ca,target=/tmp/getpatched-runner-ca.crt,required=true \
@@ -27,5 +28,6 @@ RUN --mount=type=secret,id=runner-ca,target=/tmp/getpatched-runner-ca.crt,requir
       }; \
     done; \
     for binary in $BINARY_PACKAGES; do apt-get install -y --no-install-recommends "$binary=$EXPECTED_VERSION"; done; \
+    if [ -n "$BUILDER_PACKAGES" ]; then apt-get install -y --no-install-recommends $BUILDER_PACKAGES; fi; \
     dpkg-query -W $BINARY_PACKAGES 2>/dev/null || true; \
     rm -rf /var/lib/apt/lists/*

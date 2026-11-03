@@ -182,7 +182,8 @@ def main():
             if not isinstance(summary_ids, list) or set(summary_ids) != findings_by_id:
                 raise ValueError(f"{phase} GetPatched scan finding summary disagrees with its detailed findings")
             finding_pairs = {(item.get("id"), item.get("package")) for item in findings}
-            expected_pairs = {(cve, binary) for cve in targets for binary in expected_advisory_names}
+            expected_pairs = {(cve, binary) for cve in targets
+                              for binary in package["advisoryPackagesByCve"][cve]}
             if phase == "before" and (not set(targets).issubset(findings_by_id) or not expected_pairs.issubset(finding_pairs)):
                 raise ValueError("before GetPatched scan did not detect every configured target CVE for every vulnerable binary package")
             if phase == "after" and findings_by_id & set(targets):

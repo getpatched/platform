@@ -221,6 +221,50 @@ def tiff_patched_regression_succeeded(check):
     )
 
 
+def pixarlog_probe_command_matches(check):
+    command = check.get("command")
+    if (check.get("cve") != "CVE-2026-12912"
+            or check.get("testId") != "pixarlog-abgr-rgb-multirow-strip-overflow"
+            or not isinstance(command, list) or len(command) != 9
+            or command[:5] != ["valgrind", "--tool=memcheck", "--error-exitcode=97",
+                               "--leak-check=no", "--read-var-info=yes"]
+            or not command[5].startswith("--log-file=")
+            or command[7] != "decode"):
+        return False
+    binary = Path(command[6])
+    fixture = Path(command[8])
+    log = Path(command[5].split("=", 1)[1])
+    return (binary.name == "pixarlog-abgr" and fixture.name == "pixarlog-abgr.tif"
+            and binary.parent == fixture.parent == log.parent)
+
+
+def pixarlog_baseline_reproduced(check):
+    log = check.get("memoryLog", "")
+    return (
+        not check.get("timedOut", False)
+        and check.get("returncode") == 97
+        and pixarlog_probe_command_matches(check)
+        and re.fullmatch(r"decode_called=1 result=[1-9][0-9]* strip_size=24576\n",
+                         check.get("stdout", "")) is not None
+        and any(block.group("kind").startswith("Invalid write")
+                and "libtiff.so" in block.group("body")
+                for block in valgrind_invalid_access_blocks(log))
+        and re.search(r"(?m)^==\d+== ERROR SUMMARY: [1-9]\d* errors?", log)
+    )
+
+
+def pixarlog_patched_succeeded(check):
+    return (
+        not check.get("timedOut", False)
+        and check.get("returncode") == 0
+        and pixarlog_probe_command_matches(check)
+        and check.get("stdout") == "decode_called=1 result=-1 strip_size=24576\n"
+        and "Output buffer too small for PixarLog ABGR data" in check.get("stderr", "")
+        and not valgrind_invalid_access_blocks(check.get("memoryLog", ""))
+        and memcheck_has_no_errors(check.get("memoryLog", ""))
+    )
+
+
 def tiff_cve_required(policy, cve):
     configured = policy.get("targetCves") if isinstance(policy, dict) else None
     return isinstance(configured, list) and cve in configured
@@ -915,6 +959,31 @@ def main():
             checks.append(consumer)
         elif package == "tiff":
             fixture = fixtures / "multisample.tif"
+            if tiff_cve_required(policy, "CVE-2026-12912"):
+                source = fixtures / "pixarlog-abgr.c"
+                probe = temp / "pixarlog-abgr"
+                generated = temp / "pixarlog-abgr.tif"
+                subprocess.run(["cc", "-std=c99", "-Wall", "-Wextra", "-Werror",
+                                str(source), "-ltiff", "-o", str(probe)],
+                               check=True, timeout=30)
+                create = execute([str(probe), "generate", str(generated)])
+                if (create.get("timedOut") or create.get("returncode") != 0
+                        or not generated.is_file()
+                        or not 0 < generated.stat().st_size < 1024 * 1024):
+                    raise RuntimeError("Could not generate bounded PixarLog CVE regression input")
+                memory_log = temp / "CVE-2026-12912.valgrind"
+                check = execute([
+                    "valgrind", "--tool=memcheck", "--error-exitcode=97", "--leak-check=no",
+                    "--read-var-info=yes", "--log-file=" + str(memory_log),
+                    str(probe), "decode", str(generated),
+                ])
+                check["memoryLog"] = memory_log.read_text() if memory_log.exists() else ""
+                check["memoryLogPath"] = str(memory_log)
+                check["cve"] = "CVE-2026-12912"
+                check["testId"] = "pixarlog-abgr-rgb-multirow-strip-overflow"
+                check["passed"] = (pixarlog_baseline_reproduced(check) if args.phase == "baseline"
+                                   else pixarlog_patched_succeeded(check))
+                checks.append(check)
             if not fixture.is_file() or not 0 < fixture.stat().st_size < 1024 * 1024:
                 raise RuntimeError("TIFF regression fixture is missing or exceeds its size bound")
             output = temp / "tiffcrop-output.tif"

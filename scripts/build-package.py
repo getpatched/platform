@@ -135,7 +135,11 @@ def run_getpatched_scan(image, image_id, phase, output, temp, package, expected,
         raise RuntimeError("GetPatched scan identified an unexpected installed package version")
     target_findings = set(report.get("findingsById", [])) & target_cves
     finding_pairs = {(finding.get("id"), finding.get("package")) for finding in report.get("findings", [])}
-    expected_pairs = {(cve, binary) for cve in target_cves for binary in advisory_packages}
+    advisory_by_cve = expected.get("advisoryPackagesByCve", {
+        cve: expected["advisoryPackages"] for cve in target_cves
+    })
+    expected_pairs = {(cve, binary) for cve in target_cves
+                      for binary in advisory_by_cve[cve]}
     if phase == "before" and (not target_cves.issubset(target_findings) or not expected_pairs.issubset(finding_pairs)):
         raise RuntimeError("GetPatched advisory scan did not detect every target CVE for every vulnerable binary on the baseline")
     if phase == "after" and target_findings:
@@ -174,6 +178,7 @@ def validate_release_policy(policy, config):
     if (expected["targetCve"] not in policy["targetCves"]
             or policy["targetCves"] != expected["targetCves"]
             or policy["binaryPackages"] != expected["binaryPackages"]
+            or policy.get("advisoryPackagesByCve", expected["advisoryPackagesByCve"]) != expected["advisoryPackagesByCve"]
             or policy["architecture"] != profile["architecture"]
             or policy["release"] != profile["codename"]
             or policy["distribution"] != profile["distribution"]
@@ -361,6 +366,7 @@ def main():
                 "--build-arg", "EXPECTED_VERSION=" + policy["version"],
                 "--build-arg", "APT_SOURCES_B64=" + binary_sources,
                 "--build-arg", "BINARY_PACKAGES=" + " ".join(expected["binaryPackages"]),
+                "--build-arg", "BUILDER_PACKAGES=" + " ".join(expected["builderPackages"]),
                 str(patched_context),
             ]
             run(scan_args)
@@ -374,6 +380,7 @@ def main():
                 "--build-arg", "EXPECTED_VERSION=" + policy["baseVersion"],
                 "--build-arg", "APT_SOURCES_B64=" + binary_sources,
                 "--build-arg", "BINARY_PACKAGES=" + " ".join(expected["binaryPackages"]),
+                "--build-arg", "BUILDER_PACKAGES=" + " ".join(expected["builderPackages"]),
                 str(ROOT),
             ])
             scan_images.append(scan_base)
