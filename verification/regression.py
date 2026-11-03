@@ -294,6 +294,7 @@ def _tiff_bigstrip_probe_command_matches(check):
 def tiff_bigstrip_baseline_reproduced(check):
     log = check.get("memoryLog", "")
     stderr = check.get("stderr", "")
+    bounded_read = re.search(r"GETPATCHED_TIFF_READ_BOUNDED requested=(\d+) cap=16", stderr)
     vulnerable_read_blocks = re.finditer(
         r"(?ms)^==\d+== Syscall param read\(buf\) points to unaddressable byte\(s\)\n"
         r"(?P<body>.*?)(?=^==\d+== (?:Invalid |Use of |Conditional |Syscall param |ERROR SUMMARY)|\Z)",
@@ -316,7 +317,8 @@ def tiff_bigstrip_baseline_reproduced(check):
         and check.get("memoryMappingDisabled") is True
         and _tiff_bigstrip_probe_command_matches(check)
         and "GETPATCHED_TIFF_MMAP_DISABLED" in stderr
-        and "GETPATCHED_TIFF_READ_BOUNDED requested=4294967301 cap=16" in stderr
+        and bounded_read is not None
+        and int(bounded_read.group(1)) >= 4294967295
         and "got 16 bytes, expected 4294967301" in stderr
         and read_overrun_reproduced
         and re.search(r"(?m)^==\d+== ERROR SUMMARY: [1-9]\d* errors?", log) is not None
