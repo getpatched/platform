@@ -301,8 +301,10 @@ def tiff_bigstrip_baseline_reproduced(check):
         and check.get("returncode") == 97
         and check.get("fixtureSizeBytes") == 304
         and check.get("declaredStripBytes") == 4294967301
-        and check.get("shimUsed") is False
+        and check.get("allocationCapEnabled") is False
+        and check.get("memoryMappingDisabled") is True
         and _tiff_bigstrip_probe_command_matches(check)
+        and "GETPATCHED_TIFF_MMAP_DISABLED" in stderr
         and "got 64 bytes, expected 4294967301" in stderr
         and "Invalid write of size" in log
         and "block of size 5 alloc'd" in log
@@ -319,8 +321,10 @@ def tiff_bigstrip_patched_succeeded(check):
         and check.get("returncode") == 1
         and check.get("fixtureSizeBytes") == 304
         and check.get("declaredStripBytes") == 4294967301
-        and check.get("shimUsed") is True
+        and check.get("allocationCapEnabled") is True
+        and check.get("memoryMappingDisabled") is True
         and _tiff_bigstrip_probe_command_matches(check)
+        and "GETPATCHED_TIFF_MMAP_DISABLED" in stderr
         and "GETPATCHED_TIFF_ALLOCATION_REJECTED size=4294967301 cap=67108864" in stderr
         and "got 64 bytes, expected 4294967301" not in stderr
         and memcheck_has_no_errors(check.get("memoryLog", ""))
@@ -1049,15 +1053,18 @@ def main():
                 ]
                 environment = os.environ.copy()
                 environment.pop("LD_PRELOAD", None)
-                shim_used = args.phase == "patched"
-                if shim_used:
-                    environment["LD_PRELOAD"] = str(shim)
+                allocation_cap_enabled = args.phase == "patched"
+                environment["LD_PRELOAD"] = str(shim)
+                environment.pop("GETPATCHED_TIFF_ALLOC_CAP_ENABLED", None)
+                if allocation_cap_enabled:
+                    environment["GETPATCHED_TIFF_ALLOC_CAP_ENABLED"] = "1"
                 check = execute(command, timeout=20, env=environment)
                 check["memoryLog"] = memory_log.read_text() if memory_log.exists() else ""
                 check["memoryLogPath"] = str(memory_log)
                 check["fixtureSizeBytes"] = generated.stat().st_size
                 check["declaredStripBytes"] = 4294967301
-                check["shimUsed"] = shim_used
+                check["allocationCapEnabled"] = allocation_cap_enabled
+                check["memoryMappingDisabled"] = "GETPATCHED_TIFF_MMAP_DISABLED" in check.get("stderr", "")
                 check["cve"] = "CVE-2026-18495"
                 check["testId"] = "tiff2pdf-bigtiff-strip-length-truncation"
                 check["passed"] = (

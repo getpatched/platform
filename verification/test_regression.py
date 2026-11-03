@@ -693,8 +693,9 @@ class TiffBigStripRegressionClassification(unittest.TestCase):
             "timedOut": False,
             "fixtureSizeBytes": 304,
             "declaredStripBytes": 4294967301,
-            "shimUsed": False,
-            "stderr": "TIFFReadRawStrip: got 64 bytes, expected 4294967301.\n",
+            "allocationCapEnabled": False,
+            "memoryMappingDisabled": True,
+            "stderr": "GETPATCHED_TIFF_MMAP_DISABLED\nTIFFReadRawStrip: got 64 bytes, expected 4294967301.\n",
             "memoryLog": (
                 "==1== Invalid write of size 1\n"
                 "==1== Address 0x123 is 0 bytes after a block of size 5 alloc'd\n"
@@ -711,6 +712,7 @@ class TiffBigStripRegressionClassification(unittest.TestCase):
         check = self.baseline_check()
         self.assertTrue(tiff_bigstrip_baseline_reproduced(check))
         self.assertFalse(tiff_bigstrip_baseline_reproduced(dict(check, stderr="")))
+        self.assertFalse(tiff_bigstrip_baseline_reproduced(dict(check, memoryMappingDisabled=False)))
         self.assertFalse(tiff_bigstrip_baseline_reproduced(
             dict(check, memoryLog="==1== ERROR SUMMARY: 0 errors from 0 contexts\n")))
         self.assertFalse(tiff_bigstrip_baseline_reproduced(dict(check, fixtureSizeBytes=4_294_967_301)))
@@ -719,8 +721,9 @@ class TiffBigStripRegressionClassification(unittest.TestCase):
         check = self.baseline_check()
         check.update({
             "returncode": 1,
-            "shimUsed": True,
+            "allocationCapEnabled": True,
             "stderr": (
+                "GETPATCHED_TIFF_MMAP_DISABLED\n"
                 "GETPATCHED_TIFF_ALLOCATION_REJECTED size=4294967301 cap=67108864\n"
                 "Can't allocate 4294967301 bytes\n"
             ),
