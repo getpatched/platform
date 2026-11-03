@@ -1439,6 +1439,79 @@
       "affected": [
         {
           "database_specific": {
+            "candidate_status": "development-verified-production-release-pending",
+            "candidate_version": "2.9.14+dfsg-1.3~deb12u6+getpatched1",
+            "fixed_versions": [
+              "2.9.14+dfsg-1.3~deb12u6+getpatched1"
+            ],
+            "getpatched_fixed_version": "2.9.14+dfsg-1.3~deb12u6+getpatched1",
+            "source_package": "libxml2",
+            "target_id": "debian-bookworm-amd64",
+            "vendor_fixed_versions": []
+          },
+          "ecosystem_specific": {
+            "architecture": "amd64",
+            "distribution": "Debian",
+            "release": "bookworm",
+            "source_package": "libxml2",
+            "target_id": "debian-bookworm-amd64"
+          },
+          "package": {
+            "ecosystem": "Debian:12",
+            "name": "libxml2"
+          },
+          "versions": [
+            "2.9.14+dfsg-1.3~deb12u6"
+          ]
+        },
+        {
+          "database_specific": {
+            "candidate_status": "development-verified-production-release-pending",
+            "candidate_version": "2.12.7+dfsg+really2.9.14-2.1+deb13u3+getpatched1",
+            "fixed_versions": [
+              "2.12.7+dfsg+really2.9.14-2.1+deb13u3+getpatched1"
+            ],
+            "getpatched_fixed_version": "2.12.7+dfsg+really2.9.14-2.1+deb13u3+getpatched1",
+            "source_package": "libxml2",
+            "target_id": "debian-trixie-amd64",
+            "vendor_fixed_versions": []
+          },
+          "ecosystem_specific": {
+            "architecture": "amd64",
+            "distribution": "Debian",
+            "release": "trixie",
+            "source_package": "libxml2",
+            "target_id": "debian-trixie-amd64"
+          },
+          "package": {
+            "ecosystem": "Debian:13",
+            "name": "libxml2"
+          },
+          "versions": [
+            "2.12.7+dfsg+really2.9.14-2.1+deb13u3"
+          ]
+        }
+      ],
+      "database_specific": {
+        "severity": "MEDIUM",
+        "verification_status": "development-verified-production-release-pending"
+      },
+      "details": "GetPatched records exact affected package versions and exact reviewed fixes per distribution, release, and architecture. A new target or fixed package version is accepted only after its own build and regression evidence.",
+      "id": "CVE-2026-6653",
+      "modified": "2026-10-30T05:38:23Z",
+      "references": [
+        {
+          "type": "ADVISORY",
+          "url": "https://security-tracker.debian.org/tracker/CVE-2026-6653"
+        }
+      ],
+      "schema_version": "1.6.0",
+      "summary": "libxml2 parameter-entity parsing use-after-free in Debian Bookworm and Trixie"
+    },
+    {
+      "affected": [
+        {
+          "database_specific": {
             "candidate_status": "development-verified-sponsor-flow-pending",
             "candidate_version": "1.34.5-1+deb13u1+getpatched1",
             "fixed_versions": [

@@ -58,12 +58,11 @@ class GetPatchedScannerContract(unittest.TestCase):
               item["ecosystem_specific"]["target_id"],
               item["database_specific"]["getpatched_fixed_version"])
              for item in advisory["affected"]],
-            [("Debian:12", "libxml2", ["2.9.14+dfsg-1.3~deb12u6"], target_id,
-              "2.9.14+dfsg-1.3~deb12u6+getpatched1")],
+            [("Debian:12", "libxml2", ["2.9.14+dfsg-1.3~deb12u6"], "debian-bookworm-amd64",
+              "2.9.14+dfsg-1.3~deb12u6+getpatched1"),
+             ("Debian:13", "libxml2", ["2.12.7+dfsg+really2.9.14-2.1+deb13u3"], "debian-trixie-amd64",
+              "2.12.7+dfsg+really2.9.14-2.1+deb13u3+getpatched1")],
         )
-        self.assertNotIn("debian-trixie-amd64", {
-            item["ecosystem_specific"]["target_id"] for item in advisory["affected"]
-        })
 
     def test_libxml2_trixie_candidate_advisory_has_its_exact_target_version(self):
         target_id = "debian-trixie-amd64"
@@ -77,12 +76,11 @@ class GetPatchedScannerContract(unittest.TestCase):
               item["ecosystem_specific"]["target_id"],
               item["database_specific"]["getpatched_fixed_version"])
              for item in advisory["affected"]],
-            [("Debian:13", "libxml2", ["2.12.7+dfsg+really2.9.14-2.1+deb13u3"], target_id,
+            [("Debian:12", "libxml2", ["2.9.14+dfsg-1.3~deb12u6"], "debian-bookworm-amd64",
+              "2.9.14+dfsg-1.3~deb12u6+getpatched1"),
+             ("Debian:13", "libxml2", ["2.12.7+dfsg+really2.9.14-2.1+deb13u3"], target_id,
               "2.12.7+dfsg+really2.9.14-2.1+deb13u3+getpatched1")],
         )
-        self.assertNotIn("debian-bookworm-amd64", {
-            item["ecosystem_specific"]["target_id"] for item in advisory["affected"]
-        })
 
     def test_expat_candidate_requires_exact_crash_or_patched_consumer(self):
         baseline = {"cve": "CVE-2026-117610", "testId": "CVE-2026-117610-empty-nonfinal-subparser",
@@ -868,7 +866,7 @@ raise SystemExit(3)
         committed = json.loads(FEED.read_text())
         self.assertEqual(generated, committed)
         self.assertEqual({item["id"] for item in committed["vulns"]}, {
-            "CVE-2025-49794", "CVE-2025-49796", "CVE-2026-4111",
+            "CVE-2025-49794", "CVE-2025-49796", "CVE-2026-4111", "CVE-2026-6653",
             "CVE-2026-53584", "CVE-2026-53585", "CVE-2026-53586",
             "CVE-2025-52885", "CVE-2026-69184", "CVE-2026-111497",
             "CVE-2026-117610",

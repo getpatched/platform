@@ -1,11 +1,11 @@
 # GetPatched evidence index
 
-## libxml2 CVE-2026-6653 — local development verification — 3 Nov 2026
+## libxml2 CVE-2026-6653 — hosted Debian development verification — 3 Nov 2026
 
-- Local pinned build pipelines passed for Debian Bookworm amd64 (`2.9.14+dfsg-1.3~deb12u6+getpatched1`) and Trixie amd64 (`2.12.7+dfsg+really2.9.14-2.1+deb13u3+getpatched1`). Both exact installed baselines reproduced the parameter-entity use-after-free under Valgrind, and both candidates passed the same regression. The candidate-only package-aware scanner cleared CVE-2026-6653 on each candidate and retained the unrelated Expat finding. Signed temporary APT-client checks passed.
-- Full reports, hashes, provenance, and caveats are in [`evidence/libxml2-cve-2026-6653-2026-11-03.md`](evidence/libxml2-cve-2026-6653-2026-11-03.md), with unfiltered evidence under `/private/tmp/getpatched-cve-2026-6653-bookworm-verified/` and `/private/tmp/getpatched-cve-2026-6653-trixie-final/`.
+- Hosted Bookworm [41572688535](https://github.com/getpatched/platform/actions/runs/41572688535) and Trixie [41573393066](https://github.com/getpatched/platform/actions/runs/41573393066) passed the exact-source package builds, installed baseline use-after-free reproduction, patched regression, candidate-only package-aware before/after scan, `xmllint` consumer check, and isolated signed APT client verification. Candidate scans cleared CVE-2026-6653 and preserved the unrelated Expat finding.
+- Full reports and file hashes are retained in [`evidence/libxml2-cve-2026-6653-2026-11-03.md`](evidence/libxml2-cve-2026-6653-2026-11-03.md) and [`evidence/libxml2-cve-2026-6653-hosted-2026-11-03/`](evidence/libxml2-cve-2026-6653-hosted-2026-11-03/). Original workflow artifacts remain under `/private/tmp/getpatched-libxml2-bookworm-run-41572688535/` and `/private/tmp/getpatched-libxml2-trixie-run-41573393066/`.
 - Trivy 0.70.0 still reports the CVE against `libxml2`, `libxml2-dev`, and `libxml2-utils` after patching because its Debian records do not provide a GetPatched fixed version (`fix_deferred` for Bookworm, `affected` for Trixie). Raw results are preserved; this is not a Trivy-clean claim.
-- Hosted target workflows and public source PR integration remain pending. Both targets remain unverified in policy and uncounted toward 100. No package binary, signed production index, private staging object, or release was published.
+- The source recipe PR [#10](https://github.com/getpatched/packaging-libxml2/pull/10) remains open for final independent review. Platform target policy and catalogue records are being aligned in unmerged feature PR [#109](https://github.com/getpatched/platform/pull/109). No package binary, signed production index, private staging object, or release was published.
 
 ## Expat CVE-2026-117610 — policy-matched development verification — 3 Nov 2026
 
@@ -17,6 +17,8 @@
 - Earlier fixture failures and corrections are retained below as audit history. The initial hosted compile failure [41536600485](https://github.com/getpatched/platform/actions/runs/41536600485) exposed a GCC `-Werror` warning; [41538947686](https://github.com/getpatched/platform/actions/runs/41538947686) exposed the `xmlwf -v` consumer classifier bug. Corrected fixture and classifier checks have passed local CI and independent review.
 
 ## Active 100-CVE goal — 3 Nov 2026
+
+- **Current ledger count: 3/100 distinct CVEs** (TIFF, Poppler, and Expat). libxml2 passed its hosted target workflows; final recipe review, a matching verified policy run, and combined platform review are still gates before it enters the count. No production publication is in scope.
 
 - Debian Bookworm verification run [41518910177](https://github.com/getpatched/platform/actions/runs/41518910177) and Trixie run [41531130479](https://github.com/getpatched/platform/actions/runs/41531130479) passed the exact pinned source build, installed vulnerable-baseline reproduction, patched installed regression, package-aware before/after scan, `pdfinfo -v` consumer check, and isolated signed APT client checks. The tested versions are `22.12.0-2+deb12u3+getpatched1` and `25.03.0-5+deb13u4+getpatched1`.
 - The candidate-specific GetPatched scanner changes from one matching CVE finding on each exact baseline to zero on its exact patched image, after independently rerunning the paired installed regression. Raw Trivy 0.70.0 reports CVE-2026-107705 for 14 Poppler binary-package records on both baseline and patched images in each Debian run. Preserve that vendor result; the package-aware result is separate and does not mean Trivy is clean. No suppression or ignore rule is used.

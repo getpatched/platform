@@ -301,6 +301,8 @@ class PublicCatalogueContract(unittest.TestCase):
                 self.assertEqual(entry["status"], policy["candidateStatus"])
                 expected_run = {
                     ("libxml2", "ubuntu-focal-amd64"): "40899705050",
+                    ("libxml2", "debian-bookworm-amd64"): "41572688535",
+                    ("libxml2", "debian-trixie-amd64"): "41573393066",
                     ("libarchive", "ubuntu-focal-amd64"): "40899709850",
                     ("libgit2", "ubuntu-focal-amd64"): "41162605227",
                     ("libgit2", "ubuntu-jammy-amd64"): "41167536831",
@@ -339,10 +341,10 @@ class PublicCatalogueContract(unittest.TestCase):
 
         page = (ROOT / "site/index.html").read_text()
         self.assertIn("Hosted development verification passed.", page)
-        self.assertIn("Six Focal candidates, two Debian Expat targets, one Debian Trixie c-ares target, two Debian Poppler targets, one Jammy libgit2 target and two Debian TIFF targets have hosted builds", page)
+        self.assertIn("Six Focal candidates, two Debian Expat targets, two Debian libxml2 targets, one Debian Trixie c-ares target, two Debian Poppler targets, one Jammy libgit2 target and two Debian TIFF targets have hosted builds", page)
         self.assertIn("Live package publication and downloads remain disabled", page)
         self.assertIn("no production package release has been published", page)
-        self.assertIn("Hosted development verification has passed for six Focal candidates, two Debian Expat targets", page)
+        self.assertIn("Hosted development verification has passed for six Focal candidates, two Debian Expat targets, two Debian libxml2 targets", page)
         self.assertIn("Ubuntu Pro/ESM compatibility is not tested or supported", page)
         self.assertIn("Each row links to its source, patch, regression tests and release history", page)
         self.assertIn("Any sponsor delay starts only after sponsor publication", page)

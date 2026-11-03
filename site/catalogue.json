@@ -6,28 +6,28 @@
       "releaseVersion": "20.04",
       "codename": "focal",
       "architecture": "amd64",
-      "displayName": "Ubuntu 20.04 LTS (focal) · amd64"
+      "displayName": "Ubuntu 20.04 LTS (focal) \u00b7 amd64"
     },
     "ubuntu-jammy-amd64": {
       "distribution": "Ubuntu",
       "releaseVersion": "22.04",
       "codename": "jammy",
       "architecture": "amd64",
-      "displayName": "Ubuntu 22.04 LTS (jammy) · amd64"
+      "displayName": "Ubuntu 22.04 LTS (jammy) \u00b7 amd64"
     },
     "debian-bookworm-amd64": {
       "distribution": "Debian",
       "releaseVersion": "12",
       "codename": "bookworm",
       "architecture": "amd64",
-      "displayName": "Debian 12 (bookworm) · amd64"
+      "displayName": "Debian 12 (bookworm) \u00b7 amd64"
     },
     "debian-trixie-amd64": {
       "distribution": "Debian",
       "releaseVersion": "13",
       "codename": "trixie",
       "architecture": "amd64",
-      "displayName": "Debian 13 (trixie) · amd64"
+      "displayName": "Debian 13 (trixie) \u00b7 amd64"
     }
   },
   "packages": [
@@ -110,6 +110,148 @@
           "sourceUrl": "https://github.com/getpatched/packaging-libxml2/tree/getpatched/focal",
           "patchUrl": "https://github.com/getpatched/packaging-libxml2/blob/getpatched/focal/patches/CVE-2025-49794-49796.patch",
           "testsUrl": "https://github.com/getpatched/packaging-libxml2/tree/getpatched/focal/tests",
+          "releasesUrl": "https://github.com/getpatched/packaging-libxml2/releases",
+          "releaseStatus": "No production release",
+          "publicLicenseScope": "getpatched-authored-contributions-only"
+        },
+        "debian-bookworm-amd64": {
+          "baseVersion": "2.9.14+dfsg-1.3~deb12u6",
+          "version": "2.9.14+dfsg-1.3~deb12u6+getpatched1",
+          "cves": [
+            "CVE-2026-6653"
+          ],
+          "vulnerabilities": [
+            {
+              "id": "CVE-2026-6653",
+              "slug": "cve-2026-6653",
+              "summary": "A crafted XML document can trigger a use-after-free while libxml2 handles parameter-entity input after parser error handling.",
+              "advisoryUrl": "https://security-tracker.debian.org/tracker/CVE-2026-6653",
+              "patchSlugs": [
+                "cve-2026-6653-debian"
+              ],
+              "patched": true
+            }
+          ],
+          "patches": [
+            {
+              "id": "cve-2026-6653-debian",
+              "slug": "cve-2026-6653-debian",
+              "kind": "security",
+              "title": "Preserve parser input ownership during parameter-entity errors",
+              "description": "Backports the upstream input-ownership and parser EOF handling fixes to the pinned Debian libxml2 sources.",
+              "sha256": "cb8ace38d864e912a69307c33f1f931042bf1df83cd0c2d3c526c1a9348a5021",
+              "fileUrl": "https://github.com/getpatched/packaging-libxml2/blob/getpatched/debian-bookworm/patches/CVE-2026-6653-debian.patch",
+              "cves": [
+                "CVE-2026-6653"
+              ],
+              "upstream": {
+                "repository": "https://gitlab.gnome.org/GNOME/libxml2",
+                "commit": "f19a95108a32b40eaa3b16b41d7a687896e61ce5",
+                "url": "https://gitlab.gnome.org/GNOME/libxml2/-/commit/f19a95108a32b40eaa3b16b41d7a687896e61ce5",
+                "additionalCommits": [
+                  {
+                    "commit": "e129c1d1a27abdeaab44f4d59eb0cb5052df7c6f",
+                    "url": "https://gitlab.gnome.org/GNOME/libxml2/-/commit/e129c1d1a27abdeaab44f4d59eb0cb5052df7c6f",
+                    "purpose": "Stop xmlSkipBlankChars at parser EOF during allocation-failure handling."
+                  }
+                ]
+              },
+              "tests": [
+                {
+                  "id": "CVE-2026-6653-parameter-entity-use-after-free",
+                  "baselineExpectation": "The exact installed Debian baseline reproduces the parameter-entity use-after-free under Valgrind.",
+                  "patchedExpectation": "The exact installed patched package passes the same Valgrind regression with zero errors and passes the xmllint consumer check."
+                }
+              ]
+            }
+          ],
+          "access": "public",
+          "delayHours": 0,
+          "sponsorEligibility": null,
+          "earlyBinaryLicenseId": null,
+          "publicContributionSpdx": "MIT",
+          "earlyUse": [
+            "private",
+            "commercial"
+          ],
+          "earlyRedistributionAllowed": false,
+          "status": "development-verified-production-release-pending",
+          "verification": "https://github.com/getpatched/platform/actions/runs/41572688535",
+          "ubuntuProEsmCompatibility": "not-applicable",
+          "sourceUrl": "https://github.com/getpatched/packaging-libxml2/tree/getpatched/debian-bookworm",
+          "patchUrl": "https://github.com/getpatched/packaging-libxml2/blob/getpatched/debian-bookworm/patches/CVE-2026-6653-debian.patch",
+          "testsUrl": "https://github.com/getpatched/packaging-libxml2/tree/getpatched/debian-bookworm/tests",
+          "releasesUrl": "https://github.com/getpatched/packaging-libxml2/releases",
+          "releaseStatus": "No production release",
+          "publicLicenseScope": "getpatched-authored-contributions-only"
+        },
+        "debian-trixie-amd64": {
+          "baseVersion": "2.12.7+dfsg+really2.9.14-2.1+deb13u3",
+          "version": "2.12.7+dfsg+really2.9.14-2.1+deb13u3+getpatched1",
+          "cves": [
+            "CVE-2026-6653"
+          ],
+          "vulnerabilities": [
+            {
+              "id": "CVE-2026-6653",
+              "slug": "cve-2026-6653",
+              "summary": "A crafted XML document can trigger a use-after-free while libxml2 handles parameter-entity input after parser error handling.",
+              "advisoryUrl": "https://security-tracker.debian.org/tracker/CVE-2026-6653",
+              "patchSlugs": [
+                "cve-2026-6653-debian"
+              ],
+              "patched": true
+            }
+          ],
+          "patches": [
+            {
+              "id": "cve-2026-6653-debian",
+              "slug": "cve-2026-6653-debian",
+              "kind": "security",
+              "title": "Preserve parser input ownership during parameter-entity errors",
+              "description": "Backports the upstream input-ownership and parser EOF handling fixes to the pinned Debian libxml2 sources.",
+              "sha256": "cb8ace38d864e912a69307c33f1f931042bf1df83cd0c2d3c526c1a9348a5021",
+              "fileUrl": "https://github.com/getpatched/packaging-libxml2/blob/getpatched/debian-trixie/patches/CVE-2026-6653-debian.patch",
+              "cves": [
+                "CVE-2026-6653"
+              ],
+              "upstream": {
+                "repository": "https://gitlab.gnome.org/GNOME/libxml2",
+                "commit": "f19a95108a32b40eaa3b16b41d7a687896e61ce5",
+                "url": "https://gitlab.gnome.org/GNOME/libxml2/-/commit/f19a95108a32b40eaa3b16b41d7a687896e61ce5",
+                "additionalCommits": [
+                  {
+                    "commit": "e129c1d1a27abdeaab44f4d59eb0cb5052df7c6f",
+                    "url": "https://gitlab.gnome.org/GNOME/libxml2/-/commit/e129c1d1a27abdeaab44f4d59eb0cb5052df7c6f",
+                    "purpose": "Stop xmlSkipBlankChars at parser EOF during allocation-failure handling."
+                  }
+                ]
+              },
+              "tests": [
+                {
+                  "id": "CVE-2026-6653-parameter-entity-use-after-free",
+                  "baselineExpectation": "The exact installed Debian baseline reproduces the parameter-entity use-after-free under Valgrind.",
+                  "patchedExpectation": "The exact installed patched package passes the same Valgrind regression with zero errors and passes the xmllint consumer check."
+                }
+              ]
+            }
+          ],
+          "access": "public",
+          "delayHours": 0,
+          "sponsorEligibility": null,
+          "earlyBinaryLicenseId": null,
+          "publicContributionSpdx": "MIT",
+          "earlyUse": [
+            "private",
+            "commercial"
+          ],
+          "earlyRedistributionAllowed": false,
+          "status": "development-verified-production-release-pending",
+          "verification": "https://github.com/getpatched/platform/actions/runs/41573393066",
+          "ubuntuProEsmCompatibility": "not-applicable",
+          "sourceUrl": "https://github.com/getpatched/packaging-libxml2/tree/getpatched/debian-trixie",
+          "patchUrl": "https://github.com/getpatched/packaging-libxml2/blob/getpatched/debian-trixie/patches/CVE-2026-6653-debian.patch",
+          "testsUrl": "https://github.com/getpatched/packaging-libxml2/tree/getpatched/debian-trixie/tests",
           "releasesUrl": "https://github.com/getpatched/packaging-libxml2/releases",
           "releaseStatus": "No production release",
           "publicLicenseScope": "getpatched-authored-contributions-only"
@@ -911,7 +1053,7 @@
             {
               "id": "CVE-2026-52490",
               "slug": "cve-2026-52490",
-              "summary": "An overflowing subdivision count can bypass tiffcrop’s section-count limit.",
+              "summary": "An overflowing subdivision count can bypass tiffcrop\u2019s section-count limit.",
               "advisoryUrl": "https://security-tracker.debian.org/tracker/CVE-2026-52490",
               "patchSlugs": [
                 "cve-2026-52490-bookworm"
@@ -1010,7 +1152,7 @@
             {
               "id": "CVE-2026-52490",
               "slug": "cve-2026-52490",
-              "summary": "An overflowing subdivision count can bypass tiffcrop’s section-count limit.",
+              "summary": "An overflowing subdivision count can bypass tiffcrop\u2019s section-count limit.",
               "advisoryUrl": "https://security-tracker.debian.org/tracker/CVE-2026-52490",
               "patchSlugs": [
                 "cve-2026-52490-trixie"
