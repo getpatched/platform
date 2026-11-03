@@ -33,13 +33,29 @@ class PublicCatalogueContract(unittest.TestCase):
         }
         for target_id, target_policy in policy.items():
             with self.subTest(target=target_id):
-                self.assertEqual(target_policy["candidateStatus"],
+                verified_release = (target_policy["verifiedReleases"][-1]
+                                    if target_policy["candidateStatus"] == "unverified-development-candidate"
+                                    else target_policy)
+                verified_version = verified_release.get("version", target_policy["packageVersion"])
+                verified_cves = verified_release.get("targetCves", target_policy["targetCves"])
+                verified_status = verified_release.get("status", target_policy["candidateStatus"])
+                verified_packages = set(
+                    name for names in verified_release.get(
+                        "advisoryPackagesByCve",
+                        {cve: target_policy["advisoryPackages"] for cve in verified_cves},
+                    ).values() for name in names
+                )
+                self.assertEqual(verified_status,
                                  "development-verified-production-release-pending")
+                if target_policy["candidateStatus"] == "unverified-development-candidate":
+                    self.assertEqual(target_policy["packageVersion"], "2.9.0-1~deb13u1+getpatched2")
+                    self.assertEqual(verified_version, "2.9.0-1~deb13u1+getpatched1")
+                    self.assertEqual(verified_cves, ["CVE-2026-117610"])
                 target_record = record["targets"][target_id]
                 self.assertEqual(target_record["baseVersion"], target_policy["baselineVersion"])
-                self.assertEqual(target_record["version"], target_policy["packageVersion"])
-                self.assertEqual(target_record["cves"], target_policy["targetCves"])
-                self.assertEqual(target_record["status"], target_policy["candidateStatus"])
+                self.assertEqual(target_record["version"], verified_version)
+                self.assertEqual(target_record["cves"], verified_cves)
+                self.assertEqual(target_record["status"], verified_status)
                 self.assertEqual(target_record["verification"],
                                  f"https://github.com/getpatched/platform/actions/runs/{expected_runs[target_id]}")
                 self.assertEqual(target_record["access"], "public")
@@ -53,15 +69,15 @@ class PublicCatalogueContract(unittest.TestCase):
                 affected = [item for item in advisory["affected"]
                             if item["ecosystem_specific"].get("target_id") == target_id]
                 self.assertEqual({item["package"]["name"] for item in affected},
-                                 set(target_policy["advisoryPackages"]))
+                                 verified_packages)
                 for item in affected:
                     self.assertEqual(item["versions"], [target_policy["baselineVersion"]])
                     self.assertEqual(item["database_specific"]["candidate_version"],
-                                     target_policy["packageVersion"])
+                                     verified_version)
                     self.assertEqual(item["database_specific"]["getpatched_fixed_version"],
-                                     target_policy["packageVersion"])
+                                     verified_version)
                     self.assertEqual(item["database_specific"]["candidate_status"],
-                                     target_policy["candidateStatus"])
+                                     verified_status)
 
     def test_ubuntu_snapshot_source_list_emits_one_suite_per_apt_line(self):
         platform = json.loads((ROOT / "packages.json").read_text())
