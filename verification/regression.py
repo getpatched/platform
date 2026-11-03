@@ -132,6 +132,45 @@ def libxml2_parameter_entity_patched_succeeded(check):
     )
 
 
+def libxml2_catalog_command(check):
+    command = check.get("command", [])
+    return bool(
+        len(command) == 8
+        and Path(command[0]).name == "valgrind"
+        and command[1:5] == ["--tool=memcheck", "--error-exitcode=97", "--leak-check=no", "--read-var-info=yes"]
+        and memcheck_log_path_matches(check, command)
+        and Path(command[6]).name == "libxml2-cve-2026-76781"
+        and Path(command[7]).name == "cve-2026-76781-catalog.xml"
+    )
+
+
+def libxml2_catalog_baseline_reproduced(check):
+    log = check.get("memoryLog", "")
+    return bool(
+        not check.get("timedOut", False)
+        and check.get("returncode") == 97
+        and libxml2_catalog_command(check)
+        and any(
+            block.group("kind").startswith("Invalid read")
+            and "xmlParseXMLCatalogNode" in block.group("body")
+            and "libxml2.so." in block.group("body")
+            for block in valgrind_invalid_access_blocks(log)
+        )
+        and re.search(r"(?m)^==\d+== ERROR SUMMARY: [1-9]\d* errors?", log) is not None
+    )
+
+
+def libxml2_catalog_patched_succeeded(check):
+    log = check.get("memoryLog", "")
+    return bool(
+        not check.get("timedOut", False)
+        and check.get("returncode") == 0
+        and libxml2_catalog_command(check)
+        and not valgrind_invalid_access_blocks(log)
+        and re.search(r"(?m)^==\d+== ERROR SUMMARY: 0 errors?", log)
+    )
+
+
 def libxml2_xinclude_nonet_result(check, phase):
     command = check.get("command", [])
     expected_mode = "expect-network" if phase == "baseline" else "expect-blocked"
@@ -154,6 +193,31 @@ def libxml2_xinclude_checks_succeeded(checks, phase):
         len(candidates) == 2
         and sorted(apis) == ["document", "tree"]
         and all(libxml2_xinclude_nonet_result(check, phase) for check in candidates)
+    )
+
+
+def libxml2_baseline_check_succeeded(check):
+    cve = check.get("cve")
+    if cve == "CVE-2026-6653":
+        return libxml2_parameter_entity_baseline_reproduced(check)
+    if cve == "CVE-2026-76781":
+        return libxml2_catalog_baseline_reproduced(check)
+    return schematron_baseline_reproduced(check)
+
+
+def libxml2_patched_check_succeeded(check):
+    cve = check.get("cve")
+    if cve == "CVE-2026-6653":
+        return libxml2_parameter_entity_patched_succeeded(check)
+    if cve == "CVE-2026-76781":
+        return libxml2_catalog_patched_succeeded(check)
+    return check.get("returncode") == 3 and "ERROR SUMMARY: 0 errors" in check.get("memoryLog", "")
+
+
+def libxml2_check_cardinality_valid(checks, target_cves):
+    return all(
+        sum(check.get("cve") == cve for check in checks) == (2 if cve == "CVE-2026-86144" else 1)
+        for cve in target_cves
     )
 
 
@@ -966,6 +1030,33 @@ def main():
                         check["phase"] = args.phase
                         check["passed"] = libxml2_xinclude_nonet_result(check, args.phase)
                         checks.append(check)
+                elif cve == "CVE-2026-76781":
+                    probe = temp / "libxml2-cve-2026-76781"
+                    flags = shlex.split(subprocess.check_output(
+                        ["pkg-config", "--cflags", "--libs", "libxml-2.0"], text=True, timeout=15
+                    ))
+                    compiled = subprocess.run(
+                        ["cc", "-std=c11", "-O1", "-g", str(fixtures / "cve-2026-76781-catalog-harness.c"),
+                         "-o", str(probe), *flags],
+                        capture_output=True, text=True, timeout=30, check=False,
+                    )
+                    if compiled.returncode != 0:
+                        raise RuntimeError("could not compile the libxml2 CVE-2026-76781 regression harness: " + compiled.stderr[-2000:])
+                    log = temp / "cve-2026-76781.valgrind"
+                    check = execute([
+                        "valgrind", "--tool=memcheck", "--error-exitcode=97", "--leak-check=no",
+                        "--read-var-info=yes", "--log-file=" + str(log), str(probe),
+                        str(fixtures / "cve-2026-76781-catalog.xml"),
+                    ], timeout=20)
+                    check["cve"] = cve
+                    check["testId"] = "catalog-next-catalog-missing-attribute"
+                    check["memoryLogPath"] = str(log)
+                    check["memoryLog"] = log.read_text() if log.exists() else ""
+                    check["passed"] = (
+                        libxml2_catalog_baseline_reproduced(check)
+                        if args.phase == "baseline" else libxml2_catalog_patched_succeeded(check)
+                    )
+                    checks.append(check)
                 else:
                     raise RuntimeError("no libxml2 regression is configured for " + cve)
             if args.phase == "patched":
