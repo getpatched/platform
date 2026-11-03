@@ -27,10 +27,10 @@ def digest(data):
 
 
 class PackageRecipeContract(unittest.TestCase):
-    def test_verified_libxml2_target_uses_its_merged_recipe_branch(self):
+    def test_unverified_libxml2_target_uses_its_candidate_recipe_branch(self):
         self.assertEqual(
             target_source_branch(PLATFORM_CONFIG, "debian-trixie-amd64", "libxml2"),
-            "getpatched/debian-trixie",
+            "getpatched/cve-2026-74860-trixie",
         )
 
     def test_patch_applicability_supports_target_scoped_exact_and_debian_version_ranges(self):

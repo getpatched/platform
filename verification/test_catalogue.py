@@ -441,6 +441,25 @@ class PublicCatalogueContract(unittest.TestCase):
         self.assertNotIn('"02"', page)
         self.assertNotIn('"01"', page)
 
+    def test_unverified_libxml2_python_binding_candidate_is_not_public_catalogue_claim(self):
+        platform = json.loads((ROOT / "packages.json").read_text())
+        catalogue = json.loads((ROOT / "site/catalogue.json").read_text())
+        target = package_target_policy(platform, "libxml2", "debian-trixie-amd64")
+        self.assertEqual(target["candidateStatus"], "unverified-development-candidate")
+        self.assertEqual(target["packageVersion"],
+                         "2.12.7+dfsg+really2.9.14-2.1+deb13u3+getpatched4")
+        self.assertIn("python3-libxml2", target["binaryPackages"])
+        self.assertEqual(target["advisoryPackagesByCve"]["CVE-2026-74860"], ["python3-libxml2"])
+        for cve in ("CVE-2026-6653", "CVE-2026-86144", "CVE-2026-76781"):
+            self.assertEqual(target["advisoryPackagesByCve"][cve], ["libxml2"])
+        prior = target["verifiedReleases"][-1]
+        self.assertEqual(prior["version"],
+                         "2.12.7+dfsg+really2.9.14-2.1+deb13u3+getpatched3")
+        record = next(item for item in catalogue["packages"] if item["source"] == "libxml2")
+        published = record["targets"]["debian-trixie-amd64"]
+        self.assertEqual(published["version"], prior["version"])
+        self.assertNotIn("CVE-2026-74860", published["cves"])
+
 
 if __name__ == "__main__":
     unittest.main()

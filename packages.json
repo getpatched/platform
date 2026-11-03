@@ -274,30 +274,41 @@
         "debian-trixie-amd64": {
           "baselineVersion": "2.12.7+dfsg+really2.9.14-2.1+deb13u3",
           "sourcePocket": "release",
-          "packageVersion": "2.12.7+dfsg+really2.9.14-2.1+deb13u3+getpatched3",
-          "releaseSerial": 3,
+          "packageVersion": "2.12.7+dfsg+really2.9.14-2.1+deb13u3+getpatched4",
+          "releaseSerial": 4,
           "binaryPackages": [
             "libxml2",
             "libxml2-utils",
-            "libxml2-dev"
+            "libxml2-dev",
+            "python3-libxml2"
           ],
           "advisoryPackages": [
-            "libxml2"
+            "libxml2",
+            "python3-libxml2"
           ],
           "builderPackages": [],
-          "targetCve": "CVE-2026-76781",
+          "targetCve": "CVE-2026-74860",
           "targetCves": [
             "CVE-2026-6653",
             "CVE-2026-86144",
-            "CVE-2026-76781"
+            "CVE-2026-76781",
+            "CVE-2026-74860"
           ],
-          "advisory": "https://security-tracker.debian.org/tracker/CVE-2026-76781",
+          "advisory": "https://security-tracker.debian.org/tracker/CVE-2026-74860",
           "advisories": {
             "CVE-2026-6653": "https://security-tracker.debian.org/tracker/CVE-2026-6653",
             "CVE-2026-86144": "https://security-tracker.debian.org/tracker/CVE-2026-86144",
-            "CVE-2026-76781": "https://security-tracker.debian.org/tracker/CVE-2026-76781"
+            "CVE-2026-76781": "https://security-tracker.debian.org/tracker/CVE-2026-76781",
+            "CVE-2026-74860": "https://security-tracker.debian.org/tracker/CVE-2026-74860"
           },
-          "candidateStatus": "development-verified-production-release-pending",
+          "advisoryPackagesByCve": {
+            "CVE-2026-6653": ["libxml2"],
+            "CVE-2026-86144": ["libxml2"],
+            "CVE-2026-76781": ["libxml2"],
+            "CVE-2026-74860": ["python3-libxml2"]
+          },
+          "candidateStatus": "unverified-development-candidate",
+          "verificationSourceBranch": "getpatched/cve-2026-74860-trixie",
           "verifiedReleases": [
             {
               "version": "2.12.7+dfsg+really2.9.14-2.1+deb13u3+getpatched1",
@@ -310,6 +321,21 @@
                 "CVE-2026-6653": [
                   "libxml2"
                 ]
+              }
+            },
+            {
+              "version": "2.12.7+dfsg+really2.9.14-2.1+deb13u3+getpatched3",
+              "releaseSerial": 3,
+              "status": "development-verified-production-release-pending",
+              "targetCves": [
+                "CVE-2026-6653",
+                "CVE-2026-86144",
+                "CVE-2026-76781"
+              ],
+              "advisoryPackagesByCve": {
+                "CVE-2026-6653": ["libxml2"],
+                "CVE-2026-86144": ["libxml2"],
+                "CVE-2026-76781": ["libxml2"]
               }
             }
           ],

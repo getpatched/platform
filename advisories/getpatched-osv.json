@@ -1559,6 +1559,33 @@
         {
           "database_specific": {
             "candidate_status": "development-verified-production-release-pending",
+            "candidate_version": "2.12.7+dfsg+really2.9.14-2.1+deb13u3+getpatched1",
+            "fixed_versions": [
+              "2.12.7+dfsg+really2.9.14-2.1+deb13u3+getpatched1"
+            ],
+            "getpatched_fixed_version": "2.12.7+dfsg+really2.9.14-2.1+deb13u3+getpatched1",
+            "source_package": "libxml2",
+            "target_id": "debian-trixie-amd64",
+            "vendor_fixed_versions": []
+          },
+          "ecosystem_specific": {
+            "architecture": "amd64",
+            "distribution": "Debian",
+            "release": "trixie",
+            "source_package": "libxml2",
+            "target_id": "debian-trixie-amd64"
+          },
+          "package": {
+            "ecosystem": "Debian:13",
+            "name": "libxml2"
+          },
+          "versions": [
+            "2.12.7+dfsg+really2.9.14-2.1+deb13u3"
+          ]
+        },
+        {
+          "database_specific": {
+            "candidate_status": "development-verified-production-release-pending",
             "candidate_version": "2.12.7+dfsg+really2.9.14-2.1+deb13u3+getpatched3",
             "fixed_versions": [
               "2.12.7+dfsg+really2.9.14-2.1+deb13u3+getpatched3"

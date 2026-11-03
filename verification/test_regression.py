@@ -11,6 +11,7 @@ from regression import (LIBPNG_CVE_2025_65018_FIXTURE, pixarlog_baseline_reprodu
                         brotli_baseline_reproduced, brotli_patched_succeeded,
                         cares_regression_succeeded, consumer_version_succeeded, expat_consumer_succeeded, expat_regression_succeeded,
                         libxml2_catalog_baseline_reproduced, libxml2_catalog_patched_succeeded,
+                        libxml2_python_sax_baseline_reproduced, libxml2_python_sax_patched_succeeded,
                         libxml2_check_cardinality_valid,
                         libxml2_parameter_entity_baseline_reproduced, libxml2_parameter_entity_patched_succeeded,
                         libxml2_xinclude_nonet_result, libxml2_xinclude_checks_succeeded,
@@ -26,6 +27,30 @@ cares_regression_succeeded, consumer_version_succeeded, poppler_revision6_passwo
 
 
 class Libxml2ParameterEntityRegression(unittest.TestCase):
+    def test_python_sax_enumerated_attribute_double_free_classifier(self):
+        command = ["python3", "/recipe/tests/fixtures/cve-2026-74860-python-sax.py"]
+        baseline = {
+            "cve": "CVE-2026-74860",
+            "testId": "python-sax-enumerated-attribute-double-free",
+            "command": command,
+            "timedOut": False,
+            "returncode": -11,
+            "stdout": "attributeDecl-probe-started\n",
+        }
+        self.assertTrue(libxml2_python_sax_baseline_reproduced(baseline))
+        self.assertTrue(libxml2_python_sax_baseline_reproduced({**baseline, "returncode": -signal.SIGABRT}))
+        self.assertFalse(libxml2_python_sax_baseline_reproduced({**baseline, "returncode": 0}))
+        self.assertFalse(libxml2_python_sax_baseline_reproduced({**baseline, "returncode": 1}))
+        self.assertFalse(libxml2_python_sax_baseline_reproduced({**baseline, "stdout": ""}))
+        patched = {
+            **baseline,
+            "returncode": 0,
+            "stdout": "attributeDecl-probe-started\nattributeDecl-callback-passed\n",
+        }
+        self.assertTrue(libxml2_python_sax_patched_succeeded(patched))
+        self.assertFalse(libxml2_python_sax_patched_succeeded({**patched, "stdout": ""}))
+        self.assertFalse(libxml2_python_sax_patched_succeeded({**patched, "returncode": -11}))
+
     def test_catalog_missing_attribute_regression_classifier(self):
         log_path = "/tmp/cve-2026-76781.valgrind"
         base = {
@@ -65,12 +90,13 @@ class Libxml2ParameterEntityRegression(unittest.TestCase):
         self.assertFalse(libxml2_catalog_patched_succeeded({**patched, "returncode": 97}))
 
     def test_libxml2_report_cardinality_requires_one_check_per_cve_and_both_xinclude_apis(self):
-        target = ["CVE-2026-6653", "CVE-2026-86144", "CVE-2026-76781"]
+        target = ["CVE-2026-6653", "CVE-2026-86144", "CVE-2026-76781", "CVE-2026-74860"]
         checks = [
             {"cve": "CVE-2026-6653"},
             {"cve": "CVE-2026-86144", "testId": "document"},
             {"cve": "CVE-2026-86144", "testId": "tree"},
             {"cve": "CVE-2026-76781"},
+            {"cve": "CVE-2026-74860"},
         ]
         self.assertTrue(libxml2_check_cardinality_valid(checks, target))
         self.assertFalse(libxml2_check_cardinality_valid(checks[:-1], target))

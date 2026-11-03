@@ -173,6 +173,37 @@ def libxml2_catalog_patched_succeeded(check):
     )
 
 
+def libxml2_python_sax_command(check):
+    command = check.get("command", [])
+    return bool(
+        check.get("cve") == "CVE-2026-74860"
+        and check.get("testId") == "python-sax-enumerated-attribute-double-free"
+        and len(command) == 2
+        and Path(command[0]).name == "python3"
+        and Path(command[1]).name == "cve-2026-74860-python-sax.py"
+    )
+
+
+def libxml2_python_sax_baseline_reproduced(check):
+    return bool(
+        not check.get("timedOut", False)
+        and check.get("returncode") in (-signal.SIGSEGV, -signal.SIGABRT)
+        and libxml2_python_sax_command(check)
+        and "attributeDecl-probe-started\n" in check.get("stdout", "")
+    )
+
+
+def libxml2_python_sax_patched_succeeded(check):
+    output = check.get("stdout", "")
+    return bool(
+        not check.get("timedOut", False)
+        and check.get("returncode") == 0
+        and libxml2_python_sax_command(check)
+        and "attributeDecl-probe-started\n" in output
+        and "attributeDecl-callback-passed\n" in output
+    )
+
+
 def libxml2_xinclude_nonet_result(check, phase):
     command = check.get("command", [])
     expected_mode = "expect-network" if phase == "baseline" else "expect-blocked"
@@ -204,6 +235,8 @@ def libxml2_baseline_check_succeeded(check):
         return libxml2_parameter_entity_baseline_reproduced(check)
     if cve == "CVE-2026-76781":
         return libxml2_catalog_baseline_reproduced(check)
+    if cve == "CVE-2026-74860":
+        return libxml2_python_sax_baseline_reproduced(check)
     return schematron_baseline_reproduced(check)
 
 
@@ -213,6 +246,8 @@ def libxml2_patched_check_succeeded(check):
         return libxml2_parameter_entity_patched_succeeded(check)
     if cve == "CVE-2026-76781":
         return libxml2_catalog_patched_succeeded(check)
+    if cve == "CVE-2026-74860":
+        return libxml2_python_sax_patched_succeeded(check)
     return check.get("returncode") == 3 and "ERROR SUMMARY: 0 errors" in check.get("memoryLog", "")
 
 
@@ -1057,6 +1092,17 @@ def main():
                     check["passed"] = (
                         libxml2_catalog_baseline_reproduced(check)
                         if args.phase == "baseline" else libxml2_catalog_patched_succeeded(check)
+                    )
+                    checks.append(check)
+                elif cve == "CVE-2026-74860":
+                    check = execute([
+                        "python3", str(fixtures / "cve-2026-74860-python-sax.py"),
+                    ], timeout=20)
+                    check["cve"] = cve
+                    check["testId"] = "python-sax-enumerated-attribute-double-free"
+                    check["passed"] = (
+                        libxml2_python_sax_baseline_reproduced(check)
+                        if args.phase == "baseline" else libxml2_python_sax_patched_succeeded(check)
                     )
                     checks.append(check)
                 else:
