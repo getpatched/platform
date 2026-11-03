@@ -274,8 +274,8 @@
         "debian-trixie-amd64": {
           "baselineVersion": "2.12.7+dfsg+really2.9.14-2.1+deb13u3",
           "sourcePocket": "release",
-          "packageVersion": "2.12.7+dfsg+really2.9.14-2.1+deb13u3+getpatched1",
-          "releaseSerial": 1,
+          "packageVersion": "2.12.7+dfsg+really2.9.14-2.1+deb13u3+getpatched3",
+          "releaseSerial": 3,
           "binaryPackages": [
             "libxml2",
             "libxml2-utils",
@@ -285,15 +285,34 @@
             "libxml2"
           ],
           "builderPackages": [],
-          "targetCve": "CVE-2026-6653",
+          "targetCve": "CVE-2026-76781",
           "targetCves": [
-            "CVE-2026-6653"
+            "CVE-2026-6653",
+            "CVE-2026-86144",
+            "CVE-2026-76781"
           ],
-          "advisory": "https://security-tracker.debian.org/tracker/CVE-2026-6653",
+          "advisory": "https://security-tracker.debian.org/tracker/CVE-2026-76781",
           "advisories": {
-            "CVE-2026-6653": "https://security-tracker.debian.org/tracker/CVE-2026-6653"
+            "CVE-2026-6653": "https://security-tracker.debian.org/tracker/CVE-2026-6653",
+            "CVE-2026-86144": "https://security-tracker.debian.org/tracker/CVE-2026-86144",
+            "CVE-2026-76781": "https://security-tracker.debian.org/tracker/CVE-2026-76781"
           },
           "candidateStatus": "development-verified-production-release-pending",
+          "verifiedReleases": [
+            {
+              "version": "2.12.7+dfsg+really2.9.14-2.1+deb13u3+getpatched1",
+              "releaseSerial": 1,
+              "status": "development-verified-production-release-pending",
+              "targetCves": [
+                "CVE-2026-6653"
+              ],
+              "advisoryPackagesByCve": {
+                "CVE-2026-6653": [
+                  "libxml2"
+                ]
+              }
+            }
+          ],
           "releaseAccess": {
             "policy": "public-after-checks",
             "sponsorDelayHours": 0,

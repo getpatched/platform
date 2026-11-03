@@ -10,7 +10,10 @@ from regression import (LIBPNG_CVE_2025_65018_FIXTURE, pixarlog_baseline_reprodu
                         libpng_patched_checks_succeeded, tiff_patched_regression_succeeded,
                         brotli_baseline_reproduced, brotli_patched_succeeded,
                         cares_regression_succeeded, consumer_version_succeeded, expat_consumer_succeeded, expat_regression_succeeded,
+                        libxml2_catalog_baseline_reproduced, libxml2_catalog_patched_succeeded,
+                        libxml2_check_cardinality_valid,
                         libxml2_parameter_entity_baseline_reproduced, libxml2_parameter_entity_patched_succeeded,
+                        libxml2_xinclude_nonet_result, libxml2_xinclude_checks_succeeded,
                         poppler_uaf_reproduced, schematron_baseline_reproduced,
                         validate_recipe_regression_fixture_hashes,
 
@@ -23,6 +26,85 @@ cares_regression_succeeded, consumer_version_succeeded, poppler_revision6_passwo
 
 
 class Libxml2ParameterEntityRegression(unittest.TestCase):
+    def test_catalog_missing_attribute_regression_classifier(self):
+        log_path = "/tmp/cve-2026-76781.valgrind"
+        base = {
+            "cve": "CVE-2026-76781",
+            "timedOut": False,
+            "memoryLogPath": log_path,
+            "command": [
+                "valgrind", "--tool=memcheck", "--error-exitcode=97", "--leak-check=no",
+                "--read-var-info=yes", "--log-file=" + log_path,
+                "/tmp/libxml2-cve-2026-76781", "/recipe/tests/fixtures/cve-2026-76781-catalog.xml",
+            ],
+        }
+        baseline = {
+            **base,
+            "returncode": -11,
+            "memoryLog": (
+                "==123== Invalid read of size 8\n"
+                "==123==    at 0x123: ??? (in /usr/lib/libxml2.so.2.9.14)\n"
+                "==123==    by 0x456: xmlCatalogResolveSystem (in /usr/lib/libxml2.so.2.9.14)\n"
+                "==123==  Address 0x30 is not stack'd, malloc'd or (recently) free'd\n"
+                "==123== Process terminating with default action of signal 11 (SIGSEGV)\n"
+                "==123== ERROR SUMMARY: 1 errors from 1 contexts\n"
+            ),
+        }
+        patched = {**base, "returncode": 0, "memoryLog": "==123== ERROR SUMMARY: 0 errors from 0 contexts\n"}
+        self.assertTrue(libxml2_catalog_baseline_reproduced(baseline))
+        self.assertFalse(libxml2_catalog_baseline_reproduced({**baseline, "memoryLog": ""}))
+        self.assertFalse(libxml2_catalog_baseline_reproduced({
+            **baseline,
+            "memoryLog": baseline["memoryLog"].replace("Address 0x30", "Address 0x38"),
+        }))
+        self.assertFalse(libxml2_catalog_baseline_reproduced({
+            **baseline,
+            "memoryLog": baseline["memoryLog"].replace("xmlCatalogResolveSystem", "unrelated"),
+        }))
+        self.assertTrue(libxml2_catalog_patched_succeeded(patched))
+        self.assertFalse(libxml2_catalog_patched_succeeded({**patched, "returncode": 97}))
+
+    def test_libxml2_report_cardinality_requires_one_check_per_cve_and_both_xinclude_apis(self):
+        target = ["CVE-2026-6653", "CVE-2026-86144", "CVE-2026-76781"]
+        checks = [
+            {"cve": "CVE-2026-6653"},
+            {"cve": "CVE-2026-86144", "testId": "document"},
+            {"cve": "CVE-2026-86144", "testId": "tree"},
+            {"cve": "CVE-2026-76781"},
+        ]
+        self.assertTrue(libxml2_check_cardinality_valid(checks, target))
+        self.assertFalse(libxml2_check_cardinality_valid(checks[:-1], target))
+        self.assertFalse(libxml2_check_cardinality_valid(checks + [checks[0]], target))
+
+    def test_xinclude_scanner_requires_one_passing_result_per_api(self):
+        def check(api, mode, returncode):
+            return {
+                "cve": "CVE-2026-86144",
+                "timedOut": False,
+                "returncode": returncode,
+                "command": ["/tmp/libxml2-cve-2026-86144", "/recipe/tests/fixtures/cve-2026-86144-xinclude.xml", api, mode],
+            }
+
+        baseline = [check("document", "expect-network", 10), check("tree", "expect-network", 10)]
+        patched = [check("document", "expect-blocked", 0), check("tree", "expect-blocked", 0)]
+        self.assertTrue(libxml2_xinclude_checks_succeeded(baseline, "baseline"))
+        self.assertTrue(libxml2_xinclude_checks_succeeded(patched, "patched"))
+        self.assertFalse(libxml2_xinclude_checks_succeeded([check("document", "expect-blocked", 10), patched[1]], "patched"))
+        self.assertFalse(libxml2_xinclude_checks_succeeded(patched[:1], "patched"))
+        self.assertFalse(libxml2_xinclude_checks_succeeded([patched[0], patched[0]], "patched"))
+
+    def test_xinclude_nonet_classifier_requires_expected_behavior(self):
+        baseline = {
+            "timedOut": False,
+            "command": ["/tmp/libxml2-cve-2026-86144", "/recipe/tests/fixtures/cve-2026-86144-xinclude.xml", "document", "expect-network"],
+            "returncode": 10,
+        }
+        self.assertTrue(libxml2_xinclude_nonet_result(baseline, "baseline"))
+        self.assertFalse(libxml2_xinclude_nonet_result({**baseline, "returncode": 0}, "baseline"))
+        patched = {**baseline, "command": [*baseline["command"][:-1], "expect-blocked"], "returncode": 0}
+        self.assertTrue(libxml2_xinclude_nonet_result(patched, "patched"))
+        self.assertFalse(libxml2_xinclude_nonet_result({**patched, "returncode": 10}, "patched"))
+
     def test_baseline_requires_invalid_read_after_entity_stream_is_freed(self):
         log_path = "/tmp/cve-2026-6653.valgrind"
         check = {

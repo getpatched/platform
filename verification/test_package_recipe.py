@@ -12,6 +12,7 @@ from unittest.mock import patch
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "scripts"))
+from platform_policy import target_source_branch
 SPEC = importlib.util.spec_from_file_location("package_recipe", ROOT / "scripts/package_recipe.py")
 RECIPE = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(RECIPE)
@@ -26,6 +27,12 @@ def digest(data):
 
 
 class PackageRecipeContract(unittest.TestCase):
+    def test_verified_libxml2_target_uses_its_merged_recipe_branch(self):
+        self.assertEqual(
+            target_source_branch(PLATFORM_CONFIG, "debian-trixie-amd64", "libxml2"),
+            "getpatched/debian-trixie",
+        )
+
     def test_patch_applicability_supports_target_scoped_exact_and_debian_version_ranges(self):
         exact = {"target": "ubuntu-focal-amd64", "sourceVersion": "1.0-2"}
         self.assertTrue(RECIPE.patch_applies_to_version(exact, "ubuntu-focal-amd64", "1.0-2"))

@@ -6,28 +6,28 @@
       "releaseVersion": "20.04",
       "codename": "focal",
       "architecture": "amd64",
-      "displayName": "Ubuntu 20.04 LTS (focal) \u00b7 amd64"
+      "displayName": "Ubuntu 20.04 LTS (focal) · amd64"
     },
     "ubuntu-jammy-amd64": {
       "distribution": "Ubuntu",
       "releaseVersion": "22.04",
       "codename": "jammy",
       "architecture": "amd64",
-      "displayName": "Ubuntu 22.04 LTS (jammy) \u00b7 amd64"
+      "displayName": "Ubuntu 22.04 LTS (jammy) · amd64"
     },
     "debian-bookworm-amd64": {
       "distribution": "Debian",
       "releaseVersion": "12",
       "codename": "bookworm",
       "architecture": "amd64",
-      "displayName": "Debian 12 (bookworm) \u00b7 amd64"
+      "displayName": "Debian 12 (bookworm) · amd64"
     },
     "debian-trixie-amd64": {
       "distribution": "Debian",
       "releaseVersion": "13",
       "codename": "trixie",
       "architecture": "amd64",
-      "displayName": "Debian 13 (trixie) \u00b7 amd64"
+      "displayName": "Debian 13 (trixie) · amd64"
     }
   },
   "packages": [
@@ -187,9 +187,11 @@
         },
         "debian-trixie-amd64": {
           "baseVersion": "2.12.7+dfsg+really2.9.14-2.1+deb13u3",
-          "version": "2.12.7+dfsg+really2.9.14-2.1+deb13u3+getpatched1",
+          "version": "2.12.7+dfsg+really2.9.14-2.1+deb13u3+getpatched3",
           "cves": [
-            "CVE-2026-6653"
+            "CVE-2026-6653",
+            "CVE-2026-86144",
+            "CVE-2026-76781"
           ],
           "vulnerabilities": [
             {
@@ -201,6 +203,26 @@
                 "cve-2026-6653-debian"
               ],
               "patched": true
+            },
+            {
+              "id": "CVE-2026-86144",
+              "slug": "cve-2026-86144",
+              "summary": "XInclude processing ignored XML_PARSE_NONET and could trigger network access.",
+              "advisoryUrl": "https://security-tracker.debian.org/tracker/CVE-2026-86144",
+              "patchSlugs": [
+                "cve-2026-86144-debian-trixie"
+              ],
+              "patched": true
+            },
+            {
+              "id": "CVE-2026-76781",
+              "slug": "cve-2026-76781",
+              "summary": "A malformed XML catalog nextCatalog entry without its required catalog attribute can crash libxml2.",
+              "advisoryUrl": "https://security-tracker.debian.org/tracker/CVE-2026-76781",
+              "patchSlugs": [
+                "cve-2026-76781-debian-trixie"
+              ],
+              "patched": true
             }
           ],
           "patches": [
@@ -208,8 +230,8 @@
               "id": "cve-2026-6653-debian",
               "slug": "cve-2026-6653-debian",
               "kind": "security",
-              "title": "Preserve parser input ownership during parameter-entity errors",
-              "description": "Backports the upstream input-ownership and parser EOF handling fixes to the pinned Debian libxml2 sources.",
+              "title": "Preserve parameter entity input ownership at parser EOF",
+              "description": "Backports the parser-stop handling needed to avoid a heap use-after-free while parsing a crafted parameter-entity DTD.",
               "sha256": "cb8ace38d864e912a69307c33f1f931042bf1df83cd0c2d3c526c1a9348a5021",
               "fileUrl": "https://github.com/getpatched/packaging-libxml2/blob/getpatched/debian-trixie/patches/CVE-2026-6653-debian.patch",
               "cves": [
@@ -223,15 +245,63 @@
                   {
                     "commit": "e129c1d1a27abdeaab44f4d59eb0cb5052df7c6f",
                     "url": "https://gitlab.gnome.org/GNOME/libxml2/-/commit/e129c1d1a27abdeaab44f4d59eb0cb5052df7c6f",
-                    "purpose": "Stop xmlSkipBlankChars at parser EOF during allocation-failure handling."
+                    "purpose": "Stops xmlSkipBlankChars after parser EOF so allocation-failure handling cannot loop indefinitely."
                   }
                 ]
               },
               "tests": [
                 {
-                  "id": "CVE-2026-6653-parameter-entity-use-after-free",
-                  "baselineExpectation": "The exact installed Debian baseline reproduces the parameter-entity use-after-free under Valgrind.",
-                  "patchedExpectation": "The exact installed patched package passes the same Valgrind regression with zero errors and passes the xmllint consumer check."
+                  "id": "parameter-entity-eof-use-after-free",
+                  "baselineExpectation": "Exact-source ASan builds report a heap use-after-free; the installed-package runner must report a Valgrind invalid read in libxml2 during xmlReadMemory with the freed entity-stream allocation in the trace.",
+                  "patchedExpectation": "The source-build ASan and installed-package Valgrind probes complete without invalid accesses; a normal xmllint consumer check passes."
+                }
+              ]
+            },
+            {
+              "id": "cve-2026-86144-debian-trixie",
+              "slug": "cve-2026-86144-debian-trixie",
+              "kind": "security",
+              "title": "Propagate parser security flags through XInclude APIs",
+              "description": "Carries XML_PARSE_NONET from the parsed document into the public XInclude convenience APIs and text-include parser context, preventing a later XInclude pass from triggering a network load when parsing disabled network access.",
+              "sha256": "0d15fe9c3bec8a16bc9b04b336d2c370b71c187ae1edc35ddf804c39f4b80ca9",
+              "fileUrl": "https://github.com/getpatched/packaging-libxml2/blob/getpatched/debian-trixie/patches/CVE-2026-86144-debian-trixie.patch",
+              "cves": [
+                "CVE-2026-86144"
+              ],
+              "upstream": {
+                "repository": "https://gitlab.gnome.org/GNOME/libxml2",
+                "commit": "b63cd517afecb76582dd9488c55e54ceaf50de61",
+                "url": "https://gitlab.gnome.org/GNOME/libxml2/-/commit/b63cd517afecb76582dd9488c55e54ceaf50de61"
+              },
+              "tests": [
+                {
+                  "id": "xinclude-nonet-loopback-guard",
+                  "baselineExpectation": "Against the exact installed Trixie baseline, both xmlXIncludeProcess and xmlXIncludeProcessTree make a harmless request to a loopback-only listener despite XML_PARSE_NONET.",
+                  "patchedExpectation": "Against the exact installed GetPatched package, both APIs block the loopback request; no non-loopback network access is used."
+                }
+              ]
+            },
+            {
+              "id": "cve-2026-76781-debian-trixie",
+              "slug": "cve-2026-76781-debian-trixie",
+              "kind": "security",
+              "title": "Ignore XML catalog nextCatalog entries without a catalog attribute",
+              "description": "Skips malformed nextCatalog entries before duplicate detection can dereference a missing catalog entry.",
+              "sha256": "6d766e92f757c1217d34ba60ee981f3ade595a9e4c25afa555c8b63172c3385d",
+              "fileUrl": "https://github.com/getpatched/packaging-libxml2/blob/getpatched/debian-trixie/patches/CVE-2026-76781-debian-trixie.patch",
+              "cves": [
+                "CVE-2026-76781"
+              ],
+              "upstream": {
+                "repository": "https://gitlab.gnome.org/GNOME/libxml2",
+                "commit": "a34c084d7a576914c1424caabdaaf5e227bb39ef",
+                "url": "https://gitlab.gnome.org/GNOME/libxml2/-/commit/a34c084d7a576914c1424caabdaaf5e227bb39ef"
+              },
+              "tests": [
+                {
+                  "id": "catalog-next-catalog-missing-attribute",
+                  "baselineExpectation": "On the exact installed Debian Trixie source baseline, Valgrind must identify the NULL dereference in libxml2 catalog duplicate detection when a valid nextCatalog is followed by one without the required catalog attribute.",
+                  "patchedExpectation": "The installed patched package completes catalog loading and resolves the mapping from the valid nextCatalog with no Valgrind errors."
                 }
               ]
             }
@@ -247,10 +317,10 @@
           ],
           "earlyRedistributionAllowed": false,
           "status": "development-verified-production-release-pending",
-          "verification": "https://github.com/getpatched/platform/actions/runs/41575930432",
+          "verification": "https://github.com/getpatched/platform/actions/runs/41633529746",
           "ubuntuProEsmCompatibility": "not-applicable",
           "sourceUrl": "https://github.com/getpatched/packaging-libxml2/tree/getpatched/debian-trixie",
-          "patchUrl": "https://github.com/getpatched/packaging-libxml2/blob/getpatched/debian-trixie/patches/CVE-2026-6653-debian.patch",
+          "patchUrl": "https://github.com/getpatched/packaging-libxml2/blob/getpatched/debian-trixie/patches/CVE-2026-76781-debian-trixie.patch",
           "testsUrl": "https://github.com/getpatched/packaging-libxml2/tree/getpatched/debian-trixie/tests",
           "releasesUrl": "https://github.com/getpatched/packaging-libxml2/releases",
           "releaseStatus": "No production release",
@@ -1055,7 +1125,7 @@
             {
               "id": "CVE-2026-52490",
               "slug": "cve-2026-52490",
-              "summary": "An overflowing subdivision count can bypass tiffcrop\u2019s section-count limit.",
+              "summary": "An overflowing subdivision count can bypass tiffcrop’s section-count limit.",
               "advisoryUrl": "https://security-tracker.debian.org/tracker/CVE-2026-52490",
               "patchSlugs": [
                 "cve-2026-52490-bookworm"
@@ -1222,7 +1292,7 @@
             {
               "id": "CVE-2026-52490",
               "slug": "cve-2026-52490",
-              "summary": "An overflowing subdivision count can bypass tiffcrop\u2019s section-count limit.",
+              "summary": "An overflowing subdivision count can bypass tiffcrop’s section-count limit.",
               "advisoryUrl": "https://security-tracker.debian.org/tracker/CVE-2026-52490",
               "patchSlugs": [
                 "cve-2026-52490-trixie"
