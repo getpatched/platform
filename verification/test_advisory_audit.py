@@ -50,6 +50,17 @@ class AdvisoryAuditContract(unittest.TestCase):
             {"debian-trixie-amd64"},
         )
 
+    def test_expat_hash_salt_candidate_has_a_reviewed_low_severity_summary(self):
+        config = json.loads((ROOT / "packages.json").read_text())
+        feed = build_feed(config, {("expat", "debian-bookworm-amd64")})
+        advisory = next(item for item in feed["vulns"] if item["id"] == "CVE-2026-41080")
+        self.assertIn("insufficient hash-key entropy", advisory["summary"])
+        self.assertEqual(advisory["database_specific"]["severity"], "LOW")
+        self.assertEqual(
+            {entry["ecosystem_specific"]["target_id"] for entry in advisory["affected"]},
+            {"debian-bookworm-amd64"},
+        )
+
     def test_audit_requires_real_raw_reports_osv_and_installed_test_evidence(self):
         with tempfile.TemporaryDirectory(prefix="getpatched-audit-test-") as directory:
             root = Path(directory)
