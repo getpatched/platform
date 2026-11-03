@@ -20,6 +20,7 @@ LIBPNG_CVE_2025_65018_FIXTURE = "cve-2025-65018-advisory-adam7-rgb16.png"
 LIBPNG_CVE_2025_65018_FIXTURE_SHA256 = "9deb34ada9b550df50181e4cd8c947303fd7b2881f61f3f16efa249d845e9905"
 BROTLI_MAX_PROBE_OUTPUT = 32 * 1024 * 1024
 BROTLI_MAX_PROBE_CALLS = 8192
+CARES_RECORD_COUNT_HEAP_LIMIT = 8 * 1024 * 1024
 
 
 def execute(command, timeout=30, env=None):
@@ -691,6 +692,36 @@ def cares_regression_succeeded(check, target_id, phase):
     )
 
 
+def massif_peak_heap_bytes(path):
+    try:
+        content = Path(path).read_text()
+    except OSError:
+        return None
+    values = [int(value) for value in re.findall(r"(?m)^mem_heap_B=(\d+)$", content)]
+    return max(values) if values else None
+
+
+def cares_record_count_regression_succeeded(check, target_id, phase):
+    command = check.get("command", [])
+    peak = check.get("peakHeapBytes")
+    if (target_id != "debian-trixie-amd64" or phase not in ("baseline", "patched")
+            or check.get("cve") != "CVE-2026-69186"
+            or check.get("testId") != "c-ares-malformed-record-count-allocation"
+            or check.get("timedOut") is not False or check.get("returncode") != 0
+            or not isinstance(peak, int) or not command or Path(command[0]).name != "valgrind"
+            or "--tool=massif" not in command or "--time-unit=B" not in command
+            or "--stacks=no" not in command
+            or not any(item.startswith("--massif-out-file=") for item in command)
+            or Path(command[-1]).name != "c-ares-record-count"):
+        return False
+    output = check.get("stdout", "")
+    if "malformed_rejected=yes" not in output or "valid_status=0 valid_record=present" not in output:
+        return False
+    if phase == "baseline":
+        return check.get("vulnerabilityReproduced") is True and peak > CARES_RECORD_COUNT_HEAP_LIMIT
+    return check.get("patchedBehavior") is True and peak < CARES_RECORD_COUNT_HEAP_LIMIT
+
+
 def libpng_probe_command_matches(check, test_id, executable, arguments):
     command = check.get("command")
     prefix = ["valgrind", "--tool=memcheck", "--error-exitcode=97", "--leak-check=no", "--read-var-info=yes"]
@@ -1203,6 +1234,33 @@ def main():
             check["cve"] = "CVE-2026-69184"
             check["passed"] = cares_regression_succeeded(check, policy["targetId"], args.phase)
             checks.append(check)
+            if "CVE-2026-69186" in policy.get("targetCves", []):
+                if policy["targetId"] != "debian-trixie-amd64":
+                    raise RuntimeError("CVE-2026-69186 regression is only defined for Debian Trixie amd64")
+                probe = compile_pkg_config_probe(
+                    fixtures / "c-ares-record-count.c", temp / "c-ares-record-count", ["libcares"]
+                )
+                massif_file = temp / "c-ares-record-count.massif"
+                check = execute([
+                    "valgrind", "--tool=massif", "--time-unit=B", "--stacks=no",
+                    "--massif-out-file=" + str(massif_file), str(probe),
+                ], timeout=20)
+                check["testId"] = "c-ares-malformed-record-count-allocation"
+                check["cve"] = "CVE-2026-69186"
+                check["massifFile"] = massif_file.name
+                check["peakHeapBytes"] = massif_peak_heap_bytes(massif_file)
+                check["vulnerabilityReproduced"] = (
+                    check["peakHeapBytes"] is not None
+                    and check["peakHeapBytes"] > CARES_RECORD_COUNT_HEAP_LIMIT
+                )
+                check["patchedBehavior"] = (
+                    check["peakHeapBytes"] is not None
+                    and check["peakHeapBytes"] < CARES_RECORD_COUNT_HEAP_LIMIT
+                )
+                check["passed"] = cares_record_count_regression_succeeded(
+                    check, policy["targetId"], args.phase
+                )
+                checks.append(check)
         elif package == "brotli":
             probe = compile_pkg_config_probe(
                 fixtures / "brotli-stream-probe.c", temp / "brotli-stream-probe",

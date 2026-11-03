@@ -33,6 +33,7 @@ SUMMARIES = {
     "CVE-2025-52885": "Poppler structure-tree use-after-free on duplicate parent-tree keys",
     "CVE-2026-107705": "Poppler revision 6 PDF password-length stack buffer overflow",
     "CVE-2026-69184": "c-ares CPU exhaustion from unbounded DNS compression-pointer chains",
+    "CVE-2026-69186": "c-ares disproportionate heap allocation from unvalidated DNS record counts",
     "CVE-2026-111497": "Brotli decoder out-of-bounds write on invalid block switches",
     "CVE-2026-117610": "Expat NULL dereference when an external-entity subparser starts with empty non-final input",
 }
@@ -40,10 +41,12 @@ SEVERITIES = {
     "CVE-2026-12912": "HIGH",
     "CVE-2026-76781": "MEDIUM",
     "CVE-2026-69184": "HIGH",
+    "CVE-2026-69186": "MODERATE",
     "CVE-2026-111497": "CRITICAL",
 }
 # Refresh the modified timestamp when an existing advisory record changes.
 MODIFIED = {
+    "CVE-2026-69186": "2026-11-03T00:00:00Z",
     "CVE-2026-86141": "2026-11-03T18:12:28Z",
     "CVE-2026-12912": "2026-11-03T08:35:10Z",
     "CVE-2026-18495": "2026-11-03T08:45:03Z",

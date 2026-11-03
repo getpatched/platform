@@ -46,6 +46,33 @@ SCANNER_SPEC.loader.exec_module(SCANNER_MODULE)
 
 
 class GetPatchedScannerContract(unittest.TestCase):
+    def test_verified_cares_69186_advisory_is_published_and_trixie_scoped(self):
+        config = json.loads((ROOT / "packages.json").read_text())
+        policy = config["packages"]["c-ares"]["targets"]["debian-trixie-amd64"]
+        self.assertEqual(policy["advisory"], policy["advisories"][policy["targetCve"]])
+        canonical = SCANNER_MODULE.load_feed(FEED)
+        canonical_advisory = next(item for item in canonical["vulns"] if item["id"] == "CVE-2026-69186")
+        self.assertEqual(
+            canonical_advisory["affected"][0]["database_specific"]["getpatched_fixed_version"],
+            "1.34.5-1+deb13u1+getpatched2",
+        )
+
+        candidate = SCANNER_MODULE.build_feed(
+            config, {("c-ares", "debian-trixie-amd64")}
+        )
+        advisory = next(item for item in candidate["vulns"] if item["id"] == "CVE-2026-69186")
+        self.assertEqual(
+            [(item["package"]["ecosystem"], item["package"]["name"], item["versions"],
+              item["ecosystem_specific"]["target_id"], item["database_specific"]["candidate_version"])
+             for item in advisory["affected"]],
+            [("Debian:13", "libcares2", ["1.34.5-1+deb13u1"],
+              "debian-trixie-amd64", "1.34.5-1+deb13u1+getpatched2")],
+        )
+        self.assertEqual(
+            advisory["database_specific"]["verification_status"],
+            "development-verified-production-release-pending",
+        )
+
     def test_tiff_feed_selects_the_exact_verified_release_and_unverified_candidate(self):
         canonical = SCANNER_MODULE.load_feed(FEED)
         self.assertTrue(canonical["vulns"])
@@ -940,7 +967,7 @@ raise SystemExit(3)
             "CVE-2025-49794", "CVE-2025-49796", "CVE-2026-4111", "CVE-2026-6653",
             "CVE-2026-53584", "CVE-2026-53585", "CVE-2026-53586",
             "CVE-2025-52885", "CVE-2026-69184", "CVE-2026-111497",
-            "CVE-2026-117610",
+            "CVE-2026-117610", "CVE-2026-69186",
             "CVE-2026-86144", "CVE-2026-76781", "CVE-2026-86141",
 
 "CVE-2025-52885", "CVE-2026-107705", "CVE-2026-69184", "CVE-2026-111497",
