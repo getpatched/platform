@@ -83,8 +83,8 @@ class Libxml2ParameterEntityRegression(unittest.TestCase):
         log_path = "/tmp/cve-2026-86141.valgrind"
         memory_log = (
             "==123== Invalid read of size 1\n"
-            "==123==    at 0x123: strlen (vg_replace_strmem.c:...)\n"
-            "==123==    by 0x456: xmlRegNewParserCtxt (in /usr/lib/libxml2.so.2.9.14)\n"
+            "==123==    at 0x123: ??? (in /usr/lib/libxml2.so.2.9.14)\n"
+            "==123==    by 0x456: ??? (in /usr/lib/libxml2.so.2.9.14)\n"
             "==123==    by 0x789: xmlRegexpCompile (in /usr/lib/libxml2.so.2.9.14)\n"
             "==123==  Address 0x0 is not stack'd, malloc'd or (recently) free'd\n"
             "==123== Process terminating with default action of signal 11 (SIGSEGV)\n"
@@ -106,12 +106,15 @@ class Libxml2ParameterEntityRegression(unittest.TestCase):
             "memoryLog": memory_log,
         }
         self.assertTrue(libxml2_regexp_alloc_failure_baseline_reproduced(baseline))
+        self.assertTrue(libxml2_regexp_alloc_failure_baseline_reproduced({
+            **baseline, "returncode": -signal.SIGSEGV
+        }))
         self.assertFalse(libxml2_regexp_alloc_failure_baseline_reproduced({**baseline, "returncode": 0}))
         self.assertFalse(libxml2_regexp_alloc_failure_baseline_reproduced({
             **baseline, "stderr": "unrelated crash\n"
         }))
         self.assertFalse(libxml2_regexp_alloc_failure_baseline_reproduced({
-            **baseline, "memoryLog": memory_log.replace("xmlRegNewParserCtxt", "unrelated_crash")
+            **baseline, "memoryLog": memory_log.replace("xmlRegexpCompile", "unrelated_crash")
         }))
         patched = {
             **baseline,

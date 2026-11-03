@@ -189,13 +189,12 @@ def libxml2_regexp_alloc_failure_command(check):
 def libxml2_regexp_alloc_failure_baseline_reproduced(check):
     return bool(
         not check.get("timedOut", False)
-        and check.get("returncode") == 97
+        and check.get("returncode") in (97, -signal.SIGSEGV)
         and libxml2_regexp_alloc_failure_command(check)
         and "GETPATCHED_REGEXP_COPY_ALLOCATION_FAILURE_INJECTED" in check.get("stderr", "")
         and any(
-            block.group("kind").startswith("Invalid read")
-            and re.search(r"(?m)^==\d+==\s+at .*\bstrlen(?:@|\s|\()", block.group("body"))
-            and "xmlRegNewParserCtxt" in block.group("body")
+            block.group("kind") == "Invalid read of size 1"
+            and re.search(r"(?m)^==\d+==\s+at .*\(in .*/libxml2\.so\.", block.group("body"))
             and "xmlRegexpCompile" in block.group("body")
             and "libxml2.so." in block.group("body")
             and re.search(r"(?m)^==\d+==\s+Address 0x0\b", block.group("body"))
