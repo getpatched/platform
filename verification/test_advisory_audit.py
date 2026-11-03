@@ -20,6 +20,19 @@ class AdvisoryAuditContract(unittest.TestCase):
             capture_output=True, text=True, check=False,
         )
 
+    def test_expat_reset_advisory_is_candidate_only_and_trixie_scoped(self):
+        config = json.loads((ROOT / "packages.json").read_text())
+        public_ids = {item["id"] for item in build_feed(config)["vulns"]}
+        self.assertNotIn("CVE-2026-113351", public_ids)
+
+        candidate = build_feed(config, {("expat", "debian-trixie-amd64")})
+        record = next(item for item in candidate["vulns"] if item["id"] == "CVE-2026-113351")
+        self.assertEqual(record["database_specific"]["severity"], "MEDIUM")
+        self.assertEqual(
+            {entry["ecosystem_specific"]["target_id"] for entry in record["affected"]},
+            {"debian-trixie-amd64"},
+        )
+
     def test_audit_requires_real_raw_reports_osv_and_installed_test_evidence(self):
         with tempfile.TemporaryDirectory(prefix="getpatched-audit-test-") as directory:
             root = Path(directory)

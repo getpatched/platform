@@ -623,6 +623,20 @@ def expat_regression_succeeded(check, phase):
     return phase == "patched" and check.get("returncode") == 0
 
 
+def expat_reset_regression_succeeded(check, phase):
+    if (check.get("cve") != "CVE-2026-113351"
+            or check.get("testId") != "CVE-2026-113351-parser-reset-allocation-accounting"
+            or check.get("timedOut") is not False
+            or check.get("returncode") != 0):
+        return False
+    output = check.get("stdout", "")
+    if phase == "baseline":
+        return "after_reset_status=error" in output and "error=out of memory" in output
+    return (phase == "patched"
+            and "after_reset_status=ok" in output
+            and "error=no error" in output)
+
+
 def expat_consumer_succeeded(check, expected_version):
     output = check.get("stdout", "") + check.get("stderr", "")
     return (not check.get("timedOut", False)
@@ -1239,6 +1253,16 @@ def main():
             check["testId"] = "CVE-2026-117610-empty-nonfinal-subparser"
             check["passed"] = expat_regression_succeeded(check, args.phase)
             checks.append(check)
+            if "CVE-2026-113351" in policy["targetCves"]:
+                reset_probe = compile_pkg_config_probe(
+                    fixtures / "CVE-2026-113351-parser-reset.c",
+                    temp / "expat-parser-reset", ["expat"]
+                )
+                reset_check = execute([str(reset_probe)], timeout=45)
+                reset_check["cve"] = "CVE-2026-113351"
+                reset_check["testId"] = "CVE-2026-113351-parser-reset-allocation-accounting"
+                reset_check["passed"] = expat_reset_regression_succeeded(reset_check, args.phase)
+                checks.append(reset_check)
             source_version = policy["baseVersion"].split("-", 1)[0]
             consumer = execute(["xmlwf", "-v"])
             consumer["testId"] = "expat-xmlwf-version"

@@ -35,12 +35,14 @@ SUMMARIES = {
     "CVE-2026-69184": "c-ares CPU exhaustion from unbounded DNS compression-pointer chains",
     "CVE-2026-111497": "Brotli decoder out-of-bounds write on invalid block switches",
     "CVE-2026-117610": "Expat NULL dereference when an external-entity subparser starts with empty non-final input",
+    "CVE-2026-113351": "Expat parser reuse can reject ordinary documents after parsing a large document and resetting XML_Parser",
 }
 SEVERITIES = {
     "CVE-2026-12912": "HIGH",
     "CVE-2026-76781": "MEDIUM",
     "CVE-2026-69184": "HIGH",
     "CVE-2026-111497": "CRITICAL",
+    "CVE-2026-113351": "MEDIUM",
 }
 # Refresh the modified timestamp when an existing advisory record changes.
 MODIFIED = {
@@ -48,6 +50,7 @@ MODIFIED = {
     "CVE-2026-18495": "2026-11-03T08:45:03Z",
     "CVE-2025-61144": "2026-11-03T08:35:10Z",
     "CVE-2026-52490": "2026-11-03T08:35:10Z",
+    "CVE-2026-113351": "2026-11-03T15:00:00Z",
 }
 
 
