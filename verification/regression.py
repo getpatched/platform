@@ -1205,31 +1205,61 @@ def main():
                 check["passed"] = check["returncode"] == 0 and check["stdout"] == "compatible\n"
                 checks.append(check)
         elif package == "libarchive":
-            lines = (fixtures / "test_read_format_rar5_loop_bug.rar.uu").read_bytes().splitlines()
-            start = next(i for i, line in enumerate(lines) if line.startswith(b"begin "))
-            data = bytearray()
-            for line in lines[start + 1:]:
-                if line == b"end": break
-                data.extend(binascii.a2b_uu(line))
-            if not 0 < len(data) < 1024 * 1024:
-                raise RuntimeError("Fixture exceeds regression resource bound")
-            fixture = temp / "loop.rar"
-            fixture.write_bytes(data)
-            probe = temp / "archive-probe"
-            subprocess.run(["cc", "-std=c99", "-Wall", "-Wextra", "-Werror", str(Path(__file__).with_name("archive-probe.c")), "-larchive", "-o", str(probe)], check=True, timeout=30)
-            check = execute([str(probe), str(fixture)], timeout=5)
-            check["cve"] = "CVE-2026-4111"
-            check["passed"] = check["timedOut"] if args.phase == "baseline" else not check["timedOut"] and check["returncode"] == 0
-            checks.append(check)
-            if args.phase == "patched":
-                item = temp / "consumer.txt"
-                item.write_text("consumer round trip\n")
-                archive = temp / "consumer.tar.gz"
-                create = execute(["bsdtar", "-czf", str(archive), "-C", str(temp), item.name])
-                extract = execute(["bsdtar", "-xOf", str(archive), item.name])
-                create["passed"] = create["returncode"] == 0
-                extract["passed"] = extract["returncode"] == 0 and extract["stdout"] == item.read_text()
-                checks.extend([create, extract])
+            if policy["targetId"] == "debian-trixie-amd64":
+                probe = compile_pkg_config_probe(
+                    fixtures / "zip-encrypted-size-overflow.c", temp / "zip-encrypted-size-overflow", ["libarchive"]
+                )
+                check = execute([str(probe)], timeout=5)
+                check["cve"] = "CVE-2026-16517"
+                check["vulnerabilityReproduced"] = (
+                    check["timedOut"]
+                    and "GETPATCHED:ZIP_HEADER_START" in check["stderr"]
+                    and "GETPATCHED:ZIP_HEADER_RETURN" not in check["stderr"]
+                    if args.phase == "baseline" else False
+                )
+                check["patchedBehavior"] = (
+                    not check["timedOut"] and check["returncode"] == 0
+                    and "GETPATCHED:ZIP_HEADER_START" in check["stderr"]
+                    and "GETPATCHED:ZIP_HEADER_RETURN" in check["stderr"]
+                    if args.phase == "patched" else False
+                )
+                check["passed"] = check["vulnerabilityReproduced"] if args.phase == "baseline" else check["patchedBehavior"]
+                checks.append(check)
+                if args.phase == "patched":
+                    item = temp / "consumer.txt"
+                    item.write_text("consumer round trip\n")
+                    archive = temp / "consumer.tar.gz"
+                    create = execute(["bsdtar", "-czf", str(archive), "-C", str(temp), item.name])
+                    extract = execute(["bsdtar", "-xOf", str(archive), item.name])
+                    create["passed"] = create["returncode"] == 0
+                    extract["passed"] = extract["returncode"] == 0 and extract["stdout"] == item.read_text()
+                    checks.extend([create, extract])
+            else:
+                lines = (fixtures / "test_read_format_rar5_loop_bug.rar.uu").read_bytes().splitlines()
+                start = next(i for i, line in enumerate(lines) if line.startswith(b"begin "))
+                data = bytearray()
+                for line in lines[start + 1:]:
+                    if line == b"end": break
+                    data.extend(binascii.a2b_uu(line))
+                if not 0 < len(data) < 1024 * 1024:
+                    raise RuntimeError("Fixture exceeds regression resource bound")
+                fixture = temp / "loop.rar"
+                fixture.write_bytes(data)
+                probe = temp / "archive-probe"
+                subprocess.run(["cc", "-std=c99", "-Wall", "-Wextra", "-Werror", str(Path(__file__).with_name("archive-probe.c")), "-larchive", "-o", str(probe)], check=True, timeout=30)
+                check = execute([str(probe), str(fixture)], timeout=5)
+                check["cve"] = "CVE-2026-4111"
+                check["passed"] = check["timedOut"] if args.phase == "baseline" else not check["timedOut"] and check["returncode"] == 0
+                checks.append(check)
+                if args.phase == "patched":
+                    item = temp / "consumer.txt"
+                    item.write_text("consumer round trip\n")
+                    archive = temp / "consumer.tar.gz"
+                    create = execute(["bsdtar", "-czf", str(archive), "-C", str(temp), item.name])
+                    extract = execute(["bsdtar", "-xOf", str(archive), item.name])
+                    create["passed"] = create["returncode"] == 0
+                    extract["passed"] = extract["returncode"] == 0 and extract["stdout"] == item.read_text()
+                    checks.extend([create, extract])
         elif package == "c-ares":
             if policy["targetId"] == "ubuntu-focal-amd64":
                 probe = compile_pkg_config_probe(

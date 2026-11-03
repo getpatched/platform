@@ -436,9 +436,15 @@ def regression_verified_candidate(directory, scan_images_path, target_id, recipe
         elif source == "libarchive":
             check = cve_checks[target["targetCves"][0]]
             if phase == "baseline":
-                if check.get("timedOut") is not True:
+                if target["targetCves"][0] == "CVE-2026-16517":
+                    if (check.get("timedOut") is not True
+                            or check.get("vulnerabilityReproduced") is not True):
+                        raise ValueError("libarchive baseline evidence does not reproduce the configured ZIP writer overflow")
+                elif check.get("timedOut") is not True:
                     raise ValueError("libarchive baseline evidence does not reproduce the configured bounded timeout")
             elif (check.get("returncode") != 0 or check.get("timedOut")
+                  or (target["targetCves"][0] == "CVE-2026-16517"
+                      and (check.get("patchedBehavior") is not True or check.get("passed") is not True))
                   or len([item for item in checks if item.get("passed") is True
                           and item.get("command", [None])[0] == "bsdtar"]) < 2):
                 raise ValueError("libarchive patched evidence lacks a clean probe and tar consumer round trip")
