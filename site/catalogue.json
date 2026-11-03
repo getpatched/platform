@@ -317,7 +317,7 @@
           ],
           "earlyRedistributionAllowed": false,
           "status": "development-verified-production-release-pending",
-          "verification": "https://github.com/getpatched/platform/actions/runs/41631055810",
+          "verification": "https://github.com/getpatched/platform/actions/runs/41633529746",
           "ubuntuProEsmCompatibility": "not-applicable",
           "sourceUrl": "https://github.com/getpatched/packaging-libxml2/tree/getpatched/debian-trixie",
           "patchUrl": "https://github.com/getpatched/packaging-libxml2/blob/getpatched/debian-trixie/patches/CVE-2026-76781-debian-trixie.patch",

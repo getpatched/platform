@@ -314,7 +314,7 @@ class PublicCatalogueContract(unittest.TestCase):
                          {"cve-2026-6653-debian", "cve-2026-86144-debian-trixie",
                           "cve-2026-76781-debian-trixie"})
         self.assertEqual(libxml2_trixie["verification"],
-                         "https://github.com/getpatched/platform/actions/runs/41631055810")
+                         "https://github.com/getpatched/platform/actions/runs/41633529746")
         self.assertEqual(
             set(entries["tiff"]["targets"]),
             {"debian-bookworm-amd64", "debian-trixie-amd64"},
@@ -376,7 +376,7 @@ class PublicCatalogueContract(unittest.TestCase):
                 expected_run = {
                     ("libxml2", "ubuntu-focal-amd64"): "40899705050",
                     ("libxml2", "debian-bookworm-amd64"): "41575270372",
-                    ("libxml2", "debian-trixie-amd64"): "41631055810",
+                    ("libxml2", "debian-trixie-amd64"): "41633529746",
                     ("libarchive", "ubuntu-focal-amd64"): "40899709850",
                     ("libgit2", "ubuntu-focal-amd64"): "41162605227",
                     ("libgit2", "ubuntu-jammy-amd64"): "41167536831",
