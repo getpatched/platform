@@ -695,8 +695,8 @@
           "baselineVersion": "4.5.0-6+deb12u4",
           "sourcePocket": "release",
           "packageEcosystem": "Debian:12",
-          "packageVersion": "4.5.0-6+deb12u4+getpatched4",
-          "releaseSerial": 4,
+          "packageVersion": "4.5.0-6+deb12u4+getpatched5",
+          "releaseSerial": 5,
           "binaryPackages": [
             "libtiff6",
             "libtiff-tools"
@@ -709,13 +709,15 @@
           "targetCves": [
             "CVE-2025-61144",
             "CVE-2026-52490",
-            "CVE-2026-12912"
+            "CVE-2026-12912",
+            "CVE-2026-18495"
           ],
           "advisory": "https://security-tracker.debian.org/tracker/CVE-2025-61144",
           "advisories": {
             "CVE-2025-61144": "https://security-tracker.debian.org/tracker/CVE-2025-61144",
             "CVE-2026-52490": "https://security-tracker.debian.org/tracker/CVE-2026-52490",
-            "CVE-2026-12912": "https://security-tracker.debian.org/tracker/CVE-2026-12912"
+            "CVE-2026-12912": "https://security-tracker.debian.org/tracker/CVE-2026-12912",
+            "CVE-2026-18495": "https://security-tracker.debian.org/tracker/CVE-2026-18495"
           },
           "candidateStatus": "development-verified-production-release-pending",
           "releaseAccess": {
@@ -744,6 +746,9 @@
             ],
             "CVE-2026-12912": [
               "libtiff6"
+            ],
+            "CVE-2026-18495": [
+              "libtiff-tools"
             ]
           },
           "verifiedReleases": [
@@ -761,6 +766,27 @@
                 ],
                 "CVE-2026-52490": [
                   "libtiff-tools"
+                ]
+              }
+            },
+            {
+              "version": "4.5.0-6+deb12u4+getpatched4",
+              "releaseSerial": 4,
+              "status": "development-verified-production-release-pending",
+              "targetCves": [
+                "CVE-2025-61144",
+                "CVE-2026-52490",
+                "CVE-2026-12912"
+              ],
+              "advisoryPackagesByCve": {
+                "CVE-2025-61144": [
+                  "libtiff-tools"
+                ],
+                "CVE-2026-52490": [
+                  "libtiff-tools"
+                ],
+                "CVE-2026-12912": [
+                  "libtiff6"
                 ]
               }
             }

@@ -480,11 +480,11 @@
         {
           "database_specific": {
             "candidate_status": "development-verified-production-release-pending",
-            "candidate_version": "4.5.0-6+deb12u4+getpatched4",
+            "candidate_version": "4.5.0-6+deb12u4+getpatched5",
             "fixed_versions": [
-              "4.5.0-6+deb12u4+getpatched4"
+              "4.5.0-6+deb12u4+getpatched5"
             ],
-            "getpatched_fixed_version": "4.5.0-6+deb12u4+getpatched4",
+            "getpatched_fixed_version": "4.5.0-6+deb12u4+getpatched5",
             "source_package": "tiff",
             "target_id": "debian-bookworm-amd64",
             "vendor_fixed_versions": []
@@ -538,7 +538,7 @@
       },
       "details": "GetPatched records exact affected package versions and exact reviewed fixes per distribution, release, and architecture. A new target or fixed package version is accepted only after its own build and regression evidence.",
       "id": "CVE-2025-61144",
-      "modified": "2026-10-30T05:38:23Z",
+      "modified": "2026-11-03T08:35:10Z",
       "references": [
         {
           "type": "ADVISORY",
@@ -907,11 +907,11 @@
         {
           "database_specific": {
             "candidate_status": "development-verified-production-release-pending",
-            "candidate_version": "4.5.0-6+deb12u4+getpatched4",
+            "candidate_version": "4.5.0-6+deb12u4+getpatched5",
             "fixed_versions": [
-              "4.5.0-6+deb12u4+getpatched4"
+              "4.5.0-6+deb12u4+getpatched5"
             ],
-            "getpatched_fixed_version": "4.5.0-6+deb12u4+getpatched4",
+            "getpatched_fixed_version": "4.5.0-6+deb12u4+getpatched5",
             "source_package": "tiff",
             "target_id": "debian-bookworm-amd64",
             "vendor_fixed_versions": []
@@ -938,7 +938,7 @@
       },
       "details": "GetPatched records exact affected package versions and exact reviewed fixes per distribution, release, and architecture. A new target or fixed package version is accepted only after its own build and regression evidence.",
       "id": "CVE-2026-12912",
-      "modified": "2026-11-03T05:52:23Z",
+      "modified": "2026-11-03T08:35:10Z",
       "references": [
         {
           "type": "ADVISORY",
@@ -947,6 +947,52 @@
       ],
       "schema_version": "1.6.0",
       "summary": "Heap buffer overflow in libtiff PixarLog decoding when an application opts into 8BITABGR RGB output"
+    },
+    {
+      "affected": [
+        {
+          "database_specific": {
+            "candidate_status": "development-verified-production-release-pending",
+            "candidate_version": "4.5.0-6+deb12u4+getpatched5",
+            "fixed_versions": [
+              "4.5.0-6+deb12u4+getpatched5"
+            ],
+            "getpatched_fixed_version": "4.5.0-6+deb12u4+getpatched5",
+            "source_package": "tiff",
+            "target_id": "debian-bookworm-amd64",
+            "vendor_fixed_versions": []
+          },
+          "ecosystem_specific": {
+            "architecture": "amd64",
+            "distribution": "Debian",
+            "release": "bookworm",
+            "source_package": "tiff",
+            "target_id": "debian-bookworm-amd64"
+          },
+          "package": {
+            "ecosystem": "Debian:12",
+            "name": "libtiff-tools"
+          },
+          "versions": [
+            "4.5.0-6+deb12u4"
+          ]
+        }
+      ],
+      "database_specific": {
+        "severity": "MEDIUM",
+        "verification_status": "development-verified-production-release-pending"
+      },
+      "details": "GetPatched records exact affected package versions and exact reviewed fixes per distribution, release, and architecture. A new target or fixed package version is accepted only after its own build and regression evidence.",
+      "id": "CVE-2026-18495",
+      "modified": "2026-11-03T08:45:03Z",
+      "references": [
+        {
+          "type": "ADVISORY",
+          "url": "https://security-tracker.debian.org/tracker/CVE-2026-18495"
+        }
+      ],
+      "schema_version": "1.6.0",
+      "summary": "libtiff tiff2pdf heap buffer overflow with oversized BigTIFF strip lengths"
     },
     {
       "affected": [
@@ -1032,11 +1078,11 @@
         {
           "database_specific": {
             "candidate_status": "development-verified-production-release-pending",
-            "candidate_version": "4.5.0-6+deb12u4+getpatched4",
+            "candidate_version": "4.5.0-6+deb12u4+getpatched5",
             "fixed_versions": [
-              "4.5.0-6+deb12u4+getpatched4"
+              "4.5.0-6+deb12u4+getpatched5"
             ],
-            "getpatched_fixed_version": "4.5.0-6+deb12u4+getpatched4",
+            "getpatched_fixed_version": "4.5.0-6+deb12u4+getpatched5",
             "source_package": "tiff",
             "target_id": "debian-bookworm-amd64",
             "vendor_fixed_versions": []
@@ -1090,7 +1136,7 @@
       },
       "details": "GetPatched records exact affected package versions and exact reviewed fixes per distribution, release, and architecture. A new target or fixed package version is accepted only after its own build and regression evidence.",
       "id": "CVE-2026-52490",
-      "modified": "2026-10-30T05:38:23Z",
+      "modified": "2026-11-03T08:35:10Z",
       "references": [
         {
           "type": "ADVISORY",

@@ -270,6 +270,88 @@ def tiff_cve_required(policy, cve):
     return isinstance(configured, list) and cve in configured
 
 
+def _tiff_bigstrip_probe_command_matches(check):
+    command = check.get("command", [])
+    if (not isinstance(command, list) or len(command) != 12
+            or command[:5] != [
+                "valgrind", "--tool=memcheck", "--error-exitcode=97",
+                "--leak-check=no", "--read-var-info=yes",
+            ]):
+        return False
+    if not command[5].startswith("--log-file=") or command[6:10] != ["tiff2pdf", "-m", "0", "-o"]:
+        return False
+    output = Path(command[10])
+    fixture = Path(command[11])
+    log = Path(command[5].split("=", 1)[1])
+    return (
+        output.name == "CVE-2026-18495-output.pdf"
+        and fixture.name == "CVE-2026-18495-bigstrip.tif"
+        and output.parent == fixture.parent == log.parent
+        and log.name == "CVE-2026-18495.valgrind"
+    )
+
+
+def tiff_bigstrip_baseline_reproduced(check):
+    log = check.get("memoryLog", "")
+    stderr = check.get("stderr", "")
+    bounded_read = re.search(r"GETPATCHED_TIFF_READ_BOUNDED requested=(\d+) cap=16", stderr)
+    completed_read = re.search(r"GETPATCHED_TIFF_READ_COMPLETED requested=(\d+) bytes=16", stderr)
+    vulnerable_read_blocks = re.finditer(
+        r"(?ms)^==\d+== Syscall param read\(buf\) points to unaddressable byte\(s\)\n"
+        r"(?P<body>.*?)(?=^==\d+== (?:Invalid |Use of |Conditional |Syscall param |ERROR SUMMARY)|\Z)",
+        log,
+    )
+    read_overrun_reproduced = any(
+        "block of size 5 alloc'd" in block.group("body")
+        and "libtiff.so." in block.group("body")
+        and "/usr/bin/tiff2pdf" in block.group("body")
+        for block in vulnerable_read_blocks
+    )
+    return (
+        check.get("cve") == "CVE-2026-18495"
+        and check.get("testId") == "tiff2pdf-bigtiff-strip-length-truncation"
+        and check.get("timedOut") is False
+        and check.get("returncode") == 97
+        and check.get("fixtureSizeBytes") == 304
+        and check.get("declaredStripBytes") == 4294967301
+        and check.get("allocationCapEnabled") is False
+        and check.get("memoryMappingDisabled") is True
+        and _tiff_bigstrip_probe_command_matches(check)
+        and "GETPATCHED_TIFF_MMAP_DISABLED" in stderr
+        and "GETPATCHED_TIFF_SCRATCH_ALLOC_BOUNDED requested=4294967311 cap=65536" in stderr
+        and "GETPATCHED_TIFF_SCRATCH_INIT_BOUNDED requested=4294967311 cap=65536" in stderr
+        and bounded_read is not None
+        and int(bounded_read.group(1)) > 64 * 1024 * 1024
+        and completed_read is not None
+        and bounded_read.group(1) == completed_read.group(1)
+        and read_overrun_reproduced
+        and re.search(r"(?m)^==\d+== ERROR SUMMARY: [1-9]\d* errors?", log) is not None
+    )
+
+
+def tiff_bigstrip_patched_succeeded(check):
+    stderr = check.get("stderr", "")
+    return (
+        check.get("cve") == "CVE-2026-18495"
+        and check.get("testId") == "tiff2pdf-bigtiff-strip-length-truncation"
+        and check.get("timedOut") is False
+        and check.get("returncode") == 1
+        and check.get("fixtureSizeBytes") == 304
+        and check.get("declaredStripBytes") == 4294967301
+        and check.get("allocationCapEnabled") is True
+        and check.get("memoryMappingDisabled") is True
+        and _tiff_bigstrip_probe_command_matches(check)
+        and "GETPATCHED_TIFF_MMAP_DISABLED" in stderr
+        and "GETPATCHED_TIFF_SCRATCH_ALLOC_BOUNDED requested=4294967311 cap=65536" in stderr
+        and "GETPATCHED_TIFF_SCRATCH_INIT_BOUNDED requested=4294967311 cap=65536" in stderr
+        and "GETPATCHED_TIFF_READ_BOUNDED" not in stderr
+        and "GETPATCHED_TIFF_READ_COMPLETED" not in stderr
+        and "GETPATCHED_TIFF_ALLOCATION_REJECTED size=4294967301 cap=67108864" in stderr
+        and "got 64 bytes, expected 4294967301" not in stderr
+        and memcheck_has_no_errors(check.get("memoryLog", ""))
+    )
+
+
 TIFF_SUBDIVISION_OVERFLOW_COMMAND = ["tiffcrop", "-S", "134217729:32", "-h"]
 
 
@@ -959,6 +1041,60 @@ def main():
             checks.append(consumer)
         elif package == "tiff":
             fixture = fixtures / "multisample.tif"
+            if tiff_cve_required(policy, "CVE-2026-18495"):
+                fixture_source = fixtures / "CVE-2026-18495-bigstrip.c"
+                shim_source = fixtures / "CVE-2026-18495-bounded-read-shim.c"
+                fixture_generator = temp / "CVE-2026-18495-fixture"
+                generated = temp / "CVE-2026-18495-bigstrip.tif"
+                shim = temp / "CVE-2026-18495-bounded-read-shim.so"
+                subprocess.run(
+                    ["cc", "-std=c99", "-Wall", "-Wextra", "-Werror",
+                     str(fixture_source), "-o", str(fixture_generator)],
+                    check=True, timeout=30,
+                )
+                subprocess.run(
+                    ["cc", "-std=c99", "-Wall", "-Wextra", "-Werror", "-fPIC", "-shared",
+                     str(shim_source), "-ldl", "-o", str(shim)],
+                    check=True, timeout=30,
+                )
+                generated_check = execute([str(fixture_generator), str(generated)])
+                if (generated_check.get("timedOut") or generated_check.get("returncode") != 0
+                        or not generated.is_file() or generated.stat().st_size != 304):
+                    raise RuntimeError("Could not generate the bounded CVE-2026-18495 BigTIFF fixture")
+                inspected = execute(["tiffinfo", "-s", str(generated)])
+                if (inspected.get("timedOut") or inspected.get("returncode") != 0
+                        or "4294967301" not in inspected.get("stdout", "")):
+                    raise RuntimeError("CVE-2026-18495 fixture has the wrong BigTIFF strip byte count")
+                memory_log = temp / "CVE-2026-18495.valgrind"
+                command = [
+                    "valgrind", "--tool=memcheck", "--error-exitcode=97", "--leak-check=no",
+                    "--read-var-info=yes", "--log-file=" + str(memory_log),
+                    "tiff2pdf", "-m", "0", "-o", str(temp / "CVE-2026-18495-output.pdf"),
+                    str(generated),
+                ]
+                environment = os.environ.copy()
+                environment.pop("LD_PRELOAD", None)
+                allocation_cap_enabled = args.phase == "patched"
+                environment["LD_PRELOAD"] = str(shim)
+                environment.pop("GETPATCHED_TIFF_ALLOC_CAP_ENABLED", None)
+                if allocation_cap_enabled:
+                    environment["GETPATCHED_TIFF_ALLOC_CAP_ENABLED"] = "1"
+                else:
+                    environment["GETPATCHED_TIFF_STOP_AFTER_BOUNDED_READ"] = "1"
+                check = execute(command, timeout=20, env=environment)
+                check["memoryLog"] = memory_log.read_text() if memory_log.exists() else ""
+                check["memoryLogPath"] = str(memory_log)
+                check["fixtureSizeBytes"] = generated.stat().st_size
+                check["declaredStripBytes"] = 4294967301
+                check["allocationCapEnabled"] = allocation_cap_enabled
+                check["memoryMappingDisabled"] = "GETPATCHED_TIFF_MMAP_DISABLED" in check.get("stderr", "")
+                check["cve"] = "CVE-2026-18495"
+                check["testId"] = "tiff2pdf-bigtiff-strip-length-truncation"
+                check["passed"] = (
+                    tiff_bigstrip_baseline_reproduced(check)
+                    if args.phase == "baseline" else tiff_bigstrip_patched_succeeded(check)
+                )
+                checks.append(check)
             if tiff_cve_required(policy, "CVE-2026-12912"):
                 source = fixtures / "pixarlog-abgr.c"
                 probe = temp / "pixarlog-abgr"

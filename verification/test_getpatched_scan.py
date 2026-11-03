@@ -46,6 +46,21 @@ SCANNER_SPEC.loader.exec_module(SCANNER_MODULE)
 
 
 class GetPatchedScannerContract(unittest.TestCase):
+    def test_tiff_feed_selects_the_exact_verified_release_and_unverified_candidate(self):
+        canonical = SCANNER_MODULE.load_feed(FEED)
+        self.assertTrue(canonical["vulns"])
+
+        candidate = SCANNER_MODULE.load_feed(FEED, {("tiff", "debian-bookworm-amd64")})
+        advisory = next(item for item in candidate["vulns"] if item["id"] == "CVE-2026-18495")
+        self.assertEqual(advisory["summary"],
+                         "libtiff tiff2pdf heap buffer overflow with oversized BigTIFF strip lengths")
+        self.assertEqual({(item["package"]["name"], tuple(item["versions"]),
+                           item["database_specific"]["candidate_version"])
+                          for item in advisory["affected"]}, {
+                              ("libtiff-tools", ("4.5.0-6+deb12u4",),
+                               "4.5.0-6+deb12u4+getpatched5")
+                          })
+
     def test_libxml2_debian_candidate_advisory_is_exact_and_target_scoped(self):
         target_id = "debian-bookworm-amd64"
         feed = SCANNER_MODULE.build_feed(
@@ -872,7 +887,7 @@ raise SystemExit(3)
             "CVE-2026-117610",
 
 "CVE-2025-52885", "CVE-2026-107705", "CVE-2026-69184", "CVE-2026-111497",
-            "CVE-2025-61144", "CVE-2026-52490", "CVE-2026-12912",
+            "CVE-2025-61144", "CVE-2026-52490", "CVE-2026-12912", "CVE-2026-18495",
         })
         for advisory in committed["vulns"]:
             self.assertEqual(
@@ -897,7 +912,7 @@ raise SystemExit(3)
             if any(affected["ecosystem_specific"]["source_package"] == "tiff"
                    for affected in item["affected"])
         }
-        self.assertEqual(tiff_advisories, {"CVE-2025-61144", "CVE-2026-52490", "CVE-2026-12912"})
+        self.assertEqual(tiff_advisories, {"CVE-2025-61144", "CVE-2026-52490", "CVE-2026-12912", "CVE-2026-18495"})
         self.assertTrue(all("ranges" not in affected for item in committed["vulns"] for affected in item["affected"]))
 
     def test_scanner_rejects_feed_that_disagrees_with_reviewed_package_policy(self):

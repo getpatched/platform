@@ -302,7 +302,8 @@ def load_feed(path, verified_candidates=frozenset()):
                            "advisoryPackagesByCve": expected["advisoryPackagesByCve"]}
             else:
                 release = next((item for item in expected["verifiedReleases"]
-                                if advisory_id in item["targetCves"]), None)
+                                if (advisory_id in item["targetCves"]
+                                    and item["version"] == policy.get("candidate_version"))), None)
             if (release is None or advisory_id not in release["targetCves"]
                     or package["name"] not in release["advisoryPackagesByCve"][advisory_id]):
                 raise ValueError(f"{advisory_id} does not apply to the affected package in the reviewed policy")
