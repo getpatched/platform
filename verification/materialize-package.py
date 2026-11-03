@@ -22,6 +22,52 @@ def copy_identical(source, destination):
     shutil.copyfile(source, destination)
 
 
+def add_debian_symbol(source_root, entry, binary_packages):
+    package = entry.get("package")
+    library = entry.get("library")
+    symbol = entry.get("symbol")
+    version = entry.get("version")
+    after = entry.get("after")
+    if (package not in binary_packages
+            or not isinstance(package, str)
+            or not re.fullmatch(r"[A-Za-z0-9+.-]+", package)
+            or not isinstance(library, str)
+            or not re.fullmatch(r"[A-Za-z0-9+.-]+", library)
+            or not isinstance(symbol, str)
+            or not re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*", symbol)
+            or not isinstance(after, str)
+            or not re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*", after)
+            or not isinstance(version, str)
+            or not re.fullmatch(r"[A-Za-z0-9.+:~_-]+", version)):
+        raise RuntimeError("Patch contains an invalid Debian symbols entry")
+
+    path = source_root / "debian" / f"{package}.symbols"
+    if not path.is_file():
+        raise RuntimeError(f"Debian symbols file is missing: {path}")
+    lines = path.read_text().splitlines()
+    headers = [i for i, line in enumerate(lines)
+               if re.fullmatch(r"\S+\s+\S+\s+#MINVER#", line)]
+    matching = [i for i in headers
+                if lines[i].split()[0] == library and lines[i].split()[1] == package]
+    if len(matching) != 1:
+        raise RuntimeError(f"Expected one symbols stanza for {library} in {package}")
+    start = matching[0]
+    end = next((i for i in headers if i > start), len(lines))
+    entry_line = f" {symbol}@Base {version}"
+    existing = [i for i in range(start + 1, end)
+                if lines[i].strip().split("@Base", 1)[0] == symbol]
+    if existing:
+        if len(existing) != 1 or lines[existing[0]] != entry_line:
+            raise RuntimeError(f"Conflicting Debian symbols entry for {symbol}")
+        return
+    anchors = [i for i in range(start + 1, end)
+               if lines[i].strip().startswith(f"{after}@Base ")]
+    if len(anchors) != 1:
+        raise RuntimeError(f"Expected one {after} anchor in {library} symbols stanza")
+    lines.insert(anchors[0] + 1, entry_line)
+    path.write_text("\n".join(lines) + "\n")
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--recipe", required=True, type=Path)
@@ -78,6 +124,8 @@ def main():
         if Path(patch_name).name != patch_name or "\n" in patch_name or "\t" in patch_name:
             raise RuntimeError("Patch file name is not safe for a quilt series")
         copy_identical(recipe / "patches" / patch_name, patch_dir / patch_name)
+        for symbol_entry in item.get("debianSymbols", []):
+            add_debian_symbol(source_root, symbol_entry, target["binaryPackages"])
         if patch_name not in series_entries:
             appended.append(patch_name)
 
