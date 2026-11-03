@@ -19,7 +19,7 @@ from package_recipe import load_json, recipe_path
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "verification"))
 from regression import (cares_regression_succeeded, consumer_version_succeeded, libpng_overwrite_reproduced, libpng_stride_read_reproduced,
-                        libpng_patched_checks_succeeded, poppler_uaf_reproduced,
+                        libpng_patched_checks_succeeded, poppler_revision6_password_overflow_reproduced, poppler_revision6_probe_command, poppler_uaf_reproduced,
                         expat_consumer_succeeded, expat_regression_succeeded,
                         schematron_baseline_reproduced, tiff_baseline_reproduced,
                         tiff_subdivision_baseline_reproduced, tiff_subdivision_patched_succeeded,
@@ -150,6 +150,20 @@ def expat_candidate_checks_succeeded(cve_check, checks, phase, expected_version)
         return False
     consumers = [item for item in checks if item.get("testId") == "expat-xmlwf-version"]
     return len(consumers) == 1 and expat_consumer_succeeded(consumers[0], expected_version)
+
+
+def poppler_revision6_patched_succeeded(cve_check, checks):
+    return (
+        cve_check.get("cve") == "CVE-2026-107705"
+        and cve_check.get("testId") == "CVE-2026-107705-revision6-long-owner-password"
+        and cve_check.get("passed") is True
+        and cve_check.get("returncode") == 0
+        and not cve_check.get("timedOut")
+        and poppler_revision6_probe_command(cve_check)
+        and "ERROR SUMMARY: 0 errors" in cve_check.get("memoryLog", "")
+        and any(item.get("passed") is True and item.get("command", [None])[0] == "pdfinfo"
+                and consumer_version_succeeded(item, "pdfinfo version") for item in checks)
+    )
 
 
 def libgit2_regression_checks_succeeded(cve_checks, phase):
@@ -404,12 +418,20 @@ def regression_verified_candidate(directory, scan_images_path, target_id, recipe
                 if not libpng_patched_checks_succeeded(checks):
                     raise ValueError("libpng patched evidence lacks clean CVE checks, padded-stride follow-up, or Adam7 pixel comparison")
         elif source == "poppler":
-            check = cve_checks["CVE-2025-52885"]
-            if phase == "baseline":
-                if not poppler_uaf_reproduced(check):
-                    raise ValueError("Poppler baseline evidence does not reproduce the configured StructTreeRoot use-after-free")
-            elif not poppler_patched_checks_succeeded(check, checks):
-                raise ValueError("Poppler patched evidence lacks a clean CVE regression and pdfinfo consumer check")
+            for cve in target["targetCves"]:
+                check = cve_checks[cve]
+                if cve == "CVE-2025-52885":
+                    if phase == "baseline" and not poppler_uaf_reproduced(check):
+                        raise ValueError("Poppler baseline evidence does not reproduce the configured StructTreeRoot use-after-free")
+                    if phase == "patched" and not poppler_patched_checks_succeeded(check, checks):
+                        raise ValueError("Poppler patched evidence lacks a clean CVE regression and pdfinfo consumer check")
+                elif cve == "CVE-2026-107705":
+                    if phase == "baseline" and not poppler_revision6_password_overflow_reproduced(check):
+                        raise ValueError("Poppler baseline evidence does not reproduce the revision 6 long-password buffer overflow")
+                    if phase == "patched" and not poppler_revision6_patched_succeeded(check, checks):
+                        raise ValueError("Poppler patched evidence lacks a clean revision 6 regression and pdfinfo consumer check")
+                else:
+                    raise ValueError(f"Poppler candidate regression has no evidence classifier for {cve}")
         elif source == "libgit2":
             if not libgit2_regression_checks_succeeded(cve_checks, phase):
                 description = "baseline evidence does not reproduce" if phase == "baseline" else "patched evidence does not prove"

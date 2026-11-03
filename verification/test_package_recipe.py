@@ -196,6 +196,9 @@ class PackageRecipeContract(unittest.TestCase):
         ]
         self._write_json(self.root / "package-manifest.json", self.manifest)
         RECIPE.load_recipe(self.root, PLATFORM_CONFIG)
+        self.manifest["licensing"]["fileLicenses"][0]["spdx"] = "Artistic-2.0"
+        self._write_json(self.root / "package-manifest.json", self.manifest)
+        RECIPE.load_recipe(self.root, PLATFORM_CONFIG)
         self.manifest["licensing"]["fileLicenses"][0]["path"] = "patches/missing.patch"
         self._write_json(self.root / "package-manifest.json", self.manifest)
         with self.assertRaisesRegex(RuntimeError, "Recipe file is missing"):

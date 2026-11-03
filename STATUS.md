@@ -8,6 +8,19 @@
 - Recipe commit `ed35d4b85f8cb08c2b252868d366cd6ec34cf463` is public on both target branches. Catalogue and OSV integration is in platform PR [#110](https://github.com/getpatched/platform/pull/110); it remains unmerged pending updated run links, CI, and fresh independent review.
 - Trixie run [41545338753](https://github.com/getpatched/platform/actions/runs/41545338753) was cancelled before it generated reports; replacement run [41546270294](https://github.com/getpatched/platform/actions/runs/41546270294) passed. Earlier old-policy runs are not used for acceptance. Fixture, consumer-classifier, and review history is retained in `EVIDENCE.md`.
 
+## Active 100-CVE goal checkpoint — 3 Nov 2026
+
+- **Poppler / Debian Bookworm and Trixie amd64, CVE-2026-107705:** hosted runs [41518910177](https://github.com/getpatched/platform/actions/runs/41518910177) and [41531130479](https://github.com/getpatched/platform/actions/runs/41531130479) passed exact-source builds, installed baseline overflow reproductions, patched regressions, package-aware before/after scans, consumer checks, and isolated signed APT-client verification. Package PR #2 and platform PR #108 are merged. Raw Trivy 0.70 still reports CVE-2026-107705 in 14 Poppler package records in each image; this is not a Trivy-clean claim. No binaries or production index were published.
+- **TIFF / Debian Bookworm and Trixie amd64, CVE-2026-52490:** hosted runs [41553176585](https://github.com/getpatched/platform/actions/runs/41553176585) and [41554198692](https://github.com/getpatched/platform/actions/runs/41554198692) passed exact installed baseline/patched regressions, package-aware scans, `tiffinfo`, and signed test-client verification. Candidate verification passed; release eligibility remains false. Raw Trivy still reports CVE-2025-61144 and CVE-2026-52490 on candidate packages, so production release remains blocked. Package PR #3 and platform PR #109 are open. Evidence: [`evidence/tiff-cve-2026-52490-2026-11-03.md`](evidence/tiff-cve-2026-52490-2026-11-03.md). TIFF does not count until fresh review and safe public metadata integration.
+- **Expat / Debian Bookworm and Trixie amd64, CVE-2026-117610:** hosted package verification passed in runs [41543751522](https://github.com/getpatched/platform/actions/runs/41543751522) and [41546270294](https://github.com/getpatched/platform/actions/runs/41546270294). Platform metadata PR #110 still needs final review/integration; Expat remains uncounted.
+- **Completed count:** 1/100 (Poppler). TIFF and Expat are verified development candidates pending their remaining review/integration gates. No other candidate has completed every objective gate.
+
+### Next actions
+
+1. Complete final independent review and hosted CI for TIFF PRs #3 and #109; keep #109 unmerged because it would trigger production Worker/site deployment. Keep TIFF uncounted.
+2. Complete final review of Expat PR #110 and integrate metadata only through a path that does not publish packages or trigger production deployment. Keep Expat uncounted until integration is verified.
+3. Continue to the next revalidated leaf-library candidate after these review gates; no production binaries or signed indexes may be published in this campaign phase.
+
 ## Latest development checkpoint — 31 Oct 2026
 
 - **libgit2 / Ubuntu Focal amd64:** hosted run [41162605227](https://github.com/getpatched/platform/actions/runs/41162605227) passed the exact-source build, all three installed baseline/patched regressions, package-aware scan (six baseline findings, zero candidate findings), and isolated signed APT binary/source client checks. Trivy 0.70.0 reported none of the three target CVEs on either image. The candidate is verified for development; production publication remains disabled.
@@ -421,3 +434,15 @@ The advisory scanner now treats an exact reviewed vulnerable baseline as affecte
 ### Next actions
 
 1. Inspect run 41083191679 through terminal state and review its retained artifacts. Then push and quality-check the reviewed Poppler advisory-scope correction and rerun Poppler. Keep TIFF and libpng blocked on accurate baseline reproductions; do not publish packages.
+
+## Active 100-CVE goal — Poppler CVE-2026-107705 — 2 Nov 2026
+
+- Debian Security Tracker currently lists the exact Bookworm and Trixie Poppler sources as vulnerable. Canonical says Ubuntu Focal needs evaluation, so no Focal target is proposed for this CVE.
+- Added target recipes for Bookworm security amd64 `22.12.0-2+deb12u3` and Trixie amd64 `25.03.0-5+deb13u4`, pinned to Debian Snapshot `20261030T000000Z`. Their signed `InRelease` files and `Sources.xz` hash chains were verified; details and archive digests are in `evidence/poppler-cve-2026-107705-research-20261102/README.md`.
+- Added a minimal target-scoped 127-byte password clamp backport of upstream commit `60e19a30152560fcccfb2ae7f7559eda560c0160`, plus a `PDFDoc`-based encrypted R6 fixture probe and baseline/patched scanner classification. The upstream patch does not apply verbatim because these distro sources predate its `GooString` refactor.
+- Local patch dry-runs pass for both source versions; both recipes load; the probe syntax-checks against both header sets; and 96 focused platform tests pass. These checks do not prove installed behavior.
+- The candidate has not yet reproduced against the installed baseline or passed a patched build, scan, or consumer check. Docker Desktop is unavailable locally; run the exact commit through GitHub-hosted verification before counting it. No binary or production advisory was published.
+
+### Next actions
+
+1. Obtain a fresh independent review of the current two-repository diff. Address findings, then publish reviewable source and platform branches and run the non-publishing Bookworm and Trixie workflows. Count this CVE only after both target runs pass all gates.

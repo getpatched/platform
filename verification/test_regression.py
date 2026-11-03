@@ -10,6 +10,8 @@ from regression import (LIBPNG_CVE_2025_65018_FIXTURE, libpng_followup_read_is_c
                         brotli_baseline_reproduced, brotli_patched_succeeded,
                         cares_regression_succeeded, consumer_version_succeeded, expat_consumer_succeeded, expat_regression_succeeded,
                         poppler_uaf_reproduced, schematron_baseline_reproduced,
+
+cares_regression_succeeded, consumer_version_succeeded, poppler_revision6_password_overflow_reproduced, poppler_uaf_reproduced, poppler_revision6_probe_command, schematron_baseline_reproduced,
                         tiff_baseline_reproduced, tiff_null_output_baseline_reproduced,
                         tiff_null_output_patched_succeeded, parse_callback_url,
                         libgit2_redirect_reproduced, tiff_cve_required,
@@ -585,6 +587,102 @@ class PopplerBaselineClassification(unittest.TestCase):
                    "memoryLog": "Invalid write StructTreeRoot::parentTreeAdd"}
         self.assertFalse(poppler_uaf_reproduced(timed_out))
         self.assertFalse(poppler_uaf_reproduced(success))
+
+    def test_revision6_long_password_requires_invalid_write_in_libpoppler(self):
+        check = {
+            "cve": "CVE-2026-107705",
+            "testId": "CVE-2026-107705-revision6-long-owner-password",
+            "command": [
+                "valgrind", "--tool=memcheck", "--error-exitcode=97", "--leak-check=no",
+                "--read-var-info=yes", "--log-file=/tmp/revision6-password.valgrind",
+                "/tmp/poppler-revision6-password", "/recipe/tests/fixtures/CVE-2026-107705-r6-encrypted.pdf",
+            ],
+            "returncode": 97,
+            "timedOut": False,
+            "memoryLog": (
+                "==123== Invalid write of size 8\n"
+                "==123==    at 0x1234: revision6Hash (Decrypt.cc:1767) (in /usr/lib/x86_64-linux-gnu/libpoppler.so.126)\n"
+                "==123== ERROR SUMMARY: 4 errors from 2 contexts\n"
+            ),
+        }
+        self.assertTrue(poppler_revision6_probe_command(check))
+        self.assertTrue(poppler_revision6_password_overflow_reproduced(check))
+        self.assertFalse(poppler_revision6_probe_command({**check, "command": ["valgrind"]}))
+
+    def test_revision6_rejects_unrelated_or_clean_memcheck_output(self):
+        unrelated = {
+            "returncode": 97,
+            "timedOut": False,
+            "memoryLog": "Invalid write\n==123== ERROR SUMMARY: 1 errors from 1 contexts\n",
+        }
+        clean = {
+            "returncode": 0,
+            "timedOut": False,
+            "memoryLog": "==123== ERROR SUMMARY: 0 errors from 0 contexts\n",
+        }
+        self.assertFalse(poppler_revision6_password_overflow_reproduced(unrelated))
+        self.assertFalse(poppler_revision6_password_overflow_reproduced(clean))
+
+    def test_revision6_rejects_unrelated_libpoppler_write(self):
+        check = {
+            "cve": "CVE-2026-107705",
+            "testId": "CVE-2026-107705-revision6-long-owner-password",
+            "command": [
+                "valgrind", "--tool=memcheck", "--error-exitcode=97", "--leak-check=no",
+                "--read-var-info=yes", "--log-file=/tmp/revision6-password.valgrind",
+                "/tmp/poppler-revision6-password", "/recipe/tests/fixtures/CVE-2026-107705-r6-encrypted.pdf",
+            ],
+            "returncode": 97,
+            "timedOut": False,
+            "memoryLog": (
+                "==123== Invalid write of size 8\n"
+                "==123==    at 0x1234: unrelated (in /usr/lib/x86_64-linux-gnu/libpoppler.so.126)\n"
+                "==123== ERROR SUMMARY: 1 errors from 1 contexts\n"
+            ),
+        }
+        self.assertFalse(poppler_revision6_password_overflow_reproduced(check))
+
+    def test_revision6_accepts_exact_stack_canary_overflow_from_stripped_poppler(self):
+        check = {
+            "cve": "CVE-2026-107705",
+            "testId": "CVE-2026-107705-revision6-long-owner-password",
+            "command": [
+                "valgrind", "--tool=memcheck", "--error-exitcode=97", "--leak-check=no",
+                "--read-var-info=yes", "--log-file=/tmp/revision6-password.valgrind",
+                "/tmp/poppler-revision6-password", "/recipe/tests/fixtures/CVE-2026-107705-r6-encrypted.pdf",
+            ],
+            "returncode": -6,
+            "timedOut": False,
+            "stderr": "*** stack smashing detected ***: terminated\n",
+            "memoryLog": (
+                "==41== Process terminating with default action of signal 6 (SIGABRT)\n"
+                "==41==    by 0x4FDF92F: __stack_chk_fail (fortify_fail.c:24)\n"
+                "==41==    by 0x499A747: ??? (in /usr/lib/x86_64-linux-gnu/libpoppler.so.147.0.0)\n"
+                "==41== ERROR SUMMARY: 0 errors from 0 contexts\n"
+            ),
+        }
+        self.assertTrue(poppler_revision6_password_overflow_reproduced(check))
+
+    def test_revision6_rejects_unrelated_stack_smash(self):
+        check = {
+            "cve": "CVE-2026-107705",
+            "testId": "CVE-2026-107705-revision6-long-owner-password",
+            "command": [
+                "valgrind", "--tool=memcheck", "--error-exitcode=97", "--leak-check=no",
+                "--read-var-info=yes", "--log-file=/tmp/revision6-password.valgrind",
+                "/tmp/poppler-revision6-password", "/recipe/tests/fixtures/CVE-2026-107705-r6-encrypted.pdf",
+            ],
+            "returncode": -6,
+            "timedOut": False,
+            "stderr": "Aborted\n",
+            "memoryLog": (
+                "==41== Process terminating with default action of signal 6 (SIGABRT)\n"
+                "==41==    by 0x4FDF92F: __stack_chk_fail (fortify_fail.c:24)\n"
+                "==41==    by 0x499A747: ??? (in /usr/lib/x86_64-linux-gnu/libpoppler.so.147.0.0)\n"
+                "==41== ERROR SUMMARY: 0 errors from 0 contexts\n"
+            ),
+        }
+        self.assertFalse(poppler_revision6_password_overflow_reproduced(check))
 
 
 class ConsumerVersionCheck(unittest.TestCase):

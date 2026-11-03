@@ -234,7 +234,7 @@ class PublicCatalogueContract(unittest.TestCase):
                    for target in record["targets"].values())
         }
         self.assertEqual(set(entries), expected_catalogue)
-        self.assertEqual(expected_catalogue, {"libxml2", "libarchive", "libgit2", "poppler", "c-ares", "brotli", "expat"})
+        self.assertEqual(expected_catalogue, {"libxml2", "libarchive", "libgit2", "poppler", "c-ares", "brotli", "expat", "tiff"})
         self.assertIn("libpng1.6", set(platform["packages"]) - set(entries))
         self.assertNotIn("libgit2", set(platform["packages"]) - set(entries))
         self.assertIn("ubuntu-jammy-amd64", entries["libgit2"]["targets"])
@@ -254,6 +254,17 @@ class PublicCatalogueContract(unittest.TestCase):
             {"debian-bookworm-amd64", "debian-trixie-amd64"},
         )
         self.assertEqual(catalogue["schemaVersion"], 3)
+        self.assertEqual(
+            set(entries["tiff"]["targets"]),
+            {"debian-bookworm-amd64", "debian-trixie-amd64"},
+        )
+        for target in entries["tiff"]["targets"].values():
+            self.assertEqual(target["cves"], ["CVE-2025-61144", "CVE-2026-52490"])
+            self.assertEqual(
+                {v["slug"] for v in target["vulnerabilities"]},
+                {"cve-2025-61144", "cve-2026-52490"},
+            )
+            self.assertEqual(target["status"], "development-verified-production-release-pending")
         self.assertEqual(set(catalogue["targets"]), set(platform["targets"]))
         for target_id, target in platform["targets"].items():
             profile = target_profile(platform, target_id)
@@ -294,11 +305,15 @@ class PublicCatalogueContract(unittest.TestCase):
                     ("libgit2", "ubuntu-focal-amd64"): "41162605227",
                     ("libgit2", "ubuntu-jammy-amd64"): "41167536831",
                     ("poppler", "ubuntu-focal-amd64"): "41149614570",
+                    ("poppler", "debian-bookworm-amd64"): "41518910177",
+                    ("poppler", "debian-trixie-amd64"): "41531130479",
                     ("c-ares", "ubuntu-focal-amd64"): "41492142682",
                     ("c-ares", "debian-trixie-amd64"): "41494211851",
                     ("brotli", "ubuntu-focal-amd64"): "41492184315",
                     ("expat", "debian-bookworm-amd64"): "41543751522",
                     ("expat", "debian-trixie-amd64"): "41546270294",
+("tiff", "debian-bookworm-amd64"): "41553176585",
+                    ("tiff", "debian-trixie-amd64"): "41554198692",
                 }[(source, target_id)]
                 self.assertEqual(entry["verification"], f"https://github.com/getpatched/platform/actions/runs/{expected_run}")
                 self.assertEqual(
@@ -309,7 +324,13 @@ class PublicCatalogueContract(unittest.TestCase):
                 self.assertTrue(entry["sourceUrl"].startswith(f"https://github.com/getpatched/packaging-{source}/tree/"))
                 self.assertTrue(entry["patchUrl"].startswith(f"https://github.com/getpatched/packaging-{source}/blob/"))
                 branch = target_profile(platform, target_id)["sourceBranch"]
-                self.assertEqual(entry["testsUrl"], f"https://github.com/getpatched/packaging-{source}/tree/{branch}/tests")
+                if source == "tiff" and target_id in {"debian-bookworm-amd64", "debian-trixie-amd64"}:
+                    patch_file = "CVE-2026-52490-bookworm.patch" if target_id == "debian-bookworm-amd64" else "CVE-2026-52490-trixie.patch"
+                    expected_branch = "getpatched/debian-bookworm" if target_id == "debian-bookworm-amd64" else "getpatched/debian-trixie"
+                    self.assertEqual(entry["patchUrl"], f"https://github.com/getpatched/packaging-tiff/blob/{expected_branch}/patches/{patch_file}")
+                    self.assertEqual(entry["testsUrl"], f"https://github.com/getpatched/packaging-tiff/blob/{expected_branch}/patches/metadata.json")
+                else:
+                    self.assertEqual(entry["testsUrl"], f"https://github.com/getpatched/packaging-{source}/tree/{branch}/tests")
                 self.assertEqual(entry["releasesUrl"], f"https://github.com/getpatched/packaging-{source}/releases")
                 if policy["candidateStatus"] == "development-verified-sponsor-flow-pending":
                     self.assertEqual(entry["releaseStatus"], "No production release; sponsor flow verification pending")
@@ -318,11 +339,10 @@ class PublicCatalogueContract(unittest.TestCase):
 
         page = (ROOT / "site/index.html").read_text()
         self.assertIn("Hosted verification passed.", page)
-        self.assertIn("Six Focal package candidates, two Debian Expat targets, one Debian Trixie c-ares target and one Jammy libgit2 target have hosted builds", page)
-        self.assertIn("Sponsor-first release flow and production repository access setup remain incomplete", page)
+        self.assertIn("Six Focal candidates, two Debian Expat targets, one Debian Trixie c-ares target, two Debian Poppler targets, one Jammy libgit2 target and two Debian TIFF targets have hosted builds", page)
+        self.assertIn("Live package publication and downloads remain disabled", page)
         self.assertIn("no production package release has been published", page)
-        self.assertIn("Live package publication and downloads remain disabled until sponsor sign-in, sponsor-first flow verification and production access setup are complete", page)
-        self.assertIn("Hosted verification has passed for all six Focal candidates, two Debian Expat targets", page)
+        self.assertIn("Hosted verification has passed for six Focal candidates, two Debian Expat targets", page)
         self.assertIn("Ubuntu Pro/ESM compatibility is not tested or supported", page)
         self.assertIn("Each row links to its source, patch, regression tests and release history", page)
         self.assertIn("Any sponsor delay starts only after sponsor publication", page)
