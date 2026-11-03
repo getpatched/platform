@@ -81,12 +81,8 @@ def validate_recipe_regression_fixture_hashes(recipe, manifest):
 
 
 def path_is_within(path, root):
-    """Check containment using Path.relative_to for Python 3.8 compatibility."""
-    try:
-        path.relative_to(root)
-    except ValueError:
-        return False
-    return True
+    """Check resolved-path containment without APIs missing from Python 3.8."""
+    return path == root or root in path.parents
 
 
 def schematron_baseline_reproduced(check):
