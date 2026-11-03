@@ -157,6 +157,10 @@ class PublicCatalogueContract(unittest.TestCase):
         platform = json.loads((ROOT / "packages.json").read_text())
         self.assertEqual(target_source_branch(platform, "debian-bookworm-amd64", "tiff"),
                          "getpatched/debian-bookworm")
+        self.assertEqual(target_source_branch(platform, "debian-bookworm-amd64"),
+                         "getpatched/debian-bookworm")
+        self.assertEqual(target_source_branch(platform, "debian-bookworm-amd64", "libxml2"),
+                         "getpatched/debian-bookworm")
 
     def test_cares_unverified_candidate_uses_allowed_source_branch(self):
         platform = json.loads((ROOT / "packages.json").read_text())
@@ -164,10 +168,9 @@ class PublicCatalogueContract(unittest.TestCase):
             target_source_branch(platform, "debian-trixie-amd64", "c-ares"),
             "getpatched/cve-2026-69186-trixie",
         )
-        self.assertEqual(target_source_branch(platform, "debian-bookworm-amd64"),
-                         "getpatched/debian-bookworm")
-        self.assertEqual(target_source_branch(platform, "debian-bookworm-amd64", "libxml2"),
-                         "getpatched/debian-bookworm")
+        policy = package_target_policy(platform, "c-ares", "debian-trixie-amd64")
+        self.assertFalse(set(policy["binaryPackages"]) & set(policy["builderPackages"]))
+        self.assertEqual(policy["builderPackages"], ["libc-ares-dev"])
 
     def test_tiff_verified_candidate_replaces_previous_verified_release(self):
         platform = json.loads((ROOT / "packages.json").read_text())

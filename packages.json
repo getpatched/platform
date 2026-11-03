@@ -908,8 +908,7 @@
           "packageVersion": "1.34.5-1+deb13u1+getpatched2",
           "releaseSerial": 2,
           "binaryPackages": [
-            "libcares2",
-            "libc-ares-dev"
+            "libcares2"
           ],
           "advisoryPackages": [
             "libcares2"
