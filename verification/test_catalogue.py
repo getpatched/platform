@@ -301,8 +301,8 @@ class PublicCatalogueContract(unittest.TestCase):
                 self.assertEqual(entry["status"], policy["candidateStatus"])
                 expected_run = {
                     ("libxml2", "ubuntu-focal-amd64"): "40899705050",
-                    ("libxml2", "debian-bookworm-amd64"): "41572688535",
-                    ("libxml2", "debian-trixie-amd64"): "41573393066",
+                    ("libxml2", "debian-bookworm-amd64"): "41575270372",
+                    ("libxml2", "debian-trixie-amd64"): "41575930432",
                     ("libarchive", "ubuntu-focal-amd64"): "40899709850",
                     ("libgit2", "ubuntu-focal-amd64"): "41162605227",
                     ("libgit2", "ubuntu-jammy-amd64"): "41167536831",
