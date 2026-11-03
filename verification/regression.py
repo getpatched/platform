@@ -722,6 +722,25 @@ def cares_record_count_regression_succeeded(check, target_id, phase):
     return check.get("patchedBehavior") is True and peak < CARES_RECORD_COUNT_HEAP_LIMIT
 
 
+def msgpack_unpacker_reuse_regression_succeeded(check, target_id, phase):
+    command = check.get("command", [])
+    expected_target = target_id in ("debian-bookworm-amd64", "debian-trixie-amd64")
+    if (not expected_target or phase not in ("baseline", "patched")
+            or check.get("cve") != "CVE-2026-57585"
+            or check.get("testId") != "python-msgpack-unpacker-error-reuse"
+            or check.get("timedOut") is not False
+            or len(command) != 2 or Path(command[0]).name != "python3"
+            or Path(command[1]).name != "cve-2026-57585-unpacker-reuse.py"):
+        return False
+    output = check.get("stdout", "")
+    if phase == "baseline":
+        return (check.get("returncode") == -signal.SIGSEGV
+                and "caught expected ValueError" in output)
+    return (check.get("returncode") == 0
+            and "caught expected ValueError" in output
+            and "after-error skip completed without process crash" in output)
+
+
 def libpng_probe_command_matches(check, test_id, executable, arguments):
     command = check.get("command")
     prefix = ["valgrind", "--tool=memcheck", "--error-exitcode=97", "--leak-check=no", "--read-var-info=yes"]
@@ -1261,6 +1280,26 @@ def main():
                     check, policy["targetId"], args.phase
                 )
                 checks.append(check)
+        elif package == "python-msgpack":
+            if policy["targetId"] not in ("debian-bookworm-amd64", "debian-trixie-amd64"):
+                raise RuntimeError("CVE-2026-57585 regression is only defined for Debian Bookworm and Trixie amd64")
+            fixture = fixtures / "cve-2026-57585-unpacker-reuse.py"
+            check = execute(["python3", str(fixture)], timeout=5)
+            check["testId"] = "python-msgpack-unpacker-error-reuse"
+            check["cve"] = "CVE-2026-57585"
+            check["vulnerabilityReproduced"] = (
+                check["returncode"] == -signal.SIGSEGV
+                and "caught expected ValueError" in check["stdout"]
+            )
+            check["patchedBehavior"] = (
+                check["returncode"] == 0
+                and "caught expected ValueError" in check["stdout"]
+                and "after-error skip completed without process crash" in check["stdout"]
+            )
+            check["passed"] = msgpack_unpacker_reuse_regression_succeeded(
+                check, policy["targetId"], args.phase
+            )
+            checks.append(check)
         elif package == "brotli":
             probe = compile_pkg_config_probe(
                 fixtures / "brotli-stream-probe.c", temp / "brotli-stream-probe",

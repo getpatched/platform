@@ -30,6 +30,10 @@ jobs:
             target_id: debian-bookworm-amd64
           - package: expat
             target_id: debian-trixie-amd64
+          - package: python-msgpack
+            target_id: debian-bookworm-amd64
+          - package: python-msgpack
+            target_id: debian-trixie-amd64
     steps:
       - name: Check out public build recipes
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1

@@ -103,7 +103,7 @@
       "type": "object", "additionalProperties": false,
       "required": ["baselineVersion", "sourcePocket", "packageVersion", "releaseSerial", "binaryPackages", "targetCve", "targetCves", "advisory", "candidateStatus", "releaseAccess"],
       "properties": {
-        "baselineVersion": {"type": "string", "minLength": 1}, "sourcePocket": {"type": "string"},
+        "baselineVersion": {"type": "string", "minLength": 1}, "sourceVersion": {"type": "string", "minLength": 1}, "sourcePocket": {"type": "string"},
         "packageEcosystem": {"type": "string", "pattern": "^(Debian(:[0-9]+)?|Ubuntu(:Pro)?:[0-9]+\\.[0-9]+:LTS)$"},
         "packageVersion": {"type": "string", "minLength": 1}, "releaseSerial": {"type": "integer", "minimum": 1},
         "futureEsmVersion": {"type": "string"}, "esmPockets": {"type": "array", "items": {"type": "string"}}, "vendorFixedVersions": {"type": "array", "uniqueItems": true, "items": {"type": "string"}},

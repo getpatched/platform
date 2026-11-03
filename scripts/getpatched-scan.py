@@ -19,6 +19,7 @@ from package_recipe import load_json, recipe_path
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "verification"))
 from regression import (cares_record_count_regression_succeeded, cares_regression_succeeded,
+                        msgpack_unpacker_reuse_regression_succeeded,
                         consumer_version_succeeded, libpng_overwrite_reproduced, libpng_stride_read_reproduced,
                         libpng_patched_checks_succeeded, poppler_revision6_password_overflow_reproduced, poppler_revision6_probe_command, poppler_uaf_reproduced,
                         expat_consumer_succeeded, expat_regression_succeeded,
@@ -483,6 +484,14 @@ def regression_verified_candidate(directory, scan_images_path, target_id, recipe
                     raise ValueError(
                         f"c-ares {phase} evidence lacks the expected Trixie record-count allocation result or valid-response compatibility check"
                     )
+        elif source == "python-msgpack":
+            check = cve_checks.get("CVE-2026-57585", {})
+            expected = "vulnerabilityReproduced" if phase == "baseline" else "patchedBehavior"
+            if (sum(item.get("cve") == "CVE-2026-57585" for item in checks) != 1
+                    or check.get("passed") is not True
+                    or check.get(expected) is not True
+                    or not msgpack_unpacker_reuse_regression_succeeded(check, target_id, phase)):
+                raise ValueError(f"python-msgpack {phase} evidence lacks the expected Unpacker error-reuse outcome")
         elif source == "brotli":
             check = cve_checks.get("CVE-2026-111497", {})
             expected = "vulnerabilityReproduced" if phase == "baseline" else "patchedBehavior"

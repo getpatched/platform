@@ -36,6 +36,7 @@ SUMMARIES = {
     "CVE-2026-69186": "c-ares disproportionate heap allocation from unvalidated DNS record counts",
     "CVE-2026-111497": "Brotli decoder out-of-bounds write on invalid block switches",
     "CVE-2026-117610": "Expat NULL dereference when an external-entity subparser starts with empty non-final input",
+    "CVE-2026-57585": "python-msgpack streaming Unpacker can crash when reused after a caught decoding error",
 }
 SEVERITIES = {
     "CVE-2026-12912": "HIGH",
@@ -43,6 +44,7 @@ SEVERITIES = {
     "CVE-2026-69184": "HIGH",
     "CVE-2026-69186": "MODERATE",
     "CVE-2026-111497": "CRITICAL",
+    "CVE-2026-57585": "HIGH",
 }
 # Refresh the modified timestamp when an existing advisory record changes.
 MODIFIED = {

@@ -59,7 +59,7 @@ def main():
         raise RuntimeError("source package policy does not match the configured target candidate")
     manifest = json.loads((args.output / "binary-manifest.json").read_text())
     if (manifest.get("source") != policy["source"] or manifest.get("targetId") != policy["targetId"]
-            or manifest.get("sourceVersion") != policy["baseVersion"]
+            or manifest.get("sourceVersion") != policy.get("sourceVersion", policy["baseVersion"])
             or manifest.get("version") != policy["version"]
             or manifest.get("architecture") != profile["architecture"]):
         raise RuntimeError("binary manifest does not identify the selected package target")

@@ -26,12 +26,13 @@ cp /build/*.buildinfo /output/
 dpkg -i /build/*.deb
 python3 /verification/regression.py --recipe /recipe --policy /output/package-policy.json --phase patched --output /output/patched-regression.json
 base="$(python3 -c 'import json; print(json.load(open("/output/package-policy.json"))["baseVersion"])')"
+source_version="$(python3 -c 'import json; policy=json.load(open("/output/package-policy.json")); print(policy.get("sourceVersion", policy["baseVersion"]))')"
 expected="$(python3 -c 'import json; print(json.load(open("/output/package-policy.json"))["version"])')"
 serial="$(python3 -c 'import json; print(json.load(open("/output/package-policy.json"))["releaseSerial"])')"
 version="$(dpkg-parsechangelog -S Version)"
 dpkg --compare-versions "$version" eq "$expected"
 dpkg --compare-versions "$version" gt "$base"
-next_version="$base+getpatched$((serial + 1))"
+next_version="$source_version+getpatched$((serial + 1))"
 dpkg --compare-versions "$version" lt "$next_version"
 printf '%s\n' "base < configured GetPatched release < next same-base release; ordering against vendor ESM remains unresolved" > /output/version-ordering.txt
 cp /build/*.dsc /build/*.orig.tar.* /build/*.debian.tar.* /output/source/
@@ -49,7 +50,7 @@ manifest={
     'purpose': 'unpublished build verification; binaries not exported',
     'source': policy['source'],
     'targetId': policy['targetId'],
-    'sourceVersion': policy['baseVersion'],
+    'sourceVersion': policy.get('sourceVersion', policy['baseVersion']),
     'version': policy['version'],
     'architecture': policy['architecture'],
     'packages': files,

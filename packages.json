@@ -1096,6 +1096,82 @@
           }
         }
       }
+    },
+    "python-msgpack": {
+      "targets": {
+        "debian-bookworm-amd64": {
+          "baselineVersion": "1.0.3-2+b1",
+          "sourcePocket": "release",
+          "packageEcosystem": "Debian:12",
+          "packageVersion": "1.0.3-2+getpatched1",
+          "releaseSerial": 1,
+          "binaryPackages": [
+            "python3-msgpack"
+          ],
+          "advisoryPackages": [
+            "python3-msgpack"
+          ],
+          "targetCve": "CVE-2026-57585",
+          "targetCves": [
+            "CVE-2026-57585"
+          ],
+          "advisory": "https://security-tracker.debian.org/tracker/CVE-2026-57585",
+          "advisories": {
+            "CVE-2026-57585": "https://security-tracker.debian.org/tracker/CVE-2026-57585"
+          },
+          "candidateStatus": "unverified-development-candidate",
+          "releaseAccess": {
+            "policy": "public-after-checks",
+            "sponsorDelayHours": 0,
+            "sponsorEligibility": null,
+            "earlyBinaryLicenseId": null,
+            "publicContributionSpdx": "MIT",
+            "earlyUse": [
+              "private",
+              "commercial"
+            ],
+            "earlyRedistributionAllowed": false,
+            "publicLicenseScope": "getpatched-authored-contributions-only"
+          },
+          "sourceVersion": "1.0.3-2"
+        },
+        "debian-trixie-amd64": {
+          "baselineVersion": "1.0.3-3+b4",
+          "sourcePocket": "release",
+          "packageEcosystem": "Debian:13",
+          "packageVersion": "1.0.3-3+getpatched1",
+          "releaseSerial": 1,
+          "binaryPackages": [
+            "python3-msgpack"
+          ],
+          "advisoryPackages": [
+            "python3-msgpack"
+          ],
+          "targetCve": "CVE-2026-57585",
+          "targetCves": [
+            "CVE-2026-57585"
+          ],
+          "advisory": "https://security-tracker.debian.org/tracker/CVE-2026-57585",
+          "advisories": {
+            "CVE-2026-57585": "https://security-tracker.debian.org/tracker/CVE-2026-57585"
+          },
+          "candidateStatus": "unverified-development-candidate",
+          "releaseAccess": {
+            "policy": "public-after-checks",
+            "sponsorDelayHours": 0,
+            "sponsorEligibility": null,
+            "earlyBinaryLicenseId": null,
+            "publicContributionSpdx": "MIT",
+            "earlyUse": [
+              "private",
+              "commercial"
+            ],
+            "earlyRedistributionAllowed": false,
+            "publicLicenseScope": "getpatched-authored-contributions-only"
+          },
+          "sourceVersion": "1.0.3-3"
+        }
+      }
     }
   }
 }

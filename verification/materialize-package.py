@@ -132,7 +132,7 @@ def main():
 
     policy = read_json(args.policy)
     provenance = read_json(args.provenance)
-    if (policy.get("source") != package or policy.get("baseVersion") != base_version
+    if (policy.get("source") != package or policy.get("sourceVersion", policy.get("baseVersion")) != base_version
             or policy.get("version") != package_version
             or policy.get("patches") != target["patches"]
             or policy.get("releaseSerial") != target["releaseSerial"]
