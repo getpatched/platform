@@ -11,6 +11,7 @@ from regression import (LIBPNG_CVE_2025_65018_FIXTURE, pixarlog_baseline_reprodu
                         brotli_baseline_reproduced, brotli_patched_succeeded,
                         cares_regression_succeeded, consumer_version_succeeded, expat_consumer_succeeded, expat_regression_succeeded,
                         libxml2_parameter_entity_baseline_reproduced, libxml2_parameter_entity_patched_succeeded,
+                        libxml2_xinclude_nonet_result,
                         poppler_uaf_reproduced, schematron_baseline_reproduced,
                         validate_recipe_regression_fixture_hashes,
 
@@ -23,6 +24,18 @@ cares_regression_succeeded, consumer_version_succeeded, poppler_revision6_passwo
 
 
 class Libxml2ParameterEntityRegression(unittest.TestCase):
+    def test_xinclude_nonet_classifier_requires_expected_behavior(self):
+        baseline = {
+            "timedOut": False,
+            "command": ["/tmp/libxml2-cve-2026-86144", "/recipe/tests/fixtures/cve-2026-86144-xinclude.xml", "document", "expect-network"],
+            "returncode": 10,
+        }
+        self.assertTrue(libxml2_xinclude_nonet_result(baseline, "baseline"))
+        self.assertFalse(libxml2_xinclude_nonet_result({**baseline, "returncode": 0}, "baseline"))
+        patched = {**baseline, "command": [*baseline["command"][:-1], "expect-blocked"], "returncode": 0}
+        self.assertTrue(libxml2_xinclude_nonet_result(patched, "patched"))
+        self.assertFalse(libxml2_xinclude_nonet_result({**patched, "returncode": 10}, "patched"))
+
     def test_baseline_requires_invalid_read_after_entity_stream_is_freed(self):
         log_path = "/tmp/cve-2026-6653.valgrind"
         check = {
