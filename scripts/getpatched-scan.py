@@ -18,7 +18,8 @@ from package_recipe import load_json, recipe_path
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "verification"))
-from regression import (cares_regression_succeeded, consumer_version_succeeded, libpng_overwrite_reproduced, libpng_stride_read_reproduced,
+from regression import (cares_record_count_regression_succeeded, cares_regression_succeeded,
+                        consumer_version_succeeded, libpng_overwrite_reproduced, libpng_stride_read_reproduced,
                         libpng_patched_checks_succeeded, poppler_revision6_password_overflow_reproduced, poppler_revision6_probe_command, poppler_uaf_reproduced,
                         expat_consumer_succeeded, expat_regression_succeeded,
                         libxml2_baseline_check_succeeded, libxml2_check_cardinality_valid,
@@ -473,6 +474,15 @@ def regression_verified_candidate(directory, scan_images_path, target_id, recipe
             if (check.get("passed") is not True
                     or not cares_regression_succeeded(check, target_id, phase)):
                 raise ValueError(f"c-ares {phase} evidence lacks the expected target-specific vulnerability outcome or valid-name compatibility check")
+            if "CVE-2026-69186" in target["targetCves"]:
+                allocation_check = cve_checks.get("CVE-2026-69186", {})
+                if (allocation_check.get("passed") is not True
+                        or not cares_record_count_regression_succeeded(
+                            allocation_check, target_id, phase
+                        )):
+                    raise ValueError(
+                        f"c-ares {phase} evidence lacks the expected Trixie record-count allocation result or valid-response compatibility check"
+                    )
         elif source == "brotli":
             check = cve_checks.get("CVE-2026-111497", {})
             expected = "vulnerabilityReproduced" if phase == "baseline" else "patchedBehavior"

@@ -46,6 +46,29 @@ SCANNER_SPEC.loader.exec_module(SCANNER_MODULE)
 
 
 class GetPatchedScannerContract(unittest.TestCase):
+    def test_cares_69186_candidate_is_temporary_and_trixie_scoped(self):
+        config = json.loads((ROOT / "packages.json").read_text())
+        policy = config["packages"]["c-ares"]["targets"]["debian-trixie-amd64"]
+        self.assertEqual(policy["advisory"], policy["advisories"][policy["targetCve"]])
+        canonical = SCANNER_MODULE.load_feed(FEED)
+        self.assertNotIn("CVE-2026-69186", {item["id"] for item in canonical["vulns"]})
+
+        candidate = SCANNER_MODULE.build_feed(
+            config, {("c-ares", "debian-trixie-amd64")}
+        )
+        advisory = next(item for item in candidate["vulns"] if item["id"] == "CVE-2026-69186")
+        self.assertEqual(
+            [(item["package"]["ecosystem"], item["package"]["name"], item["versions"],
+              item["ecosystem_specific"]["target_id"], item["database_specific"]["candidate_version"])
+             for item in advisory["affected"]],
+            [("Debian:13", "libcares2", ["1.34.5-1+deb13u1"],
+              "debian-trixie-amd64", "1.34.5-1+deb13u1+getpatched2")],
+        )
+        self.assertEqual(
+            advisory["database_specific"]["verification_status"],
+            "development-verified-production-release-pending",
+        )
+
     def test_tiff_feed_selects_the_exact_verified_release_and_unverified_candidate(self):
         canonical = SCANNER_MODULE.load_feed(FEED)
         self.assertTrue(canonical["vulns"])

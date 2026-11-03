@@ -157,6 +157,13 @@ class PublicCatalogueContract(unittest.TestCase):
         platform = json.loads((ROOT / "packages.json").read_text())
         self.assertEqual(target_source_branch(platform, "debian-bookworm-amd64", "tiff"),
                          "getpatched/debian-bookworm")
+
+    def test_cares_unverified_candidate_uses_allowed_source_branch(self):
+        platform = json.loads((ROOT / "packages.json").read_text())
+        self.assertEqual(
+            target_source_branch(platform, "debian-trixie-amd64", "c-ares"),
+            "getpatched/cve-2026-69186-trixie",
+        )
         self.assertEqual(target_source_branch(platform, "debian-bookworm-amd64"),
                          "getpatched/debian-bookworm")
         self.assertEqual(target_source_branch(platform, "debian-bookworm-amd64", "libxml2"),

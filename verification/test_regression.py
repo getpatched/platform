@@ -9,7 +9,9 @@ import unittest
 from regression import (LIBPNG_CVE_2025_65018_FIXTURE, pixarlog_baseline_reproduced, pixarlog_patched_succeeded, libpng_followup_read_is_clean, libpng_output_buffer_result, libpng_overwrite_reproduced, libpng_stride_read_reproduced, memcheck_has_no_errors,
                         libpng_patched_checks_succeeded, tiff_patched_regression_succeeded,
                         brotli_baseline_reproduced, brotli_patched_succeeded,
-                        cares_regression_succeeded, consumer_version_succeeded, expat_consumer_succeeded, expat_regression_succeeded,
+                        cares_record_count_regression_succeeded, cares_regression_succeeded,
+                        massif_peak_heap_bytes,
+                        consumer_version_succeeded, expat_consumer_succeeded, expat_regression_succeeded,
                         libxml2_catalog_baseline_reproduced, libxml2_catalog_patched_succeeded,
                         libxml2_regexp_alloc_failure_baseline_reproduced,
                         libxml2_regexp_alloc_failure_patched_succeeded,
@@ -291,6 +293,14 @@ class TiffSubdivisionOverflowRegression(unittest.TestCase):
 
 
 class CaresTargetRegression(unittest.TestCase):
+    def test_massif_peak_parser_returns_largest_heap_snapshot(self):
+        with tempfile.TemporaryDirectory(prefix="getpatched-cares-massif-") as directory:
+            path = Path(directory) / "massif.out"
+            path.write_text("mem_heap_B=128\nmem_heap_B=16777216\nmem_heap_B=4096\n")
+            self.assertEqual(massif_peak_heap_bytes(path), 16 * 1024 * 1024)
+            path.write_text("no heap snapshots\n")
+            self.assertIsNone(massif_peak_heap_bytes(path))
+
     def test_focal_requires_overlong_name_reproduction_and_valid_boundary(self):
         baseline = {
             "cve": "CVE-2026-69184", "testId": "c-ares-overlong-expanded-name-focal",
@@ -314,6 +324,47 @@ class CaresTargetRegression(unittest.TestCase):
         }
         self.assertTrue(cares_regression_succeeded(check, "debian-trixie-amd64", "baseline"))
         self.assertFalse(cares_regression_succeeded(check, "ubuntu-focal-amd64", "baseline"))
+
+    def test_trixie_record_count_requires_large_baseline_heap_and_small_patched_heap(self):
+        base = {
+            "cve": "CVE-2026-69186",
+            "testId": "c-ares-malformed-record-count-allocation",
+            "command": [
+                "valgrind", "--tool=massif", "--time-unit=B", "--stacks=no",
+                "--massif-out-file=/tmp/c-ares-record-count.massif",
+                "/tmp/c-ares-record-count",
+            ],
+            "returncode": 0,
+            "timedOut": False,
+            "stdout": "malformed_rejected=yes\nvalid_status=0 valid_record=present\n",
+        }
+        baseline = {
+            **base,
+            "peakHeapBytes": 16 * 1024 * 1024,
+            "vulnerabilityReproduced": True,
+        }
+        patched = {
+            **base,
+            "peakHeapBytes": 1024 * 1024,
+            "patchedBehavior": True,
+        }
+        self.assertTrue(cares_record_count_regression_succeeded(
+            baseline, "debian-trixie-amd64", "baseline"
+        ))
+        self.assertTrue(cares_record_count_regression_succeeded(
+            patched, "debian-trixie-amd64", "patched"
+        ))
+        self.assertFalse(cares_record_count_regression_succeeded(
+            {**baseline, "peakHeapBytes": 1024 * 1024},
+            "debian-trixie-amd64", "baseline"
+        ))
+        self.assertFalse(cares_record_count_regression_succeeded(
+            {**patched, "peakHeapBytes": 16 * 1024 * 1024},
+            "debian-trixie-amd64", "patched"
+        ))
+        self.assertFalse(cares_record_count_regression_succeeded(
+            baseline, "ubuntu-focal-amd64", "baseline"
+        ))
 
 
 class BrotliRegression(unittest.TestCase):
