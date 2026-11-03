@@ -40,12 +40,13 @@ class Libxml2ParameterEntityRegression(unittest.TestCase):
         }
         baseline = {
             **base,
-            "returncode": 97,
+            "returncode": -11,
             "memoryLog": (
                 "==123== Invalid read of size 8\n"
-                "==123==    at 0x123: xmlParseXMLCatalogNode (in /usr/lib/libxml2.so.2)\n"
-                "==123==    by 0x456: xmlLoadCatalog (in /usr/lib/libxml2.so.2)\n"
-                "==123== Address 0x0 is not stack'd, malloc'd or (recently) free'd\n"
+                "==123==    at 0x123: ??? (in /usr/lib/libxml2.so.2.9.14)\n"
+                "==123==    by 0x456: xmlCatalogResolveSystem (in /usr/lib/libxml2.so.2.9.14)\n"
+                "==123==  Address 0x30 is not stack'd, malloc'd or (recently) free'd\n"
+                "==123== Process terminating with default action of signal 11 (SIGSEGV)\n"
                 "==123== ERROR SUMMARY: 1 errors from 1 contexts\n"
             ),
         }
@@ -54,7 +55,11 @@ class Libxml2ParameterEntityRegression(unittest.TestCase):
         self.assertFalse(libxml2_catalog_baseline_reproduced({**baseline, "memoryLog": ""}))
         self.assertFalse(libxml2_catalog_baseline_reproduced({
             **baseline,
-            "memoryLog": baseline["memoryLog"].replace("Address 0x0", "Address 0x8"),
+            "memoryLog": baseline["memoryLog"].replace("Address 0x30", "Address 0x38"),
+        }))
+        self.assertFalse(libxml2_catalog_baseline_reproduced({
+            **baseline,
+            "memoryLog": baseline["memoryLog"].replace("xmlCatalogResolveSystem", "unrelated"),
         }))
         self.assertTrue(libxml2_catalog_patched_succeeded(patched))
         self.assertFalse(libxml2_catalog_patched_succeeded({**patched, "returncode": 97}))

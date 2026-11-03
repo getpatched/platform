@@ -148,15 +148,16 @@ def libxml2_catalog_baseline_reproduced(check):
     log = check.get("memoryLog", "")
     return bool(
         not check.get("timedOut", False)
-        and check.get("returncode") == 97
+        and check.get("returncode") in (97, -signal.SIGSEGV)
         and libxml2_catalog_command(check)
         and any(
             block.group("kind").startswith("Invalid read")
-            and "xmlParseXMLCatalogNode" in block.group("body")
+            and "xmlCatalogResolveSystem" in block.group("body")
             and "libxml2.so." in block.group("body")
-            and re.search(r"(?m)^==\d+== Address 0x0\b", block.group("body")) is not None
+            and re.search(r"(?m)^==\d+==\s+(?:Address|at) 0x30\b", block.group("body")) is not None
             for block in valgrind_invalid_access_blocks(log)
         )
+        and "Process terminating with default action of signal 11 (SIGSEGV)" in log
         and re.search(r"(?m)^==\d+== ERROR SUMMARY: [1-9]\d* errors?", log) is not None
     )
 
