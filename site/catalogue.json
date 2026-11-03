@@ -1090,7 +1090,7 @@
           ],
           "earlyRedistributionAllowed": false,
           "status": "development-verified-sponsor-flow-pending",
-          "verification": "https://github.com/getpatched/platform/actions/runs/41701027308",
+          "verification": "https://github.com/getpatched/platform/actions/runs/41703193562",
           "sourceUrl": "https://github.com/getpatched/packaging-c-ares/tree/getpatched/debian-trixie",
           "patchUrl": "https://github.com/getpatched/packaging-c-ares/blob/getpatched/debian-trixie/patches/CVE-2026-69186-trixie.patch",
           "testsUrl": "https://github.com/getpatched/packaging-c-ares/tree/getpatched/debian-trixie/tests",

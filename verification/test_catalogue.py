@@ -336,7 +336,7 @@ class PublicCatalogueContract(unittest.TestCase):
         self.assertEqual(cares_trixie["cves"], ["CVE-2026-69184", "CVE-2026-69186"])
         self.assertEqual(cares_trixie["status"], "development-verified-sponsor-flow-pending")
         self.assertEqual(cares_trixie["verification"],
-                         "https://github.com/getpatched/platform/actions/runs/41701027308")
+                         "https://github.com/getpatched/platform/actions/runs/41703193562")
         self.assertIn("cve-2026-69186", {v["slug"] for v in cares_trixie["vulnerabilities"]})
         self.assertIn("cve-2026-69186-record-count-allocation",
                       {p["slug"] for p in cares_trixie["patches"]})
@@ -409,7 +409,7 @@ class PublicCatalogueContract(unittest.TestCase):
                     ("poppler", "debian-bookworm-amd64"): "41518910177",
                     ("poppler", "debian-trixie-amd64"): "41531130479",
                     ("c-ares", "ubuntu-focal-amd64"): "41492142682",
-                    ("c-ares", "debian-trixie-amd64"): "41701027308",
+                    ("c-ares", "debian-trixie-amd64"): "41703193562",
                     ("brotli", "ubuntu-focal-amd64"): "41492184315",
                     ("expat", "debian-bookworm-amd64"): "41543751522",
                     ("expat", "debian-trixie-amd64"): "41546270294",
