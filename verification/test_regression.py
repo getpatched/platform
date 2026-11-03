@@ -257,12 +257,15 @@ class ExpatRegressionEvidence(unittest.TestCase):
         check = {"cve": "CVE-2026-113351",
                  "testId": "CVE-2026-113351-parser-reset-allocation-accounting",
                  "returncode": 0, "timedOut": False,
-                 "stdout": "after_reset_status=error error=out of memory\n"}
+                 "stdout": ("after_reset_status=error error=out of memory\n"
+                            "fresh_parser_status=ok error=no error\n")}
         self.assertTrue(expat_reset_regression_succeeded(check, "baseline"))
         self.assertFalse(expat_reset_regression_succeeded({**check, "stdout": "after_reset_status=ok error=no error\n"}, "baseline"))
+        self.assertFalse(expat_reset_regression_succeeded({**check, "stdout": "after_reset_status=error error=out of memory\n"}, "baseline"))
         self.assertFalse(expat_reset_regression_succeeded({**check, "returncode": 1}, "baseline"))
         self.assertFalse(expat_reset_regression_succeeded({**check, "timedOut": True}, "baseline"))
-        fixed = {**check, "stdout": "after_reset_status=ok error=no error\n"}
+        fixed = {**check, "stdout": ("after_reset_status=ok error=no error\n"
+                                      "fresh_parser_status=ok error=no error\n")}
         self.assertTrue(expat_reset_regression_succeeded(fixed, "patched"))
         self.assertFalse(expat_reset_regression_succeeded({**fixed, "stdout": "after_reset_status=error error=out of memory"}, "patched"))
 

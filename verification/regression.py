@@ -631,10 +631,13 @@ def expat_reset_regression_succeeded(check, phase):
         return False
     output = check.get("stdout", "")
     if phase == "baseline":
-        return "after_reset_status=error" in output and "error=out of memory" in output
+        return ("after_reset_status=error" in output
+                and "error=out of memory" in output
+                and "fresh_parser_status=ok error=no error" in output)
     return (phase == "patched"
             and "after_reset_status=ok" in output
-            and "error=no error" in output)
+            and "after_reset_status=ok error=no error" in output
+            and "fresh_parser_status=ok error=no error" in output)
 
 
 def expat_consumer_succeeded(check, expected_version):
