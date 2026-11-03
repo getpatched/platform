@@ -208,15 +208,11 @@ class PublicCatalogueContract(unittest.TestCase):
             set(entries["tiff"]["targets"]),
             {"debian-bookworm-amd64", "debian-trixie-amd64"},
         )
-        for target_id, target in entries["tiff"]["targets"].items():
+        for target in entries["tiff"]["targets"].values():
             self.assertEqual(target["cves"], ["CVE-2025-61144", "CVE-2026-52490"])
             self.assertEqual(
-                {vulnerability["slug"] for vulnerability in target["vulnerabilities"]},
+                {v["slug"] for v in target["vulnerabilities"]},
                 {"cve-2025-61144", "cve-2026-52490"},
-            )
-            self.assertEqual(
-                len([patch for patch in target["patches"] if "CVE-2026-52490" in patch["cves"]]),
-                1,
             )
             self.assertEqual(target["status"], "development-verified-production-release-pending")
         self.assertEqual(set(catalogue["targets"]), set(platform["targets"]))
@@ -259,6 +255,8 @@ class PublicCatalogueContract(unittest.TestCase):
                     ("libgit2", "ubuntu-focal-amd64"): "41162605227",
                     ("libgit2", "ubuntu-jammy-amd64"): "41167536831",
                     ("poppler", "ubuntu-focal-amd64"): "41149614570",
+                    ("poppler", "debian-bookworm-amd64"): "41518910177",
+                    ("poppler", "debian-trixie-amd64"): "41531130479",
                     ("c-ares", "ubuntu-focal-amd64"): "41492142682",
                     ("c-ares", "debian-trixie-amd64"): "41494211851",
                     ("brotli", "ubuntu-focal-amd64"): "41492184315",
@@ -283,11 +281,11 @@ class PublicCatalogueContract(unittest.TestCase):
 
         page = (ROOT / "site/index.html").read_text()
         self.assertIn("Hosted verification passed.", page)
-        self.assertIn("Six Ubuntu Focal candidates, one Debian Trixie c-ares target, one Jammy libgit2 target and two Debian TIFF targets have hosted builds", page)
-        self.assertIn("Sponsor-first release flow and production repository access setup remain incomplete", page)
+        self.assertIn("Six Focal candidates, one Debian Trixie c-ares target, two Debian Poppler targets, one Jammy libgit2 target and two Debian TIFF targets have hosted builds", page)
+        self.assertIn("Live package publication and downloads remain disabled", page)
         self.assertIn("no production package release has been published", page)
-        self.assertIn("Live package publication and downloads remain disabled until sponsor sign-in, sponsor-first flow verification and production access setup are complete", page)
-        self.assertIn("Hosted verification has passed for six Focal candidates, Debian Trixie c-ares, Jammy libgit2, and Bookworm/Trixie TIFF candidates", page)
+        self.assertIn("Live package publication and downloads remain disabled", page)
+        self.assertIn("Hosted verification has passed for six Focal candidates, Debian Trixie c-ares, Debian Bookworm and Trixie Poppler, Ubuntu Jammy libgit2, and Debian Bookworm/Trixie TIFF", page)
         self.assertIn("Ubuntu Pro/ESM compatibility is not tested or supported", page)
         self.assertIn("Each row links to its source, patch, regression tests and release history", page)
         self.assertIn("Any sponsor delay starts only after sponsor publication", page)

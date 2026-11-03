@@ -271,6 +271,134 @@
           "releasesUrl": "https://github.com/getpatched/packaging-poppler/releases",
           "releaseStatus": "No production release",
           "publicLicenseScope": "getpatched-authored-contributions-only"
+        },
+        "debian-bookworm-amd64": {
+          "baseVersion": "22.12.0-2+deb12u3",
+          "version": "22.12.0-2+deb12u3+getpatched1",
+          "cves": [
+            "CVE-2026-107705"
+          ],
+          "vulnerabilities": [
+            {
+              "id": "CVE-2026-107705",
+              "slug": "cve-2026-107705",
+              "summary": "An overlong password in a revision 6 encrypted PDF can overflow fixed-size buffers in Poppler's password hashing code.",
+              "advisoryUrl": "https://security-tracker.debian.org/tracker/CVE-2026-107705",
+              "patchSlugs": [
+                "cve-2026-107705-debian"
+              ],
+              "patched": true
+            }
+          ],
+          "patches": [
+            {
+              "id": "cve-2026-107705-debian",
+              "slug": "cve-2026-107705-debian",
+              "kind": "security",
+              "title": "Clamp overlong revision 6 PDF passwords before hashing",
+              "description": "Limits the revision 6 hash input to the PDF-specified 127 bytes so K1 and E remain within their fixed-size buffers.",
+              "sha256": "4e5ddff2aebb279f96a33930e1540635025e476e1c975c012335534c998df7de",
+              "fileUrl": "https://github.com/getpatched/packaging-poppler/blob/getpatched/debian-bookworm/patches/CVE-2026-107705-debian.patch",
+              "cves": [
+                "CVE-2026-107705"
+              ],
+              "upstream": {
+                "repository": "https://gitlab.freedesktop.org/poppler/poppler",
+                "commit": "60e19a30152560fcccfb2ae7f7559eda560c0160",
+                "url": "https://gitlab.freedesktop.org/poppler/poppler/-/commit/60e19a30152560fcccfb2ae7f7559eda560c0160"
+              },
+              "tests": [
+                {
+                  "id": "CVE-2026-107705-revision6-long-owner-password",
+                  "baselineExpectation": "The exact installed Debian baseline reproduces the long-password overflow under Valgrind in revision6Hash/Decrypt.cc, or the attributed stack-canary abort inside libpoppler.",
+                  "patchedExpectation": "The exact installed patched package completes the same 180-byte owner-password probe with exit status 0 and Valgrind reports no errors."
+                }
+              ]
+            }
+          ],
+          "access": "public",
+          "delayHours": 0,
+          "sponsorEligibility": null,
+          "earlyBinaryLicenseId": null,
+          "publicContributionSpdx": "MIT",
+          "earlyUse": [
+            "private",
+            "commercial"
+          ],
+          "earlyRedistributionAllowed": false,
+          "status": "development-verified-production-release-pending",
+          "verification": "https://github.com/getpatched/platform/actions/runs/41518910177",
+          "ubuntuProEsmCompatibility": "not-applicable",
+          "sourceUrl": "https://github.com/getpatched/packaging-poppler/tree/getpatched/debian-bookworm",
+          "patchUrl": "https://github.com/getpatched/packaging-poppler/blob/getpatched/debian-bookworm/patches/CVE-2026-107705-debian.patch",
+          "testsUrl": "https://github.com/getpatched/packaging-poppler/tree/getpatched/debian-bookworm/tests",
+          "releasesUrl": "https://github.com/getpatched/packaging-poppler/releases",
+          "releaseStatus": "No production release",
+          "publicLicenseScope": "getpatched-authored-contributions-only"
+        },
+        "debian-trixie-amd64": {
+          "baseVersion": "25.03.0-5+deb13u4",
+          "version": "25.03.0-5+deb13u4+getpatched1",
+          "cves": [
+            "CVE-2026-107705"
+          ],
+          "vulnerabilities": [
+            {
+              "id": "CVE-2026-107705",
+              "slug": "cve-2026-107705",
+              "summary": "An overlong password in a revision 6 encrypted PDF can overflow fixed-size buffers in Poppler's password hashing code.",
+              "advisoryUrl": "https://security-tracker.debian.org/tracker/CVE-2026-107705",
+              "patchSlugs": [
+                "cve-2026-107705-debian"
+              ],
+              "patched": true
+            }
+          ],
+          "patches": [
+            {
+              "id": "cve-2026-107705-debian",
+              "slug": "cve-2026-107705-debian",
+              "kind": "security",
+              "title": "Clamp overlong revision 6 PDF passwords before hashing",
+              "description": "Limits the revision 6 hash input to the PDF-specified 127 bytes so K1 and E remain within their fixed-size buffers.",
+              "sha256": "4e5ddff2aebb279f96a33930e1540635025e476e1c975c012335534c998df7de",
+              "fileUrl": "https://github.com/getpatched/packaging-poppler/blob/getpatched/debian-trixie/patches/CVE-2026-107705-debian.patch",
+              "cves": [
+                "CVE-2026-107705"
+              ],
+              "upstream": {
+                "repository": "https://gitlab.freedesktop.org/poppler/poppler",
+                "commit": "60e19a30152560fcccfb2ae7f7559eda560c0160",
+                "url": "https://gitlab.freedesktop.org/poppler/poppler/-/commit/60e19a30152560fcccfb2ae7f7559eda560c0160"
+              },
+              "tests": [
+                {
+                  "id": "CVE-2026-107705-revision6-long-owner-password",
+                  "baselineExpectation": "The exact installed Debian baseline reproduces the long-password overflow under Valgrind in revision6Hash/Decrypt.cc, or the attributed stack-canary abort inside libpoppler.",
+                  "patchedExpectation": "The exact installed patched package completes the same 180-byte owner-password probe with exit status 0 and Valgrind reports no errors."
+                }
+              ]
+            }
+          ],
+          "access": "public",
+          "delayHours": 0,
+          "sponsorEligibility": null,
+          "earlyBinaryLicenseId": null,
+          "publicContributionSpdx": "MIT",
+          "earlyUse": [
+            "private",
+            "commercial"
+          ],
+          "earlyRedistributionAllowed": false,
+          "status": "development-verified-production-release-pending",
+          "verification": "https://github.com/getpatched/platform/actions/runs/41531130479",
+          "ubuntuProEsmCompatibility": "not-applicable",
+          "sourceUrl": "https://github.com/getpatched/packaging-poppler/tree/getpatched/debian-trixie",
+          "patchUrl": "https://github.com/getpatched/packaging-poppler/blob/getpatched/debian-trixie/patches/CVE-2026-107705-debian.patch",
+          "testsUrl": "https://github.com/getpatched/packaging-poppler/tree/getpatched/debian-trixie/tests",
+          "releasesUrl": "https://github.com/getpatched/packaging-poppler/releases",
+          "releaseStatus": "No production release",
+          "publicLicenseScope": "getpatched-authored-contributions-only"
         }
       }
     },

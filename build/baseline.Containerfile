@@ -14,6 +14,7 @@ RUN --mount=type=secret,id=runner-ca,target=/tmp/getpatched-runner-ca.crt,requir
     printf 'Acquire::https::CAInfo "/etc/ssl/certs/ca-certificates.crt";\n' > /etc/apt/apt.conf.d/99getpatched-ca; \
     test -n "$APT_SOURCES_B64"; \
     test -n "$BINARY_PACKAGES"; \
+    rm -f /etc/apt/sources.list.d/*; \
     printf '%s' "$APT_SOURCES_B64" | base64 -d > /etc/apt/sources.list; \
     apt-get update; \
     apt-get -y dist-upgrade; \
