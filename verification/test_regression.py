@@ -11,7 +11,7 @@ from regression import (LIBPNG_CVE_2025_65018_FIXTURE, pixarlog_baseline_reprodu
                         brotli_baseline_reproduced, brotli_patched_succeeded,
                         cares_regression_succeeded, consumer_version_succeeded, expat_consumer_succeeded, expat_regression_succeeded,
                         libxml2_parameter_entity_baseline_reproduced, libxml2_parameter_entity_patched_succeeded,
-                        libxml2_xinclude_nonet_result,
+                        libxml2_xinclude_nonet_result, libxml2_xinclude_checks_succeeded,
                         poppler_uaf_reproduced, schematron_baseline_reproduced,
                         validate_recipe_regression_fixture_hashes,
 
@@ -24,6 +24,23 @@ cares_regression_succeeded, consumer_version_succeeded, poppler_revision6_passwo
 
 
 class Libxml2ParameterEntityRegression(unittest.TestCase):
+    def test_xinclude_scanner_requires_one_passing_result_per_api(self):
+        def check(api, mode, returncode):
+            return {
+                "cve": "CVE-2026-86144",
+                "timedOut": False,
+                "returncode": returncode,
+                "command": ["/tmp/libxml2-cve-2026-86144", "/recipe/tests/fixtures/cve-2026-86144-xinclude.xml", api, mode],
+            }
+
+        baseline = [check("document", "expect-network", 10), check("tree", "expect-network", 10)]
+        patched = [check("document", "expect-blocked", 0), check("tree", "expect-blocked", 0)]
+        self.assertTrue(libxml2_xinclude_checks_succeeded(baseline, "baseline"))
+        self.assertTrue(libxml2_xinclude_checks_succeeded(patched, "patched"))
+        self.assertFalse(libxml2_xinclude_checks_succeeded([check("document", "expect-blocked", 10), patched[1]], "patched"))
+        self.assertFalse(libxml2_xinclude_checks_succeeded(patched[:1], "patched"))
+        self.assertFalse(libxml2_xinclude_checks_succeeded([patched[0], patched[0]], "patched"))
+
     def test_xinclude_nonet_classifier_requires_expected_behavior(self):
         baseline = {
             "timedOut": False,
