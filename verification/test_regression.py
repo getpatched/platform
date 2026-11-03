@@ -51,6 +51,10 @@ class Libxml2ParameterEntityRegression(unittest.TestCase):
         patched = {**base, "returncode": 0, "memoryLog": "==123== ERROR SUMMARY: 0 errors from 0 contexts\n"}
         self.assertTrue(libxml2_catalog_baseline_reproduced(baseline))
         self.assertFalse(libxml2_catalog_baseline_reproduced({**baseline, "memoryLog": ""}))
+        self.assertFalse(libxml2_catalog_baseline_reproduced({
+            **baseline,
+            "memoryLog": baseline["memoryLog"].replace("Address 0x0", "Address 0x8"),
+        }))
         self.assertTrue(libxml2_catalog_patched_succeeded(patched))
         self.assertFalse(libxml2_catalog_patched_succeeded({**patched, "returncode": 97}))
 

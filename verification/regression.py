@@ -154,6 +154,7 @@ def libxml2_catalog_baseline_reproduced(check):
             block.group("kind").startswith("Invalid read")
             and "xmlParseXMLCatalogNode" in block.group("body")
             and "libxml2.so." in block.group("body")
+            and re.search(r"(?m)^==\d+== Address 0x0\b", block.group("body")) is not None
             for block in valgrind_invalid_access_blocks(log)
         )
         and re.search(r"(?m)^==\d+== ERROR SUMMARY: [1-9]\d* errors?", log) is not None
