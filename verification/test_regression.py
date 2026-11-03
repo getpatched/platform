@@ -38,24 +38,44 @@ class PythonMsgpackRegression(unittest.TestCase):
             "timedOut": False,
             "command": ["python3", "/recipe/tests/fixtures/cve-2026-57585-unpacker-reuse.py"],
         }
-        baseline = {**base, "returncode": -signal.SIGSEGV, "stdout": "caught expected ValueError\n"}
+        identity = (
+            "module_path=/usr/lib/python3/dist-packages/msgpack/__init__.py\n"
+            "debian_package=python3-msgpack\n"
+            "module_owner=python3-msgpack\n"
+        )
+        baseline = {
+            **base,
+            "returncode": -signal.SIGSEGV,
+            "stdout": identity + "debian_package_version=1.0.3-2+b1\n"
+            "caught expected ValueError\n",
+        }
         self.assertTrue(msgpack_unpacker_reuse_regression_succeeded(
-            baseline, "debian-bookworm-amd64", "baseline"
+            baseline, "debian-bookworm-amd64", "baseline", "1.0.3-2+b1"
         ))
         self.assertFalse(msgpack_unpacker_reuse_regression_succeeded(
-            {**baseline, "returncode": 0}, "debian-bookworm-amd64", "baseline"
+            {**baseline, "returncode": 0}, "debian-bookworm-amd64", "baseline", "1.0.3-2+b1"
         ))
         patched = {
             **base,
             "returncode": 0,
-            "stdout": "caught expected ValueError\nafter-error skip completed without process crash\n",
+            "stdout": identity + "debian_package_version=1.0.3-3+getpatched1\n"
+            "caught expected ValueError\nafter-error skip completed without process crash\n",
         }
         self.assertTrue(msgpack_unpacker_reuse_regression_succeeded(
-            patched, "debian-trixie-amd64", "patched"
+            patched, "debian-trixie-amd64", "patched", "1.0.3-3+getpatched1"
         ))
         self.assertFalse(msgpack_unpacker_reuse_regression_succeeded(
             {**patched, "command": ["python3", "/tmp/other.py"]},
-            "debian-trixie-amd64", "patched"
+            "debian-trixie-amd64", "patched", "1.0.3-3+getpatched1"
+        ))
+        self.assertFalse(msgpack_unpacker_reuse_regression_succeeded(
+            patched, "debian-trixie-amd64", "patched", "1.0.3-3+getpatched2"
+        ))
+        self.assertFalse(msgpack_unpacker_reuse_regression_succeeded(
+            {**patched, "stdout": patched["stdout"].replace(
+                "/usr/lib/python3/dist-packages/msgpack/", "/usr/local/lib/python3/dist-packages/msgpack/"
+            )},
+            "debian-trixie-amd64", "patched", "1.0.3-3+getpatched1"
         ))
 
 

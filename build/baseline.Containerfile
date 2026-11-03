@@ -29,5 +29,11 @@ RUN --mount=type=secret,id=runner-ca,target=/tmp/getpatched-runner-ca.crt,requir
     done; \
     for binary in $BINARY_PACKAGES; do apt-get install -y --no-install-recommends "$binary=$EXPECTED_VERSION"; done; \
     if [ -n "$BUILDER_PACKAGES" ]; then apt-get install -y --no-install-recommends $BUILDER_PACKAGES; fi; \
-    dpkg-query -W $BINARY_PACKAGES 2>/dev/null || true; \
+    for binary in $BINARY_PACKAGES; do \
+      installed="$(dpkg-query -W -f='${Version}' "$binary")"; \
+      test "$installed" = "$EXPECTED_VERSION" || { \
+        echo "Installed baseline package has unexpected version: $binary=$installed (expected $EXPECTED_VERSION)" >&2; \
+        exit 1; \
+      }; \
+    done; \
     rm -rf /var/lib/apt/lists/*

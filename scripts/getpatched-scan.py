@@ -490,7 +490,9 @@ def regression_verified_candidate(directory, scan_images_path, target_id, recipe
             if (sum(item.get("cve") == "CVE-2026-57585" for item in checks) != 1
                     or check.get("passed") is not True
                     or check.get(expected) is not True
-                    or not msgpack_unpacker_reuse_regression_succeeded(check, target_id, phase)):
+                    or not msgpack_unpacker_reuse_regression_succeeded(
+                        check, target_id, phase, version
+                    )):
                 raise ValueError(f"python-msgpack {phase} evidence lacks the expected Unpacker error-reuse outcome")
         elif source == "brotli":
             check = cve_checks.get("CVE-2026-111497", {})
