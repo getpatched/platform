@@ -76,7 +76,7 @@ class GetPatchedScannerContract(unittest.TestCase):
             [("Debian:12", "libxml2", ["2.9.14+dfsg-1.3~deb12u6"], "debian-bookworm-amd64",
               "2.9.14+dfsg-1.3~deb12u6+getpatched1"),
              ("Debian:13", "libxml2", ["2.12.7+dfsg+really2.9.14-2.1+deb13u3"], "debian-trixie-amd64",
-              "2.12.7+dfsg+really2.9.14-2.1+deb13u3+getpatched3")],
+              "2.12.7+dfsg+really2.9.14-2.1+deb13u3+getpatched4")],
         )
 
     def test_libxml2_trixie_candidate_advisory_has_its_exact_target_version(self):
@@ -140,6 +140,8 @@ class GetPatchedScannerContract(unittest.TestCase):
         self.assertEqual(policy["advisory"], policy["advisories"][policy["targetCve"]])
         candidate = SCANNER_MODULE.build_feed(config, {("libxml2", "debian-trixie-amd64")})
         advisory = next(item for item in candidate["vulns"] if item["id"] == "CVE-2026-86141")
+        self.assertEqual(advisory["database_specific"]["verification_status"],
+                         "development-verified-production-release-pending")
         self.assertEqual(advisory["summary"],
                          "libxml2 can dereference NULL while creating a regular-expression parser context after allocation failure")
         self.assertEqual(
@@ -939,7 +941,7 @@ raise SystemExit(3)
             "CVE-2026-53584", "CVE-2026-53585", "CVE-2026-53586",
             "CVE-2025-52885", "CVE-2026-69184", "CVE-2026-111497",
             "CVE-2026-117610",
-                "CVE-2026-86144", "CVE-2026-76781",
+            "CVE-2026-86144", "CVE-2026-76781", "CVE-2026-86141",
 
 "CVE-2025-52885", "CVE-2026-107705", "CVE-2026-69184", "CVE-2026-111497",
             "CVE-2025-61144", "CVE-2026-52490", "CVE-2026-12912", "CVE-2026-18495",

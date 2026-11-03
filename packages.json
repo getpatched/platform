@@ -299,7 +299,7 @@
             "CVE-2026-76781": "https://security-tracker.debian.org/tracker/CVE-2026-76781",
             "CVE-2026-86141": "https://security-tracker.debian.org/tracker/CVE-2026-86141"
           },
-          "candidateStatus": "unverified-development-candidate",
+          "candidateStatus": "development-verified-production-release-pending",
           "verifiedReleases": [
             {
               "version": "2.12.7+dfsg+really2.9.14-2.1+deb13u3+getpatched3",

@@ -302,19 +302,19 @@ class PublicCatalogueContract(unittest.TestCase):
         libxml2_trixie = entries["libxml2"]["targets"]["debian-trixie-amd64"]
         self.assertEqual(
             libxml2_trixie["cves"],
-            ["CVE-2026-6653", "CVE-2026-86144", "CVE-2026-76781"],
+            ["CVE-2026-6653", "CVE-2026-86144", "CVE-2026-76781", "CVE-2026-86141"],
         )
         self.assertEqual(libxml2_trixie["version"],
-                         "2.12.7+dfsg+really2.9.14-2.1+deb13u3+getpatched3")
+                         "2.12.7+dfsg+really2.9.14-2.1+deb13u3+getpatched4")
         self.assertEqual(libxml2_trixie["status"],
                          "development-verified-production-release-pending")
         self.assertEqual({item["slug"] for item in libxml2_trixie["vulnerabilities"]},
-                         {"cve-2026-6653", "cve-2026-86144", "cve-2026-76781"})
+                         {"cve-2026-6653", "cve-2026-86144", "cve-2026-76781", "cve-2026-86141"})
         self.assertEqual({item["slug"] for item in libxml2_trixie["patches"]},
                          {"cve-2026-6653-debian", "cve-2026-86144-debian-trixie",
-                          "cve-2026-76781-debian-trixie"})
+                          "cve-2026-76781-debian-trixie", "cve-2026-86141-debian-trixie"})
         self.assertEqual(libxml2_trixie["verification"],
-                         "https://github.com/getpatched/platform/actions/runs/41633529746")
+                         "https://github.com/getpatched/platform/actions/runs/41690376263")
         self.assertEqual(
             set(entries["tiff"]["targets"]),
             {"debian-bookworm-amd64", "debian-trixie-amd64"},
@@ -376,7 +376,7 @@ class PublicCatalogueContract(unittest.TestCase):
                 expected_run = {
                     ("libxml2", "ubuntu-focal-amd64"): "40899705050",
                     ("libxml2", "debian-bookworm-amd64"): "41575270372",
-                    ("libxml2", "debian-trixie-amd64"): "41633529746",
+                    ("libxml2", "debian-trixie-amd64"): "41690376263",
                     ("libarchive", "ubuntu-focal-amd64"): "40899709850",
                     ("libgit2", "ubuntu-focal-amd64"): "41162605227",
                     ("libgit2", "ubuntu-jammy-amd64"): "41167536831",

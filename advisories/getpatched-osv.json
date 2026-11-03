@@ -1559,11 +1559,11 @@
         {
           "database_specific": {
             "candidate_status": "development-verified-production-release-pending",
-            "candidate_version": "2.12.7+dfsg+really2.9.14-2.1+deb13u3+getpatched3",
+            "candidate_version": "2.12.7+dfsg+really2.9.14-2.1+deb13u3+getpatched4",
             "fixed_versions": [
-              "2.12.7+dfsg+really2.9.14-2.1+deb13u3+getpatched3"
+              "2.12.7+dfsg+really2.9.14-2.1+deb13u3+getpatched4"
             ],
-            "getpatched_fixed_version": "2.12.7+dfsg+really2.9.14-2.1+deb13u3+getpatched3",
+            "getpatched_fixed_version": "2.12.7+dfsg+really2.9.14-2.1+deb13u3+getpatched4",
             "source_package": "libxml2",
             "target_id": "debian-trixie-amd64",
             "vendor_fixed_versions": []
@@ -1682,11 +1682,11 @@
         {
           "database_specific": {
             "candidate_status": "development-verified-production-release-pending",
-            "candidate_version": "2.12.7+dfsg+really2.9.14-2.1+deb13u3+getpatched3",
+            "candidate_version": "2.12.7+dfsg+really2.9.14-2.1+deb13u3+getpatched4",
             "fixed_versions": [
-              "2.12.7+dfsg+really2.9.14-2.1+deb13u3+getpatched3"
+              "2.12.7+dfsg+really2.9.14-2.1+deb13u3+getpatched4"
             ],
-            "getpatched_fixed_version": "2.12.7+dfsg+really2.9.14-2.1+deb13u3+getpatched3",
+            "getpatched_fixed_version": "2.12.7+dfsg+really2.9.14-2.1+deb13u3+getpatched4",
             "source_package": "libxml2",
             "target_id": "debian-trixie-amd64",
             "vendor_fixed_versions": []
@@ -1728,11 +1728,57 @@
         {
           "database_specific": {
             "candidate_status": "development-verified-production-release-pending",
-            "candidate_version": "2.12.7+dfsg+really2.9.14-2.1+deb13u3+getpatched3",
+            "candidate_version": "2.12.7+dfsg+really2.9.14-2.1+deb13u3+getpatched4",
             "fixed_versions": [
-              "2.12.7+dfsg+really2.9.14-2.1+deb13u3+getpatched3"
+              "2.12.7+dfsg+really2.9.14-2.1+deb13u3+getpatched4"
             ],
-            "getpatched_fixed_version": "2.12.7+dfsg+really2.9.14-2.1+deb13u3+getpatched3",
+            "getpatched_fixed_version": "2.12.7+dfsg+really2.9.14-2.1+deb13u3+getpatched4",
+            "source_package": "libxml2",
+            "target_id": "debian-trixie-amd64",
+            "vendor_fixed_versions": []
+          },
+          "ecosystem_specific": {
+            "architecture": "amd64",
+            "distribution": "Debian",
+            "release": "trixie",
+            "source_package": "libxml2",
+            "target_id": "debian-trixie-amd64"
+          },
+          "package": {
+            "ecosystem": "Debian:13",
+            "name": "libxml2"
+          },
+          "versions": [
+            "2.12.7+dfsg+really2.9.14-2.1+deb13u3"
+          ]
+        }
+      ],
+      "database_specific": {
+        "severity": "MEDIUM",
+        "verification_status": "development-verified-production-release-pending"
+      },
+      "details": "GetPatched records exact affected package versions and exact reviewed fixes per distribution, release, and architecture. A new target or fixed package version is accepted only after its own build and regression evidence.",
+      "id": "CVE-2026-86141",
+      "modified": "2026-11-03T18:12:28Z",
+      "references": [
+        {
+          "type": "ADVISORY",
+          "url": "https://security-tracker.debian.org/tracker/CVE-2026-86141"
+        }
+      ],
+      "schema_version": "1.6.0",
+      "summary": "libxml2 can dereference NULL while creating a regular-expression parser context after allocation failure"
+    },
+    {
+      "affected": [
+        {
+          "database_specific": {
+            "candidate_status": "development-verified-production-release-pending",
+            "candidate_version": "2.12.7+dfsg+really2.9.14-2.1+deb13u3+getpatched4",
+            "fixed_versions": [
+              "2.12.7+dfsg+really2.9.14-2.1+deb13u3+getpatched4"
+            ],
+            "getpatched_fixed_version": "2.12.7+dfsg+really2.9.14-2.1+deb13u3+getpatched4",
             "source_package": "libxml2",
             "target_id": "debian-trixie-amd64",
             "vendor_fixed_versions": []

@@ -44,6 +44,7 @@ SEVERITIES = {
 }
 # Refresh the modified timestamp when an existing advisory record changes.
 MODIFIED = {
+    "CVE-2026-86141": "2026-11-03T18:12:28Z",
     "CVE-2026-12912": "2026-11-03T08:35:10Z",
     "CVE-2026-18495": "2026-11-03T08:45:03Z",
     "CVE-2025-61144": "2026-11-03T08:35:10Z",

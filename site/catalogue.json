@@ -187,11 +187,12 @@
         },
         "debian-trixie-amd64": {
           "baseVersion": "2.12.7+dfsg+really2.9.14-2.1+deb13u3",
-          "version": "2.12.7+dfsg+really2.9.14-2.1+deb13u3+getpatched3",
+          "version": "2.12.7+dfsg+really2.9.14-2.1+deb13u3+getpatched4",
           "cves": [
             "CVE-2026-6653",
             "CVE-2026-86144",
-            "CVE-2026-76781"
+            "CVE-2026-76781",
+            "CVE-2026-86141"
           ],
           "vulnerabilities": [
             {
@@ -221,6 +222,16 @@
               "advisoryUrl": "https://security-tracker.debian.org/tracker/CVE-2026-76781",
               "patchSlugs": [
                 "cve-2026-76781-debian-trixie"
+              ],
+              "patched": true
+            },
+            {
+              "id": "CVE-2026-86141",
+              "slug": "cve-2026-86141",
+              "summary": "libxml2 can dereference NULL while creating a regular-expression parser context after allocation failure.",
+              "advisoryUrl": "https://security-tracker.debian.org/tracker/CVE-2026-86141",
+              "patchSlugs": [
+                "cve-2026-86141-debian-trixie"
               ],
               "patched": true
             }
@@ -304,6 +315,30 @@
                   "patchedExpectation": "The installed patched package completes catalog loading and resolves the mapping from the valid nextCatalog with no Valgrind errors."
                 }
               ]
+            },
+            {
+              "id": "cve-2026-86141-debian-trixie",
+              "slug": "cve-2026-86141-debian-trixie",
+              "kind": "security",
+              "title": "Check regexp string duplication before using it",
+              "description": "Backports the allocation-failure guard to Debian Trixie's older 2.9.14 source, checking the duplicated regexp before assigning it to the parser cursor.",
+              "sha256": "000df16e82e7d4eb232cdbb2811ed5b8fa091b8815f142069d7df6cba5d9d4c2",
+              "fileUrl": "https://github.com/getpatched/packaging-libxml2/blob/getpatched/debian-trixie/patches/CVE-2026-86141-debian-trixie.patch",
+              "cves": [
+                "CVE-2026-86141"
+              ],
+              "upstream": {
+                "repository": "https://gitlab.gnome.org/GNOME/libxml2",
+                "commit": "e89a8aae4c9b40cdafcf66b3f9e57c62db37bb55",
+                "url": "https://github.com/GNOME/libxml2/commit/e89a8aae4c9b40cdafcf66b3f9e57c62db37bb55"
+              },
+              "tests": [
+                {
+                  "id": "regexp-allocation-failure-null-check",
+                  "baselineExpectation": "A custom allocator fails the exact regexp-copy allocation; Valgrind records a one-byte NULL invalid read in libxml2 during xmlRegexpCompile, followed by SIGSEGV.",
+                  "patchedExpectation": "The patched package rejects the regexp cleanly after the injected allocation failure and exits with zero Valgrind errors."
+                }
+              ]
             }
           ],
           "access": "public",
@@ -317,10 +352,10 @@
           ],
           "earlyRedistributionAllowed": false,
           "status": "development-verified-production-release-pending",
-          "verification": "https://github.com/getpatched/platform/actions/runs/41633529746",
+          "verification": "https://github.com/getpatched/platform/actions/runs/41690376263",
           "ubuntuProEsmCompatibility": "not-applicable",
           "sourceUrl": "https://github.com/getpatched/packaging-libxml2/tree/getpatched/debian-trixie",
-          "patchUrl": "https://github.com/getpatched/packaging-libxml2/blob/getpatched/debian-trixie/patches/CVE-2026-76781-debian-trixie.patch",
+          "patchUrl": "https://github.com/getpatched/packaging-libxml2/blob/getpatched/debian-trixie/patches/CVE-2026-86141-debian-trixie.patch",
           "testsUrl": "https://github.com/getpatched/packaging-libxml2/tree/getpatched/debian-trixie/tests",
           "releasesUrl": "https://github.com/getpatched/packaging-libxml2/releases",
           "releaseStatus": "No production release",
