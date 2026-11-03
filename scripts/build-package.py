@@ -357,6 +357,14 @@ def main():
                     builder_selected.append(target)
             if {p.name.split("_", 1)[0] for p in selected} != runtime_names:
                 raise RuntimeError("Could not extract every patched runtime package")
+            if {p.name.split("_", 1)[0] for p in builder_selected} != builder_names:
+                raise RuntimeError("Could not extract every patched builder package")
+            for item in binary_manifest["packages"]:
+                binary_name = item["control"].splitlines()[0].split(": ", 1)[1]
+                if binary_name in builder_names:
+                    control = dict(line.split(": ", 1) for line in item["control"].splitlines() if ": " in line)
+                    if control.get("Version") != policy["version"]:
+                        raise RuntimeError("Patched builder package version differs from the candidate version")
             patched_context = temp / "patched-context"
             patched_context.mkdir()
             (patched_context / "getpatched").mkdir()

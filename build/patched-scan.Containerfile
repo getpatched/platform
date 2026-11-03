@@ -47,6 +47,11 @@ RUN set -eu; \
       apt-get install -y --no-install-recommends $builder_debs; \
     fi; \
     if [ -n "$BUILDER_PACKAGES" ]; then apt-get install -y --no-install-recommends $BUILDER_PACKAGES; fi; \
+    for binary in $BUILDER_PACKAGES; do \
+      test "$(dpkg-query -W -f='${Version}' "$binary")" = "$EXPECTED_VERSION" || { \
+        echo "Candidate builder package has unexpected version: $binary" >&2; exit 1; \
+      }; \
+    done; \
     for binary in $BINARY_PACKAGES; do \
       test "$(dpkg-query -W -f='${Version}' "$binary")" = "$EXPECTED_VERSION"; \
     done; \

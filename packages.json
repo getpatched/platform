@@ -702,7 +702,8 @@
             "libtiff-tools"
           ],
           "builderPackages": [
-            "libtiff-dev"
+            "libtiff-dev",
+            "libtiffxx6"
           ],
           "targetCve": "CVE-2025-61144",
           "targetCves": [
@@ -776,7 +777,9 @@
             "libtiff-tools"
           ],
           "builderPackages": [
-            "libtiff-dev"
+            "libtiff-dev",
+            "libtiff6",
+            "libtiffxx6"
           ],
           "targetCve": "CVE-2025-61144",
           "targetCves": [

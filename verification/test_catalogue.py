@@ -218,11 +218,16 @@ class PublicCatalogueContract(unittest.TestCase):
         scan_containerfile = (ROOT / "build/patched-scan.Containerfile").read_text()
         policy = json.loads((ROOT / "packages.json").read_text())
         tiff = package_target_policy(policy, "tiff", "debian-bookworm-amd64")
-        self.assertIn("libtiff-dev", tiff["builderPackages"])
+        self.assertEqual(set(tiff["builderPackages"]), {"libtiff-dev", "libtiffxx6"})
+        trixie_tiff = package_target_policy(policy, "tiff", "debian-trixie-amd64")
+        self.assertTrue({"libtiff-dev", "libtiff6", "libtiffxx6"}.issubset(
+            set(trixie_tiff["builderPackages"])))
         self.assertIn('builder_names = set(expected["builderPackages"])', build_script)
         self.assertIn('"--build-arg", "BUILDER_DEB_PACKAGES=" + " ".join(builder_deb_names)', build_script)
         self.assertIn("COPY builder-debs/ /tmp/getpatched-builder/", scan_containerfile)
         self.assertIn("apt-get install -y --no-install-recommends $builder_debs", scan_containerfile)
+        self.assertIn("for binary in $BUILDER_PACKAGES; do", scan_containerfile)
+        self.assertIn("builder package version differs from the candidate version", build_script)
 
     def test_target_recipe_branch_rejects_untrusted_ref_syntax(self):
         platform = deepcopy(json.loads((ROOT / "packages.json").read_text()))
