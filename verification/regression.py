@@ -295,6 +295,7 @@ def tiff_bigstrip_baseline_reproduced(check):
     log = check.get("memoryLog", "")
     stderr = check.get("stderr", "")
     bounded_read = re.search(r"GETPATCHED_TIFF_READ_BOUNDED requested=(\d+) cap=16", stderr)
+    completed_read = re.search(r"GETPATCHED_TIFF_READ_COMPLETED requested=(\d+) bytes=16", stderr)
     vulnerable_read_blocks = re.finditer(
         r"(?ms)^==\d+== Syscall param read\(buf\) points to unaddressable byte\(s\)\n"
         r"(?P<body>.*?)(?=^==\d+== (?:Invalid |Use of |Conditional |Syscall param |ERROR SUMMARY)|\Z)",
@@ -321,7 +322,8 @@ def tiff_bigstrip_baseline_reproduced(check):
         and "GETPATCHED_TIFF_SCRATCH_INIT_BOUNDED requested=4294967311 cap=65536" in stderr
         and bounded_read is not None
         and int(bounded_read.group(1)) > 64 * 1024 * 1024
-        and "got 64 bytes, expected 4294967301" in stderr
+        and completed_read is not None
+        and bounded_read.group(1) == completed_read.group(1)
         and read_overrun_reproduced
         and re.search(r"(?m)^==\d+== ERROR SUMMARY: [1-9]\d* errors?", log) is not None
     )
@@ -343,6 +345,7 @@ def tiff_bigstrip_patched_succeeded(check):
         and "GETPATCHED_TIFF_SCRATCH_ALLOC_BOUNDED requested=4294967311 cap=65536" in stderr
         and "GETPATCHED_TIFF_SCRATCH_INIT_BOUNDED requested=4294967311 cap=65536" in stderr
         and "GETPATCHED_TIFF_READ_BOUNDED" not in stderr
+        and "GETPATCHED_TIFF_READ_COMPLETED" not in stderr
         and "GETPATCHED_TIFF_ALLOCATION_REJECTED size=4294967301 cap=67108864" in stderr
         and "got 64 bytes, expected 4294967301" not in stderr
         and memcheck_has_no_errors(check.get("memoryLog", ""))
@@ -1076,6 +1079,8 @@ def main():
                 environment.pop("GETPATCHED_TIFF_ALLOC_CAP_ENABLED", None)
                 if allocation_cap_enabled:
                     environment["GETPATCHED_TIFF_ALLOC_CAP_ENABLED"] = "1"
+                else:
+                    environment["GETPATCHED_TIFF_STOP_AFTER_BOUNDED_READ"] = "1"
                 check = execute(command, timeout=20, env=environment)
                 check["memoryLog"] = memory_log.read_text() if memory_log.exists() else ""
                 check["memoryLogPath"] = str(memory_log)
