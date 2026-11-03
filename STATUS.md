@@ -7,8 +7,8 @@
 
 ### Next actions
 
-1. Preflight candidate CVE-2026-18495 / libtiff for a safe exact-baseline regression.
-2. Keep PR #109 unmerged while its merge would deploy the Worker/site.
+1. Finish review and merge stacked TIFF catalogue PR #111 into nonproduction feature branch #109; keep #109 unmerged to avoid Worker/site deployment.
+2. Keep CVE-2026-18495 out of the campaign count until the final review and feature-branch merge complete.
 
 # GetPatched implementation status
 
@@ -458,3 +458,11 @@ The advisory scanner now treats an exact reviewed vulnerable baseline as affecte
 ### Next actions
 
 1. Obtain a fresh independent review of the current two-repository diff. Address findings, then publish reviewable source and platform branches and run the non-publishing Bookworm and Trixie workflows. Count this CVE only after both target runs pass all gates.
+
+
+## TIFF CVE-2026-18495 policy-matched development verification — 3 Nov 2026
+
+- Final hosted run [41604393283](https://github.com/getpatched/platform/actions/runs/41604393283) passed Debian Bookworm amd64 exact-source build and installed baseline/patched regression for `4.5.0-6+deb12u4+getpatched5`, from packaging commit `8d842d44c49116b8c5d231b4b80246296eb77757`. Report sets `candidateVerified=true`, `verificationChecksPassed=true`, `releaseEligible=false` because repository publication is disabled.
+- The Debian upstream suite passed 99 tests; consumer, advisory comparison, and isolated signed APT client checks passed. The TIFF-only package-aware scan cleared all four configured TIFF CVEs, while the full scan retained unrelated Expat CVE-2026-117610. Raw Trivy 0.70.0 still reports the four TIFF CVEs after patching; this remains a production-release blocker.
+- Package patch, README, metadata, and checksummed evidence are pushed to the canonical `getpatched/debian-bookworm` branch. The platform catalogue/OSV update is in stacked PR [#111](https://github.com/getpatched/platform/pull/111), targeting feature PR #109's nonproduction branch. Final review and stacked merge are pending; this candidate is not yet included in the 5/100 count. No binaries or indexes were published.
+- Full report bundle: [package report bundle](https://github.com/getpatched/packaging-tiff/tree/getpatched/debian-bookworm/evidence/tiff-cve-2026-18495-bookworm-41604393283); package summary: [EVIDENCE.md](https://github.com/getpatched/packaging-tiff/blob/getpatched/debian-bookworm/EVIDENCE.md).
