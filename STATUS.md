@@ -1,16 +1,17 @@
 # GetPatched implementation status
 
-## Active 100-CVE goal checkpoint — 2 Nov 2026
+## Active 100-CVE goal checkpoint — 3 Nov 2026
 
-- **Poppler / Debian Bookworm and Trixie amd64, CVE-2026-107705:** hosted runs [41518910177](https://github.com/getpatched/platform/actions/runs/41518910177) and [41531130479](https://github.com/getpatched/platform/actions/runs/41531130479) passed exact-source builds, installed baseline overflow reproductions, patched regressions, package-aware before/after scans, consumer checks, and isolated signed APT-client verification. Policy and catalogue now mark only these exact Debian targets as development-verified. Raw Trivy 0.70 still reports CVE-2026-107705 in 14 Poppler package records in each image; this is not a Trivy-clean claim. The target repository profiles are disabled, so release eligibility remains false and nothing was published. Independent review and CI for this metadata update remain pending.
-- **Expat / Debian Bookworm and Trixie amd64, CVE-2026-117610:** recipe/platform review passed, and platform quality run [41538049083](https://github.com/getpatched/platform/actions/runs/41538049083) passed on PR #110. Corrected hosted package verification for Bookworm and Trixie is still required; Expat does not count yet.
-- **Completed count:** 0/100. Poppler still awaits review/merge of this evidence reconciliation; Expat awaits both target verification runs; no other candidate has completed every objective gate.
+- **Poppler / Debian Bookworm and Trixie amd64, CVE-2026-107705:** hosted runs [41518910177](https://github.com/getpatched/platform/actions/runs/41518910177) and [41531130479](https://github.com/getpatched/platform/actions/runs/41531130479) passed exact-source builds, installed baseline overflow reproductions, patched regressions, package-aware before/after scans, consumer checks, and isolated signed APT-client verification. Package PR #2 and platform PR #108 are merged. Raw Trivy 0.70 still reports CVE-2026-107705 in 14 Poppler package records in each image; this is not a Trivy-clean claim. No binaries or production index were published.
+- **TIFF / Debian Bookworm and Trixie amd64, CVE-2026-52490:** hosted runs [41553176585](https://github.com/getpatched/platform/actions/runs/41553176585) and [41554198692](https://github.com/getpatched/platform/actions/runs/41554198692) passed exact installed baseline/patched regressions, package-aware scans, `tiffinfo`, and signed test-client verification. Candidate verification passed; release eligibility remains false. Raw Trivy still reports CVE-2025-61144 and CVE-2026-52490 on candidate packages, so production release remains blocked. Package PR #3 and platform PR #109 are open. Evidence: [`evidence/tiff-cve-2026-52490-2026-11-03.md`](evidence/tiff-cve-2026-52490-2026-11-03.md). TIFF does not count until fresh review and safe public metadata integration.
+- **Expat / Debian Bookworm and Trixie amd64, CVE-2026-117610:** hosted package verification passed in runs [41543751522](https://github.com/getpatched/platform/actions/runs/41543751522) and [41546270294](https://github.com/getpatched/platform/actions/runs/41546270294). Platform metadata PR #110 still needs final review/integration; Expat remains uncounted.
+- **Completed count:** 1/100 (Poppler). TIFF and Expat are verified development candidates pending their remaining review/integration gates. No other candidate has completed every objective gate.
 
 ### Next actions
 
-1. Obtain fresh independent review and passing CI for the Poppler policy, catalogue, advisory, and evidence update; merge only after findings are resolved.
-2. Dispatch Expat Bookworm hosted verification from recipe commit `ed35d4b85f8cb08c2b252868d366cd6ec34cf463`, then Trixie, and retain/inspect both artifacts.
-3. Continue to the next revalidated leaf-library candidate after the in-progress Poppler and Expat work.
+1. Complete final independent review and hosted CI for TIFF PRs #3 and #109; keep #109 unmerged because it would trigger production Worker/site deployment. Keep TIFF uncounted.
+2. Complete final review of Expat PR #110 and integrate metadata only through a path that does not publish packages or trigger production deployment. Keep Expat uncounted until integration is verified.
+3. Continue to the next revalidated leaf-library candidate after these review gates; no production binaries or signed indexes may be published in this campaign phase.
 
 ## Latest development checkpoint — 31 Oct 2026
 

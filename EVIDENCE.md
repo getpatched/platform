@@ -1,11 +1,15 @@
 # GetPatched evidence index
 
-## Active 100-CVE goal — Poppler CVE-2026-107705 — 2 Nov 2026
+## Active 100-CVE goal — 3 Nov 2026
 
 - Debian Bookworm verification run [41518910177](https://github.com/getpatched/platform/actions/runs/41518910177) and Trixie run [41531130479](https://github.com/getpatched/platform/actions/runs/41531130479) passed the exact pinned source build, installed vulnerable-baseline reproduction, patched installed regression, package-aware before/after scan, `pdfinfo -v` consumer check, and isolated signed APT client checks. The tested versions are `22.12.0-2+deb12u3+getpatched1` and `25.03.0-5+deb13u4+getpatched1`.
 - The candidate-specific GetPatched scanner changes from one matching CVE finding on each exact baseline to zero on its exact patched image, after independently rerunning the paired installed regression. Raw Trivy 0.70.0 reports CVE-2026-107705 for 14 Poppler binary-package records on both baseline and patched images in each Debian run. Preserve that vendor result; the package-aware result is separate and does not mean Trivy is clean. No suppression or ignore rule is used.
 - The signed APT checks, manifests, scan comparisons, regression logs, and checksums are retained in the local evidence directories `AptTo/evidence/poppler-hosted-verification-41518910177/` and `AptTo/evidence/poppler-hosted-verification-41531130479/`. Build provenance records that binaries remained inside disposable containers; no binaries, signed production indexes, or production releases were published.
-- PR [#108](https://github.com/getpatched/platform/pull/108) now aligns both verified Debian targets in `packages.json`, the public catalogue/security-record source, and the generated OSV feed. Release remains disabled. The update awaits independent review and CI; CVE-2026-107705 is not counted in the 100-fix ledger until all required gates are accepted.
+- PR [#108](https://github.com/getpatched/platform/pull/108) aligns both verified Debian targets in `packages.json`, the public catalogue/security-record source, and the generated OSV feed. It was reviewed and merged; release remains disabled. Poppler is the sole completed candidate and the campaign count is 1/100.
+
+## TIFF CVE-2026-52490 hosted development verification — 3 Nov 2026
+
+See [`evidence/tiff-cve-2026-52490-2026-11-03.md`](evidence/tiff-cve-2026-52490-2026-11-03.md) for exact Bookworm/Trixie source and candidate versions, hosted run links, regression and scan report hashes, signed test-client checks, and the raw Trivy discrepancy. Both hosted runs passed candidate verification and retained `releaseEligible=false`; no production binaries or signed indexes were published. Raw Trivy still reports CVE-2025-61144 and CVE-2026-52490 on candidate packages, so this is not a Trivy-clean result and remains a production-release blocker. The CVE remains uncounted pending fresh reviews and safe metadata integration; campaign total is 1/100.
 
 ## Production repository gate and release prerequisites — 31 October 2026
 
