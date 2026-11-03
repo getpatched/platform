@@ -46,6 +46,21 @@ SCANNER_SPEC.loader.exec_module(SCANNER_MODULE)
 
 
 class GetPatchedScannerContract(unittest.TestCase):
+    def test_tiff_feed_selects_the_exact_verified_release_and_unverified_candidate(self):
+        canonical = SCANNER_MODULE.load_feed(FEED)
+        self.assertTrue(canonical["vulns"])
+
+        candidate = SCANNER_MODULE.load_feed(FEED, {("tiff", "debian-bookworm-amd64")})
+        advisory = next(item for item in candidate["vulns"] if item["id"] == "CVE-2026-18495")
+        self.assertEqual(advisory["summary"],
+                         "libtiff tiff2pdf heap buffer overflow with oversized BigTIFF strip lengths")
+        self.assertEqual({(item["package"]["name"], tuple(item["versions"]),
+                           item["database_specific"]["candidate_version"])
+                          for item in advisory["affected"]}, {
+                              ("libtiff-tools", ("4.5.0-6+deb12u4",),
+                               "4.5.0-6+deb12u4+getpatched5")
+                          })
+
     def test_libxml2_debian_candidate_advisory_is_exact_and_target_scoped(self):
         target_id = "debian-bookworm-amd64"
         feed = SCANNER_MODULE.build_feed(

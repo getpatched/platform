@@ -24,6 +24,7 @@ SUMMARIES = {
     "CVE-2026-53586": "libgit2 HTTP redirect authentication can disclose credentials to another host",
     "CVE-2025-61144": "tiffcrop out-of-bounds read while producing level-2 debug output",
     "CVE-2025-61143": "tiffcrop null-pointer read when debug logging follows output-open failure",
+    "CVE-2026-18495": "libtiff tiff2pdf heap buffer overflow with oversized BigTIFF strip lengths",
     "CVE-2026-52490": "tiffcrop subdivision integer overflow bypasses the section limit",
     "CVE-2026-12912": "Heap buffer overflow in libtiff PixarLog decoding when an application opts into 8BITABGR RGB output",
     "CVE-2025-52885": "Poppler structure-tree use-after-free on duplicate parent-tree keys",

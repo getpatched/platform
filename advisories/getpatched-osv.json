@@ -480,6 +480,33 @@
         {
           "database_specific": {
             "candidate_status": "development-verified-production-release-pending",
+            "candidate_version": "4.5.0-6+deb12u4+getpatched3",
+            "fixed_versions": [
+              "4.5.0-6+deb12u4+getpatched3"
+            ],
+            "getpatched_fixed_version": "4.5.0-6+deb12u4+getpatched3",
+            "source_package": "tiff",
+            "target_id": "debian-bookworm-amd64",
+            "vendor_fixed_versions": []
+          },
+          "ecosystem_specific": {
+            "architecture": "amd64",
+            "distribution": "Debian",
+            "release": "bookworm",
+            "source_package": "tiff",
+            "target_id": "debian-bookworm-amd64"
+          },
+          "package": {
+            "ecosystem": "Debian:12",
+            "name": "libtiff-tools"
+          },
+          "versions": [
+            "4.5.0-6+deb12u4"
+          ]
+        },
+        {
+          "database_specific": {
+            "candidate_status": "development-verified-production-release-pending",
             "candidate_version": "4.5.0-6+deb12u4+getpatched4",
             "fixed_versions": [
               "4.5.0-6+deb12u4+getpatched4"
@@ -1029,6 +1056,33 @@
     },
     {
       "affected": [
+        {
+          "database_specific": {
+            "candidate_status": "development-verified-production-release-pending",
+            "candidate_version": "4.5.0-6+deb12u4+getpatched3",
+            "fixed_versions": [
+              "4.5.0-6+deb12u4+getpatched3"
+            ],
+            "getpatched_fixed_version": "4.5.0-6+deb12u4+getpatched3",
+            "source_package": "tiff",
+            "target_id": "debian-bookworm-amd64",
+            "vendor_fixed_versions": []
+          },
+          "ecosystem_specific": {
+            "architecture": "amd64",
+            "distribution": "Debian",
+            "release": "bookworm",
+            "source_package": "tiff",
+            "target_id": "debian-bookworm-amd64"
+          },
+          "package": {
+            "ecosystem": "Debian:12",
+            "name": "libtiff-tools"
+          },
+          "versions": [
+            "4.5.0-6+deb12u4"
+          ]
+        },
         {
           "database_specific": {
             "candidate_status": "development-verified-production-release-pending",
