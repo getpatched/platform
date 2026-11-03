@@ -1441,9 +1441,10 @@
         },
         "debian-trixie-amd64": {
           "baseVersion": "2.9.0-1~deb13u1",
-          "version": "2.9.0-1~deb13u1+getpatched1",
+          "version": "2.9.0-1~deb13u1+getpatched2",
           "cves": [
-            "CVE-2026-117610"
+            "CVE-2026-117610",
+            "CVE-2026-113351"
           ],
           "vulnerabilities": [
             {
@@ -1453,6 +1454,16 @@
               "advisoryUrl": "https://security-tracker.debian.org/tracker/CVE-2026-117610",
               "patchSlugs": [
                 "cve-2026-117610-expat"
+              ],
+              "patched": true
+            },
+            {
+              "id": "CVE-2026-113351",
+              "slug": "cve-2026-113351",
+              "summary": "Expat parser reuse can reject ordinary documents after parsing a large document and resetting XML_Parser.",
+              "advisoryUrl": "https://security-tracker.debian.org/tracker/CVE-2026-113351",
+              "patchSlugs": [
+                "cve-2026-113351-expat-trixie"
               ],
               "patched": true
             }
@@ -1481,6 +1492,30 @@
                   "patchedExpectation": "The exact installed patched package completes the same parse and invokes the processing-instruction handler once; xmlwf -v reports the matching patched Expat version."
                 }
               ]
+            },
+            {
+              "id": "cve-2026-113351",
+              "slug": "cve-2026-113351-expat-trixie",
+              "kind": "security",
+              "title": "Preserve allocation accounting across parser resets",
+              "description": "Keeps tracked heap allocations in the allocator baseline so a reset parser can accept ordinary later documents.",
+              "sha256": "5f96db31ebc26cb6543a44ec661bfd5f3174f7758d27353e3dcfdf3adb22bc45",
+              "fileUrl": "https://github.com/getpatched/packaging-expat/blob/main/patches/CVE-2026-113351.patch",
+              "cves": [
+                "CVE-2026-113351"
+              ],
+              "upstream": {
+                "repository": "https://github.com/libexpat/libexpat",
+                "commit": "d8f31e647a4d1eda088e89354f4769b0dad303d3",
+                "url": "https://github.com/libexpat/libexpat/pull/1431"
+              },
+              "tests": [
+                {
+                  "id": "CVE-2026-113351-parser-reset-allocation-accounting",
+                  "baselineExpectation": "A valid 70 MiB attribute parse followed by XML_ParserReset causes the exact baseline parser to fail a small parse with XML_ERROR_NO_MEMORY; a fresh parser accepts it.",
+                  "patchedExpectation": "The exact patched parser accepts the small parse after reset; a fresh parser accepts it as a control."
+                }
+              ]
             }
           ],
           "access": "public",
@@ -1494,10 +1529,10 @@
           ],
           "earlyRedistributionAllowed": false,
           "status": "development-verified-production-release-pending",
-          "verification": "https://github.com/getpatched/platform/actions/runs/41546270294",
-          "sourceUrl": "https://github.com/getpatched/packaging-expat/tree/getpatched/debian-trixie",
-          "patchUrl": "https://github.com/getpatched/packaging-expat/blob/getpatched/debian-trixie/patches/CVE-2026-117610.patch",
-          "testsUrl": "https://github.com/getpatched/packaging-expat/tree/getpatched/debian-trixie/tests",
+          "verification": "https://github.com/getpatched/platform/actions/runs/41666465396",
+          "sourceUrl": "https://github.com/getpatched/packaging-expat/tree/main",
+          "patchUrl": "https://github.com/getpatched/packaging-expat/blob/main/patches/CVE-2026-113351.patch",
+          "testsUrl": "https://github.com/getpatched/packaging-expat/tree/main/tests",
           "releasesUrl": "https://github.com/getpatched/packaging-expat/releases",
           "releaseStatus": "No production release",
           "publicLicenseScope": "getpatched-authored-contributions-only",

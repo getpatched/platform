@@ -24,44 +24,81 @@ class PublicCatalogueContract(unittest.TestCase):
         policy = platform["packages"]["expat"]["targets"]
         record = next(item for item in catalogue["packages"] if item["source"] == "expat")
         advisory = next(item for item in feed["vulns"] if item["id"] == "CVE-2026-117610")
+        reset_advisory = next(item for item in feed["vulns"] if item["id"] == "CVE-2026-113351")
         self.assertEqual(advisory["database_specific"]["verification_status"],
                          "development-verified-production-release-pending")
 
         expected_runs = {
             "debian-bookworm-amd64": "41543751522",
-            "debian-trixie-amd64": "41546270294",
+            "debian-trixie-amd64": "41666465396",
         }
         for target_id, target_policy in policy.items():
             with self.subTest(target=target_id):
+                verified_release = (target_policy["verifiedReleases"][-1]
+                                    if target_policy["candidateStatus"] == "unverified-development-candidate"
+                                    else target_policy)
+                verified_version = verified_release.get("version", target_policy["packageVersion"])
+                verified_cves = verified_release.get("targetCves", target_policy["targetCves"])
+                verified_status = verified_release.get("status", target_policy["candidateStatus"])
+                verified_packages = set(
+                    name for names in verified_release.get(
+                        "advisoryPackagesByCve",
+                        {cve: target_policy["advisoryPackages"] for cve in verified_cves},
+                    ).values() for name in names
+                )
+                self.assertEqual(verified_status,
+                                 "development-verified-production-release-pending")
                 self.assertEqual(target_policy["candidateStatus"],
                                  "development-verified-production-release-pending")
                 target_record = record["targets"][target_id]
                 self.assertEqual(target_record["baseVersion"], target_policy["baselineVersion"])
-                self.assertEqual(target_record["version"], target_policy["packageVersion"])
-                self.assertEqual(target_record["cves"], target_policy["targetCves"])
-                self.assertEqual(target_record["status"], target_policy["candidateStatus"])
+                self.assertEqual(target_record["version"], verified_version)
+                self.assertEqual(target_record["cves"], verified_cves)
+                self.assertEqual(target_record["status"], verified_status)
                 self.assertEqual(target_record["verification"],
                                  f"https://github.com/getpatched/platform/actions/runs/{expected_runs[target_id]}")
                 self.assertEqual(target_record["access"], "public")
                 self.assertEqual(target_record["delayHours"], 0)
-                self.assertEqual(len(target_record["patches"]), 1)
-                patch = target_record["patches"][0]
+                self.assertEqual(len(target_record["patches"]),
+                                 2 if target_id == "debian-trixie-amd64" else 1)
+                patch = next(patch for patch in target_record["patches"]
+                             if patch["id"] == "cve-2026-117610")
                 self.assertEqual(patch["sha256"],
                                  "365988ba0fb36bf8fde4792a4288e0f5bc466411b50b888de960bb6aa3a6a5a9")
                 self.assertEqual(patch["upstream"]["commit"],
                                  "bfc28346fa3efeb8ca56c17437d24a7344e5feab")
+                if target_id == "debian-trixie-amd64":
+                    reset_patch = next(patch for patch in target_record["patches"]
+                                       if patch["id"] == "cve-2026-113351")
+                    self.assertEqual(reset_patch["slug"], "cve-2026-113351-expat-trixie")
+                    self.assertEqual(reset_patch["sha256"],
+                                     "5f96db31ebc26cb6543a44ec661bfd5f3174f7758d27353e3dcfdf3adb22bc45")
+                    self.assertEqual(reset_patch["upstream"]["commit"],
+                                     "d8f31e647a4d1eda088e89354f4769b0dad303d3")
+                    self.assertEqual(reset_patch["tests"][0]["id"],
+                                     "CVE-2026-113351-parser-reset-allocation-accounting")
+                    affected_reset = [item for item in reset_advisory["affected"]
+                                      if item["ecosystem_specific"].get("target_id") == target_id]
+                    self.assertEqual({item["package"]["name"] for item in affected_reset},
+                                     {"expat", "libexpat1", "libexpat1-dev"})
+                    self.assertTrue(all(item["database_specific"]["candidate_version"]
+                                        == "2.9.0-1~deb13u1+getpatched2"
+                                        for item in affected_reset))
+                    self.assertFalse(any(item["ecosystem_specific"].get("target_id")
+                                         == "debian-bookworm-amd64"
+                                         for item in reset_advisory["affected"]))
                 affected = [item for item in advisory["affected"]
                             if item["ecosystem_specific"].get("target_id") == target_id]
                 self.assertEqual({item["package"]["name"] for item in affected},
-                                 set(target_policy["advisoryPackages"]))
+                                 verified_packages)
                 for item in affected:
                     self.assertEqual(item["versions"], [target_policy["baselineVersion"]])
                     self.assertEqual(item["database_specific"]["candidate_version"],
-                                     target_policy["packageVersion"])
+                                     verified_version)
                     self.assertEqual(item["database_specific"]["getpatched_fixed_version"],
-                                     target_policy["packageVersion"])
+                                     verified_version)
                     self.assertEqual(item["database_specific"]["candidate_status"],
-                                     target_policy["candidateStatus"])
+                                     verified_status)
 
     def test_ubuntu_snapshot_source_list_emits_one_suite_per_apt_line(self):
         platform = json.loads((ROOT / "packages.json").read_text())
@@ -387,7 +424,7 @@ class PublicCatalogueContract(unittest.TestCase):
                     ("c-ares", "debian-trixie-amd64"): "41494211851",
                     ("brotli", "ubuntu-focal-amd64"): "41492184315",
                     ("expat", "debian-bookworm-amd64"): "41543751522",
-                    ("expat", "debian-trixie-amd64"): "41546270294",
+                    ("expat", "debian-trixie-amd64"): "41666465396",
                     ("tiff", "debian-bookworm-amd64"): "41604393283",
                     ("tiff", "debian-trixie-amd64"): "41554198692",
                 }[(source, target_id)]
@@ -400,6 +437,8 @@ class PublicCatalogueContract(unittest.TestCase):
                 self.assertTrue(entry["sourceUrl"].startswith(f"https://github.com/getpatched/packaging-{source}/tree/"))
                 self.assertTrue(entry["patchUrl"].startswith(f"https://github.com/getpatched/packaging-{source}/blob/"))
                 branch = target_profile(platform, target_id)["sourceBranch"]
+                if source == "expat" and target_id == "debian-trixie-amd64":
+                    branch = "main"
                 if source == "tiff" and target_id in {"debian-bookworm-amd64", "debian-trixie-amd64"}:
                     patch_file = "CVE-2026-18495.patch" if target_id == "debian-bookworm-amd64" else "CVE-2026-52490-trixie.patch"
                     expected_branch = "getpatched/debian-bookworm" if target_id == "debian-bookworm-amd64" else "getpatched/debian-trixie"

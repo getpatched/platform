@@ -302,10 +302,18 @@
             "CVE-2026-74860": "https://security-tracker.debian.org/tracker/CVE-2026-74860"
           },
           "advisoryPackagesByCve": {
-            "CVE-2026-6653": ["libxml2"],
-            "CVE-2026-86144": ["libxml2"],
-            "CVE-2026-76781": ["libxml2"],
-            "CVE-2026-74860": ["python3-libxml2"]
+            "CVE-2026-6653": [
+              "libxml2"
+            ],
+            "CVE-2026-86144": [
+              "libxml2"
+            ],
+            "CVE-2026-76781": [
+              "libxml2"
+            ],
+            "CVE-2026-74860": [
+              "python3-libxml2"
+            ]
           },
           "candidateStatus": "unverified-development-candidate",
           "verificationSourceBranch": "getpatched/cve-2026-74860-trixie",
@@ -333,9 +341,15 @@
                 "CVE-2026-76781"
               ],
               "advisoryPackagesByCve": {
-                "CVE-2026-6653": ["libxml2"],
-                "CVE-2026-86144": ["libxml2"],
-                "CVE-2026-76781": ["libxml2"]
+                "CVE-2026-6653": [
+                  "libxml2"
+                ],
+                "CVE-2026-86144": [
+                  "libxml2"
+                ],
+                "CVE-2026-76781": [
+                  "libxml2"
+                ]
               }
             }
           ],
@@ -1052,8 +1066,8 @@
           "baselineVersion": "2.9.0-1~deb13u1",
           "sourcePocket": "security",
           "packageEcosystem": "Debian:13",
-          "packageVersion": "2.9.0-1~deb13u1+getpatched1",
-          "releaseSerial": 1,
+          "packageVersion": "2.9.0-1~deb13u1+getpatched2",
+          "releaseSerial": 2,
           "binaryPackages": [
             "libexpat1",
             "libexpat1-dev",
@@ -1067,13 +1081,32 @@
           "builderPackages": [],
           "targetCve": "CVE-2026-117610",
           "targetCves": [
-            "CVE-2026-117610"
+            "CVE-2026-117610",
+            "CVE-2026-113351"
           ],
           "advisory": "https://security-tracker.debian.org/tracker/CVE-2026-117610",
           "advisories": {
-            "CVE-2026-117610": "https://security-tracker.debian.org/tracker/CVE-2026-117610"
+            "CVE-2026-117610": "https://security-tracker.debian.org/tracker/CVE-2026-117610",
+            "CVE-2026-113351": "https://security-tracker.debian.org/tracker/CVE-2026-113351"
           },
           "candidateStatus": "development-verified-production-release-pending",
+          "verifiedReleases": [
+            {
+              "version": "2.9.0-1~deb13u1+getpatched1",
+              "releaseSerial": 1,
+              "status": "development-verified-production-release-pending",
+              "targetCves": [
+                "CVE-2026-117610"
+              ],
+              "advisoryPackagesByCve": {
+                "CVE-2026-117610": [
+                  "libexpat1",
+                  "libexpat1-dev",
+                  "expat"
+                ]
+              }
+            }
+          ],
           "releaseAccess": {
             "policy": "public-after-checks",
             "sponsorDelayHours": 0,

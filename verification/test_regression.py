@@ -9,7 +9,7 @@ import unittest
 from regression import (LIBPNG_CVE_2025_65018_FIXTURE, pixarlog_baseline_reproduced, pixarlog_patched_succeeded, libpng_followup_read_is_clean, libpng_output_buffer_result, libpng_overwrite_reproduced, libpng_stride_read_reproduced, memcheck_has_no_errors,
                         libpng_patched_checks_succeeded, tiff_patched_regression_succeeded,
                         brotli_baseline_reproduced, brotli_patched_succeeded,
-                        cares_regression_succeeded, consumer_version_succeeded, expat_consumer_succeeded, expat_regression_succeeded,
+                        cares_regression_succeeded, consumer_version_succeeded, expat_consumer_succeeded, expat_regression_succeeded, expat_reset_regression_succeeded,
                         libxml2_catalog_baseline_reproduced, libxml2_catalog_patched_succeeded,
                         libxml2_python_sax_baseline_reproduced, libxml2_python_sax_patched_succeeded,
                         libxml2_check_cardinality_valid,
@@ -252,6 +252,22 @@ class ExpatRegressionEvidence(unittest.TestCase):
         self.assertFalse(expat_regression_succeeded({**check, "returncode": -signal.SIGABRT}, "baseline"))
         self.assertFalse(expat_regression_succeeded({**check, "timedOut": True}, "baseline"))
         self.assertFalse(expat_regression_succeeded({**check, "cve": "CVE-2026-999999"}, "baseline"))
+
+    def test_parser_reset_requires_expected_baseline_failure_and_fixed_behavior(self):
+        check = {"cve": "CVE-2026-113351",
+                 "testId": "CVE-2026-113351-parser-reset-allocation-accounting",
+                 "returncode": 0, "timedOut": False,
+                 "stdout": ("after_reset_status=error error=out of memory\n"
+                            "fresh_parser_status=ok error=no error\n")}
+        self.assertTrue(expat_reset_regression_succeeded(check, "baseline"))
+        self.assertFalse(expat_reset_regression_succeeded({**check, "stdout": "after_reset_status=ok error=no error\n"}, "baseline"))
+        self.assertFalse(expat_reset_regression_succeeded({**check, "stdout": "after_reset_status=error error=out of memory\n"}, "baseline"))
+        self.assertFalse(expat_reset_regression_succeeded({**check, "returncode": 1}, "baseline"))
+        self.assertFalse(expat_reset_regression_succeeded({**check, "timedOut": True}, "baseline"))
+        fixed = {**check, "stdout": ("after_reset_status=ok error=no error\n"
+                                      "fresh_parser_status=ok error=no error\n")}
+        self.assertTrue(expat_reset_regression_succeeded(fixed, "patched"))
+        self.assertFalse(expat_reset_regression_succeeded({**fixed, "stdout": "after_reset_status=error error=out of memory"}, "patched"))
 
     def test_consumer_version_check_accepts_only_the_matching_installed_version(self):
         consumer = {"testId": "expat-xmlwf-version", "returncode": 0, "timedOut": False,
