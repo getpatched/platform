@@ -1090,7 +1090,6 @@
             "CVE-2026-113351": "https://security-tracker.debian.org/tracker/CVE-2026-113351"
           },
           "candidateStatus": "development-verified-production-release-pending",
-          "verificationSourceBranch": "getpatched/cve-2026-113351-trixie",
           "verifiedReleases": [
             {
               "version": "2.9.0-1~deb13u1+getpatched1",
