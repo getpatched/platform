@@ -36,6 +36,26 @@ class RecipePathContainment(unittest.TestCase):
                 self.assertTrue(path_is_within(root / "tests/fixtures/input.xml", root))
                 self.assertFalse(path_is_within(root.parent / "outside.xml", root))
 
+    def test_fixture_validator_rejects_valid_hash_for_path_outside_recipe_root(self):
+        import hashlib
+
+        with tempfile.TemporaryDirectory(prefix="getpatched-recipe-path-containment-") as directory:
+            parent = Path(directory).resolve()
+            root = parent / "recipe"
+            (root / "patches").mkdir(parents=True)
+            outside_fixture = parent / "outside.xml"
+            outside_fixture.write_text("<outside/>")
+            digest = hashlib.sha256(outside_fixture.read_bytes()).hexdigest()
+            (root / "patches/metadata.json").write_text(json.dumps({"patches": [{
+                "referenceFiles": [],
+                "tests": [{"fixtures": [{"path": "../outside.xml", "sha256": digest}]}],
+            }]}))
+
+            with self.assertRaisesRegex(RuntimeError, "fixture hash does not match"):
+                validate_recipe_regression_fixture_hashes(
+                    root, {"patchMetadata": "patches/metadata.json"}
+                )
+
 
 class Libxml2ParameterEntityRegression(unittest.TestCase):
     def test_python_sax_enumerated_attribute_double_free_classifier(self):
