@@ -717,7 +717,7 @@
             "CVE-2026-52490": "https://security-tracker.debian.org/tracker/CVE-2026-52490",
             "CVE-2026-12912": "https://security-tracker.debian.org/tracker/CVE-2026-12912"
           },
-          "candidateStatus": "unverified-development-candidate",
+          "candidateStatus": "development-verified-production-release-pending",
           "releaseAccess": {
             "policy": "public-after-checks",
             "sponsorDelayHours": 0,
@@ -764,8 +764,7 @@
                 ]
               }
             }
-          ],
-          "verificationSourceBranch": "getpatched/cve-2026-12912-bookworm"
+          ]
         },
         "debian-trixie-amd64": {
           "baselineVersion": "4.7.0-3+deb13u3",

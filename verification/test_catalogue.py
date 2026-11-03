@@ -153,22 +153,18 @@ class PublicCatalogueContract(unittest.TestCase):
         with self.assertRaises(ValueError):
             target_profile(insecure_ubuntu, "ubuntu-focal-amd64")
 
-    def test_tiff_verification_branch_is_candidate_only(self):
+    def test_tiff_merged_source_uses_declared_target_branch(self):
         platform = json.loads((ROOT / "packages.json").read_text())
         self.assertEqual(target_source_branch(platform, "debian-bookworm-amd64", "tiff"),
-                         "getpatched/cve-2026-12912-bookworm")
+                         "getpatched/debian-bookworm")
         self.assertEqual(target_source_branch(platform, "debian-bookworm-amd64", "libxml2"),
                          "getpatched/debian-bookworm")
-        verified = deepcopy(platform)
-        verified["packages"]["tiff"]["targets"]["debian-bookworm-amd64"]["candidateStatus"] = (
-            "development-verified-production-release-pending")
-        with self.assertRaisesRegex(ValueError, "unverified candidate"):
-            target_source_branch(verified, "debian-bookworm-amd64", "tiff")
 
-    def test_tiff_pending_candidate_keeps_historical_cves_scoped_to_their_binaries(self):
+    def test_tiff_verified_candidate_keeps_per_cve_binary_scope_and_history(self):
         platform = json.loads((ROOT / "packages.json").read_text())
         target = package_target_policy(platform, "tiff", "debian-bookworm-amd64")
-        self.assertEqual(target["candidateStatus"], "unverified-development-candidate")
+        self.assertEqual(target["candidateStatus"], "development-verified-production-release-pending")
+        self.assertEqual(target["packageVersion"], "4.5.0-6+deb12u4+getpatched4")
         self.assertEqual(target["advisoryPackagesByCve"], {
             "CVE-2025-61144": ["libtiff-tools"],
             "CVE-2026-52490": ["libtiff-tools"],
