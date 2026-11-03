@@ -153,24 +153,30 @@ class PublicCatalogueContract(unittest.TestCase):
         with self.assertRaises(ValueError):
             target_profile(insecure_ubuntu, "ubuntu-focal-amd64")
 
-    def test_tiff_merged_source_uses_declared_target_branch(self):
+    def test_tiff_unverified_candidate_uses_its_candidate_source_branch(self):
         platform = json.loads((ROOT / "packages.json").read_text())
         self.assertEqual(target_source_branch(platform, "debian-bookworm-amd64", "tiff"),
+                         "getpatched/cve-2026-18495")
+        self.assertEqual(target_source_branch(platform, "debian-bookworm-amd64"),
                          "getpatched/debian-bookworm")
         self.assertEqual(target_source_branch(platform, "debian-bookworm-amd64", "libxml2"),
                          "getpatched/debian-bookworm")
 
-    def test_tiff_verified_candidate_keeps_per_cve_binary_scope_and_history(self):
+    def test_tiff_unverified_candidate_preserves_previous_verified_release(self):
         platform = json.loads((ROOT / "packages.json").read_text())
         target = package_target_policy(platform, "tiff", "debian-bookworm-amd64")
-        self.assertEqual(target["candidateStatus"], "development-verified-production-release-pending")
-        self.assertEqual(target["packageVersion"], "4.5.0-6+deb12u4+getpatched4")
+        self.assertEqual(target["candidateStatus"], "unverified-development-candidate")
+        self.assertEqual(target["packageVersion"], "4.5.0-6+deb12u4+getpatched5")
         self.assertEqual(target["advisoryPackagesByCve"], {
             "CVE-2025-61144": ["libtiff-tools"],
             "CVE-2026-52490": ["libtiff-tools"],
             "CVE-2026-12912": ["libtiff6"],
+            "CVE-2026-18495": ["libtiff-tools"],
         })
-        self.assertEqual(target["verifiedReleases"][0]["version"], "4.5.0-6+deb12u4+getpatched3")
+        self.assertEqual(target["verifiedReleases"][-1]["version"], "4.5.0-6+deb12u4+getpatched4")
+        self.assertEqual(target["verifiedReleases"][-1]["targetCves"], [
+            "CVE-2025-61144", "CVE-2026-52490", "CVE-2026-12912",
+        ])
         invalid = json.loads(json.dumps(platform))
         invalid["packages"]["tiff"]["targets"]["debian-bookworm-amd64"]["advisoryPackagesByCve"]["CVE-2026-12912"] = ["libtiff-tools"]
         with self.assertRaisesRegex(ValueError, "per-CVE advisory package scope"):

@@ -18,6 +18,7 @@ cares_regression_succeeded, consumer_version_succeeded, poppler_revision6_passwo
                         tiff_baseline_reproduced, tiff_null_output_baseline_reproduced,
                         tiff_null_output_patched_succeeded, parse_callback_url,
                         libgit2_redirect_reproduced, tiff_cve_required,
+                        tiff_bigstrip_baseline_reproduced, tiff_bigstrip_patched_succeeded,
                         tiff_subdivision_baseline_reproduced, tiff_subdivision_patched_succeeded, execute)
 
 
@@ -680,6 +681,56 @@ class TiffPatchedClassification(unittest.TestCase):
         check = self.valid_check()
         check["command"][6] = "tiffinfo"
         self.assertFalse(tiff_patched_regression_succeeded(check))
+
+
+class TiffBigStripRegressionClassification(unittest.TestCase):
+    def baseline_check(self):
+        fixture = "/tmp/CVE-2026-18495-bigstrip.tif"
+        return {
+            "cve": "CVE-2026-18495",
+            "testId": "tiff2pdf-bigtiff-strip-length-truncation",
+            "returncode": 97,
+            "timedOut": False,
+            "fixtureSizeBytes": 304,
+            "declaredStripBytes": 4294967301,
+            "shimUsed": False,
+            "stderr": "TIFFReadRawStrip: got 64 bytes, expected 4294967301.\n",
+            "memoryLog": (
+                "==1== Invalid write of size 1\n"
+                "==1== Address 0x123 is 0 bytes after a block of size 5 alloc'd\n"
+                "==1== ERROR SUMMARY: 59 errors from 1 contexts\n"
+            ),
+            "command": [
+                "valgrind", "--tool=memcheck", "--error-exitcode=97", "--leak-check=no",
+                "--read-var-info=yes", "--log-file=/tmp/CVE-2026-18495.valgrind",
+                "tiff2pdf", "-m", "0", "-o", "/tmp/CVE-2026-18495-output.pdf", fixture,
+            ],
+        }
+
+    def test_baseline_requires_real_short_read_and_five_byte_overflow(self):
+        check = self.baseline_check()
+        self.assertTrue(tiff_bigstrip_baseline_reproduced(check))
+        self.assertFalse(tiff_bigstrip_baseline_reproduced(dict(check, stderr="")))
+        self.assertFalse(tiff_bigstrip_baseline_reproduced(
+            dict(check, memoryLog="==1== ERROR SUMMARY: 0 errors from 0 contexts\n")))
+        self.assertFalse(tiff_bigstrip_baseline_reproduced(dict(check, fixtureSizeBytes=4_294_967_301)))
+
+    def test_patched_requires_allocator_cap_and_clean_memcheck(self):
+        check = self.baseline_check()
+        check.update({
+            "returncode": 1,
+            "shimUsed": True,
+            "stderr": (
+                "GETPATCHED_TIFF_ALLOCATION_REJECTED size=4294967301 cap=67108864\n"
+                "Can't allocate 4294967301 bytes\n"
+            ),
+            "memoryLog": "==1== ERROR SUMMARY: 0 errors from 0 contexts\n",
+        })
+        self.assertTrue(tiff_bigstrip_patched_succeeded(check))
+        self.assertFalse(tiff_bigstrip_patched_succeeded(
+            dict(check, stderr="Can't allocate 4294967301 bytes\n")))
+        self.assertFalse(tiff_bigstrip_patched_succeeded(
+            dict(check, memoryLog="==1== Invalid write of size 1\n==1== ERROR SUMMARY: 1 errors\n")))
 
 
 class PopplerBaselineClassification(unittest.TestCase):
