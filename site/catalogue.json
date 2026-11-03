@@ -1194,7 +1194,7 @@
           "status": "development-verified-production-release-pending",
           "verification": "https://github.com/getpatched/platform/actions/runs/41604136263",
           "sourceUrl": "https://github.com/getpatched/packaging-tiff/tree/getpatched/debian-bookworm",
-          "patchUrl": "https://github.com/getpatched/packaging-tiff/blob/getpatched/debian-bookworm/patches/CVE-2026-12912-bookworm.patch",
+          "patchUrl": "https://github.com/getpatched/packaging-tiff/blob/getpatched/debian-bookworm/patches/CVE-2026-18495.patch",
           "testsUrl": "https://github.com/getpatched/packaging-tiff/blob/getpatched/debian-bookworm/patches/metadata.json",
           "releasesUrl": "https://github.com/getpatched/packaging-tiff/releases",
           "releaseStatus": "No production release",

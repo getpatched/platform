@@ -385,7 +385,7 @@ class PublicCatalogueContract(unittest.TestCase):
                 self.assertTrue(entry["patchUrl"].startswith(f"https://github.com/getpatched/packaging-{source}/blob/"))
                 branch = target_profile(platform, target_id)["sourceBranch"]
                 if source == "tiff" and target_id in {"debian-bookworm-amd64", "debian-trixie-amd64"}:
-                    patch_file = "CVE-2026-12912-bookworm.patch" if target_id == "debian-bookworm-amd64" else "CVE-2026-52490-trixie.patch"
+                    patch_file = "CVE-2026-18495.patch" if target_id == "debian-bookworm-amd64" else "CVE-2026-52490-trixie.patch"
                     expected_branch = "getpatched/debian-bookworm" if target_id == "debian-bookworm-amd64" else "getpatched/debian-trixie"
                     self.assertEqual(entry["patchUrl"], f"https://github.com/getpatched/packaging-tiff/blob/{expected_branch}/patches/{patch_file}")
                     self.assertEqual(entry["testsUrl"], f"https://github.com/getpatched/packaging-tiff/blob/{expected_branch}/patches/metadata.json")
