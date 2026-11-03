@@ -178,29 +178,43 @@ def libxml2_python_sax_command(check):
     return bool(
         check.get("cve") == "CVE-2026-74860"
         and check.get("testId") == "python-sax-enumerated-attribute-double-free"
-        and len(command) == 2
-        and Path(command[0]).name == "python3"
-        and Path(command[1]).name == "cve-2026-74860-python-sax.py"
+        and len(command) == 8
+        and Path(command[0]).name == "valgrind"
+        and command[1:5] == ["--tool=memcheck", "--error-exitcode=97", "--leak-check=no", "--read-var-info=yes"]
+        and memcheck_log_path_matches(check, command)
+        and Path(command[6]).name == "python3"
+        and Path(command[7]).name == "cve-2026-74860-python-sax.py"
     )
 
 
 def libxml2_python_sax_baseline_reproduced(check):
+    log = check.get("memoryLog", "")
     return bool(
         not check.get("timedOut", False)
-        and check.get("returncode") in (-signal.SIGSEGV, -signal.SIGABRT)
+        and check.get("returncode") == 97
         and libxml2_python_sax_command(check)
-        and "attributeDecl-probe-started\n" in check.get("stdout", "")
+        and "attributeDecl-probe-started\nattributeDecl-callback-entered\n" in check.get("stdout", "")
+        and any(
+            block.group("kind").startswith("Invalid read")
+            and "libxml2mod.so" in block.group("body").partition("Address")[0]
+            and "free'd" in block.group("body").partition("Address")[2]
+            for block in valgrind_invalid_access_blocks(log)
+        )
+        and re.search(r"(?m)^==\d+== ERROR SUMMARY: [1-9]\d* errors?", log) is not None
     )
 
 
 def libxml2_python_sax_patched_succeeded(check):
     output = check.get("stdout", "")
+    log = check.get("memoryLog", "")
     return bool(
         not check.get("timedOut", False)
         and check.get("returncode") == 0
         and libxml2_python_sax_command(check)
-        and "attributeDecl-probe-started\n" in output
+        and "attributeDecl-probe-started\nattributeDecl-callback-entered\n" in output
         and "attributeDecl-callback-passed\n" in output
+        and not valgrind_invalid_access_blocks(log)
+        and re.search(r"(?m)^==\d+== ERROR SUMMARY: 0 errors?", log) is not None
     )
 
 
@@ -1095,11 +1109,16 @@ def main():
                     )
                     checks.append(check)
                 elif cve == "CVE-2026-74860":
+                    log = temp / "cve-2026-74860.valgrind"
                     check = execute([
+                        "valgrind", "--tool=memcheck", "--error-exitcode=97", "--leak-check=no",
+                        "--read-var-info=yes", "--log-file=" + str(log),
                         "python3", str(fixtures / "cve-2026-74860-python-sax.py"),
                     ], timeout=20)
                     check["cve"] = cve
                     check["testId"] = "python-sax-enumerated-attribute-double-free"
+                    check["memoryLogPath"] = str(log)
+                    check["memoryLog"] = log.read_text() if log.exists() else ""
                     check["passed"] = (
                         libxml2_python_sax_baseline_reproduced(check)
                         if args.phase == "baseline" else libxml2_python_sax_patched_succeeded(check)

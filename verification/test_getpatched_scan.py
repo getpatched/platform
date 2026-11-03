@@ -76,6 +76,8 @@ class GetPatchedScannerContract(unittest.TestCase):
             [("Debian:12", "libxml2", ["2.9.14+dfsg-1.3~deb12u6"], "debian-bookworm-amd64",
               "2.9.14+dfsg-1.3~deb12u6+getpatched1"),
              ("Debian:13", "libxml2", ["2.12.7+dfsg+really2.9.14-2.1+deb13u3"], "debian-trixie-amd64",
+              "2.12.7+dfsg+really2.9.14-2.1+deb13u3+getpatched1"),
+             ("Debian:13", "libxml2", ["2.12.7+dfsg+really2.9.14-2.1+deb13u3"], "debian-trixie-amd64",
               "2.12.7+dfsg+really2.9.14-2.1+deb13u3+getpatched3")],
         )
 
@@ -94,7 +96,7 @@ class GetPatchedScannerContract(unittest.TestCase):
             [("Debian:12", "libxml2", ["2.9.14+dfsg-1.3~deb12u6"], "debian-bookworm-amd64",
               "2.9.14+dfsg-1.3~deb12u6+getpatched1"),
              ("Debian:13", "libxml2", ["2.12.7+dfsg+really2.9.14-2.1+deb13u3"], target_id,
-              "2.12.7+dfsg+really2.9.14-2.1+deb13u3+getpatched3")],
+              "2.12.7+dfsg+really2.9.14-2.1+deb13u3+getpatched4")],
         )
 
     def test_libxml2_trixie_xinclude_advisory_is_verified_and_target_scoped(self):
@@ -112,7 +114,7 @@ class GetPatchedScannerContract(unittest.TestCase):
               item["database_specific"]["candidate_version"])
              for item in advisory["affected"]],
             [("Debian:13", "libxml2", ["2.12.7+dfsg+really2.9.14-2.1+deb13u3"], target_id,
-              "2.12.7+dfsg+really2.9.14-2.1+deb13u3+getpatched3")],
+              "2.12.7+dfsg+really2.9.14-2.1+deb13u3+getpatched4")],
         )
 
     def test_libxml2_trixie_catalog_advisory_is_verified_and_target_scoped(self):
@@ -131,7 +133,23 @@ class GetPatchedScannerContract(unittest.TestCase):
               item["database_specific"]["candidate_version"])
              for item in advisory["affected"]],
             [("Debian:13", "libxml2", ["2.12.7+dfsg+really2.9.14-2.1+deb13u3"], target_id,
-              "2.12.7+dfsg+really2.9.14-2.1+deb13u3+getpatched3")],
+              "2.12.7+dfsg+really2.9.14-2.1+deb13u3+getpatched4")],
+        )
+
+    def test_unverified_libxml2_python_binding_cve_is_absent_from_public_osv_feed(self):
+        canonical = SCANNER_MODULE.load_feed(FEED)
+        self.assertNotIn("CVE-2026-74860", {item["id"] for item in canonical["vulns"]})
+
+        config = json.loads((ROOT / "packages.json").read_text())
+        candidate = SCANNER_MODULE.build_feed(config, {("libxml2", "debian-trixie-amd64")})
+        advisory = next(item for item in candidate["vulns"] if item["id"] == "CVE-2026-74860")
+        self.assertEqual(
+            [(item["package"]["ecosystem"], item["package"]["name"], item["versions"],
+              item["ecosystem_specific"]["target_id"],
+              item["database_specific"]["candidate_version"])
+             for item in advisory["affected"]],
+            [("Debian:13", "python3-libxml2", ["2.12.7+dfsg+really2.9.14-2.1+deb13u3"],
+              "debian-trixie-amd64", "2.12.7+dfsg+really2.9.14-2.1+deb13u3+getpatched4")],
         )
 
     def test_expat_candidate_requires_exact_crash_or_patched_consumer(self):

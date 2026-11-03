@@ -28,27 +28,57 @@ cares_regression_succeeded, consumer_version_succeeded, poppler_revision6_passwo
 
 class Libxml2ParameterEntityRegression(unittest.TestCase):
     def test_python_sax_enumerated_attribute_double_free_classifier(self):
-        command = ["python3", "/recipe/tests/fixtures/cve-2026-74860-python-sax.py"]
+        log_path = "/tmp/cve-2026-74860.valgrind"
+        command = [
+            "valgrind", "--tool=memcheck", "--error-exitcode=97", "--leak-check=no",
+            "--read-var-info=yes", "--log-file=" + log_path,
+            "python3", "/recipe/tests/fixtures/cve-2026-74860-python-sax.py",
+        ]
+        invalid_read = (
+            "==42== Invalid read of size 8\n"
+            "==42==    at 0x1000: Py_DECREF (in /usr/bin/python3.13)\n"
+            "==42==    by 0x2000: pythonAttributeDecl (in /usr/lib/python3/dist-packages/libxml2mod.so)\n"
+            "==42==  Address 0x123456 is 0 bytes inside a block of size 64 free'd\n"
+        )
         baseline = {
             "cve": "CVE-2026-74860",
             "testId": "python-sax-enumerated-attribute-double-free",
             "command": command,
             "timedOut": False,
-            "returncode": -11,
-            "stdout": "attributeDecl-probe-started\n",
+            "returncode": 97,
+            "stdout": "attributeDecl-probe-started\nattributeDecl-callback-entered\n",
+            "memoryLogPath": log_path,
+            "memoryLog": invalid_read + "==42== ERROR SUMMARY: 1 errors from 1 contexts\n",
         }
         self.assertTrue(libxml2_python_sax_baseline_reproduced(baseline))
-        self.assertTrue(libxml2_python_sax_baseline_reproduced({**baseline, "returncode": -signal.SIGABRT}))
         self.assertFalse(libxml2_python_sax_baseline_reproduced({**baseline, "returncode": 0}))
         self.assertFalse(libxml2_python_sax_baseline_reproduced({**baseline, "returncode": 1}))
         self.assertFalse(libxml2_python_sax_baseline_reproduced({**baseline, "stdout": ""}))
+        self.assertFalse(libxml2_python_sax_baseline_reproduced({
+            **baseline, "stdout": "attributeDecl-probe-started\n",
+        }))
+        self.assertFalse(libxml2_python_sax_baseline_reproduced({
+            **baseline, "memoryLog": "==42== ERROR SUMMARY: 0 errors from 0 contexts\n",
+        }))
+        unrelated_module_read = invalid_read.replace(
+            "pythonAttributeDecl (in /usr/lib/python3/dist-packages/libxml2mod.so)",
+            "unrelated_callback (in /usr/lib/python3/dist-packages/othermodule.so)",
+        ).replace("free'd\n", "free'd from libxml2mod.so\n")
+        self.assertFalse(libxml2_python_sax_baseline_reproduced({
+            **baseline,
+            "memoryLog": unrelated_module_read + "==42== ERROR SUMMARY: 1 errors from 1 contexts\n",
+        }))
         patched = {
             **baseline,
             "returncode": 0,
-            "stdout": "attributeDecl-probe-started\nattributeDecl-callback-passed\n",
+            "stdout": "attributeDecl-probe-started\nattributeDecl-callback-entered\nattributeDecl-callback-passed\n",
+            "memoryLog": "==43== ERROR SUMMARY: 0 errors from 0 contexts\n",
         }
         self.assertTrue(libxml2_python_sax_patched_succeeded(patched))
         self.assertFalse(libxml2_python_sax_patched_succeeded({**patched, "stdout": ""}))
+        self.assertFalse(libxml2_python_sax_patched_succeeded({
+            **patched, "stdout": "attributeDecl-probe-started\nattributeDecl-callback-entered\n",
+        }))
         self.assertFalse(libxml2_python_sax_patched_succeeded({**patched, "returncode": -11}))
 
     def test_catalog_missing_attribute_regression_classifier(self):
