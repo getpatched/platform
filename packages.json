@@ -719,8 +719,7 @@
             "CVE-2026-12912": "https://security-tracker.debian.org/tracker/CVE-2026-12912",
             "CVE-2026-18495": "https://security-tracker.debian.org/tracker/CVE-2026-18495"
           },
-          "candidateStatus": "unverified-development-candidate",
-          "verificationSourceBranch": "getpatched/cve-2026-18495",
+          "candidateStatus": "development-verified-production-release-pending",
           "releaseAccess": {
             "policy": "public-after-checks",
             "sponsorDelayHours": 0,
@@ -780,9 +779,15 @@
                 "CVE-2026-12912"
               ],
               "advisoryPackagesByCve": {
-                "CVE-2025-61144": ["libtiff-tools"],
-                "CVE-2026-52490": ["libtiff-tools"],
-                "CVE-2026-12912": ["libtiff6"]
+                "CVE-2025-61144": [
+                  "libtiff-tools"
+                ],
+                "CVE-2026-52490": [
+                  "libtiff-tools"
+                ],
+                "CVE-2026-12912": [
+                  "libtiff6"
+                ]
               }
             }
           ]

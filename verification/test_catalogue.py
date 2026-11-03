@@ -153,19 +153,19 @@ class PublicCatalogueContract(unittest.TestCase):
         with self.assertRaises(ValueError):
             target_profile(insecure_ubuntu, "ubuntu-focal-amd64")
 
-    def test_tiff_unverified_candidate_uses_its_candidate_source_branch(self):
+    def test_tiff_verified_candidate_uses_declared_source_branch(self):
         platform = json.loads((ROOT / "packages.json").read_text())
         self.assertEqual(target_source_branch(platform, "debian-bookworm-amd64", "tiff"),
-                         "getpatched/cve-2026-18495")
+                         "getpatched/debian-bookworm")
         self.assertEqual(target_source_branch(platform, "debian-bookworm-amd64"),
                          "getpatched/debian-bookworm")
         self.assertEqual(target_source_branch(platform, "debian-bookworm-amd64", "libxml2"),
                          "getpatched/debian-bookworm")
 
-    def test_tiff_unverified_candidate_preserves_previous_verified_release(self):
+    def test_tiff_verified_candidate_replaces_previous_verified_release(self):
         platform = json.loads((ROOT / "packages.json").read_text())
         target = package_target_policy(platform, "tiff", "debian-bookworm-amd64")
-        self.assertEqual(target["candidateStatus"], "unverified-development-candidate")
+        self.assertEqual(target["candidateStatus"], "development-verified-production-release-pending")
         self.assertEqual(target["packageVersion"], "4.5.0-6+deb12u4+getpatched5")
         self.assertEqual(target["advisoryPackagesByCve"], {
             "CVE-2025-61144": ["libtiff-tools"],
@@ -304,7 +304,7 @@ class PublicCatalogueContract(unittest.TestCase):
             {"debian-bookworm-amd64", "debian-trixie-amd64"},
         )
         expected_tiff_cves = {
-            "debian-bookworm-amd64": ["CVE-2025-61144", "CVE-2026-52490", "CVE-2026-12912"],
+            "debian-bookworm-amd64": ["CVE-2025-61144", "CVE-2026-52490", "CVE-2026-12912", "CVE-2026-18495"],
             "debian-trixie-amd64": ["CVE-2025-61144", "CVE-2026-52490"],
         }
         for target_id, target in entries["tiff"]["targets"].items():
@@ -372,7 +372,7 @@ class PublicCatalogueContract(unittest.TestCase):
                     ("brotli", "ubuntu-focal-amd64"): "41492184315",
                     ("expat", "debian-bookworm-amd64"): "41543751522",
                     ("expat", "debian-trixie-amd64"): "41546270294",
-                    ("tiff", "debian-bookworm-amd64"): "41584790178",
+                    ("tiff", "debian-bookworm-amd64"): "41604136263",
                     ("tiff", "debian-trixie-amd64"): "41554198692",
                 }[(source, target_id)]
                 self.assertEqual(entry["verification"], f"https://github.com/getpatched/platform/actions/runs/{expected_run}")

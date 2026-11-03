@@ -887,7 +887,7 @@ raise SystemExit(3)
             "CVE-2026-117610",
 
 "CVE-2025-52885", "CVE-2026-107705", "CVE-2026-69184", "CVE-2026-111497",
-            "CVE-2025-61144", "CVE-2026-52490", "CVE-2026-12912",
+            "CVE-2025-61144", "CVE-2026-52490", "CVE-2026-12912", "CVE-2026-18495",
         })
         for advisory in committed["vulns"]:
             self.assertEqual(
@@ -912,7 +912,7 @@ raise SystemExit(3)
             if any(affected["ecosystem_specific"]["source_package"] == "tiff"
                    for affected in item["affected"])
         }
-        self.assertEqual(tiff_advisories, {"CVE-2025-61144", "CVE-2026-52490", "CVE-2026-12912"})
+        self.assertEqual(tiff_advisories, {"CVE-2025-61144", "CVE-2026-52490", "CVE-2026-12912", "CVE-2026-18495"})
         self.assertTrue(all("ranges" not in affected for item in committed["vulns"] for affected in item["affected"]))
 
     def test_scanner_rejects_feed_that_disagrees_with_reviewed_package_policy(self):
