@@ -1529,7 +1529,7 @@
           ],
           "earlyRedistributionAllowed": false,
           "status": "development-verified-production-release-pending",
-          "verification": "https://github.com/getpatched/platform/actions/runs/41664016379",
+          "verification": "https://github.com/getpatched/platform/actions/runs/41666465396",
           "sourceUrl": "https://github.com/getpatched/packaging-expat/tree/main",
           "patchUrl": "https://github.com/getpatched/packaging-expat/blob/main/patches/CVE-2026-113351.patch",
           "testsUrl": "https://github.com/getpatched/packaging-expat/tree/main/tests",

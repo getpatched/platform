@@ -30,7 +30,7 @@ class PublicCatalogueContract(unittest.TestCase):
 
         expected_runs = {
             "debian-bookworm-amd64": "41543751522",
-            "debian-trixie-amd64": "41664016379",
+            "debian-trixie-amd64": "41666465396",
         }
         for target_id, target_policy in policy.items():
             with self.subTest(target=target_id):
@@ -424,7 +424,7 @@ class PublicCatalogueContract(unittest.TestCase):
                     ("c-ares", "debian-trixie-amd64"): "41494211851",
                     ("brotli", "ubuntu-focal-amd64"): "41492184315",
                     ("expat", "debian-bookworm-amd64"): "41543751522",
-                    ("expat", "debian-trixie-amd64"): "41664016379",
+                    ("expat", "debian-trixie-amd64"): "41666465396",
                     ("tiff", "debian-bookworm-amd64"): "41604393283",
                     ("tiff", "debian-trixie-amd64"): "41554198692",
                 }[(source, target_id)]
