@@ -6,22 +6,28 @@
       "releaseVersion": "20.04",
       "codename": "focal",
       "architecture": "amd64",
-      "displayName": "Ubuntu 20.04 LTS (focal) · amd64"
+      "displayName": "Ubuntu 20.04 LTS (focal) \u00b7 amd64"
     },
     "ubuntu-jammy-amd64": {
       "distribution": "Ubuntu",
       "releaseVersion": "22.04",
       "codename": "jammy",
       "architecture": "amd64",
-      "displayName": "Ubuntu 22.04 LTS (jammy) · amd64"
+      "displayName": "Ubuntu 22.04 LTS (jammy) \u00b7 amd64"
     },
     "debian-bookworm-amd64": {
-      "distribution": "Debian", "releaseVersion": "12", "codename": "bookworm", "architecture": "amd64",
-      "displayName": "Debian 12 (bookworm) · amd64"
+      "distribution": "Debian",
+      "releaseVersion": "12",
+      "codename": "bookworm",
+      "architecture": "amd64",
+      "displayName": "Debian 12 (bookworm) \u00b7 amd64"
     },
     "debian-trixie-amd64": {
-      "distribution": "Debian", "releaseVersion": "13", "codename": "trixie", "architecture": "amd64",
-      "displayName": "Debian 13 (trixie) · amd64"
+      "distribution": "Debian",
+      "releaseVersion": "13",
+      "codename": "trixie",
+      "architecture": "amd64",
+      "displayName": "Debian 13 (trixie) \u00b7 amd64"
     }
   },
   "packages": [
@@ -31,7 +37,10 @@
         "ubuntu-focal-amd64": {
           "baseVersion": "2.9.10+dfsg-5ubuntu0.20.04.10",
           "version": "2.9.10+dfsg-5ubuntu0.20.04.10+getpatched1",
-          "cves": ["CVE-2025-49794", "CVE-2025-49796"],
+          "cves": [
+            "CVE-2025-49794",
+            "CVE-2025-49796"
+          ],
           "vulnerabilities": [
             {
               "id": "CVE-2025-49794",
@@ -40,7 +49,9 @@
               "ubuntuPriority": "medium",
               "cvssV3": 9.1,
               "advisoryUrl": "https://ubuntu.com/security/CVE-2025-49794",
-              "patchSlugs": ["cve-2025-49794-49796"],
+              "patchSlugs": [
+                "cve-2025-49794-49796"
+              ],
               "patched": true
             },
             {
@@ -50,7 +61,9 @@
               "ubuntuPriority": "medium",
               "cvssV3": 9.1,
               "advisoryUrl": "https://ubuntu.com/security/CVE-2025-49796",
-              "patchSlugs": ["cve-2025-49794-49796"],
+              "patchSlugs": [
+                "cve-2025-49794-49796"
+              ],
               "patched": true
             }
           ],
@@ -63,7 +76,10 @@
               "description": "Preserves the XPath result for the duration of Schematron report generation and checks node types before reading element fields.",
               "sha256": "4ad0454ea7c0dcab6de5519b84ef49d84b849924c7717a215481a0f9f7632f73",
               "fileUrl": "https://github.com/getpatched/packaging-libxml2/blob/getpatched/focal/patches/CVE-2025-49794-49796.patch",
-              "cves": ["CVE-2025-49794", "CVE-2025-49796"],
+              "cves": [
+                "CVE-2025-49794",
+                "CVE-2025-49796"
+              ],
               "upstream": {
                 "repository": "https://gitlab.gnome.org/GNOME/libxml2",
                 "commit": "81cef8c5b5aec2acdf5707e57a6db0c8d1d0abca",
@@ -106,7 +122,9 @@
         "ubuntu-focal-amd64": {
           "baseVersion": "3.4.0-2ubuntu1.5",
           "version": "3.4.0-2ubuntu1.5+getpatched1",
-          "cves": ["CVE-2026-4111"],
+          "cves": [
+            "CVE-2026-4111"
+          ],
           "vulnerabilities": [
             {
               "id": "CVE-2026-4111",
@@ -115,7 +133,9 @@
               "ubuntuPriority": "medium",
               "cvssV3": 7.5,
               "advisoryUrl": "https://ubuntu.com/security/CVE-2026-4111",
-              "patchSlugs": ["cve-2026-4111"],
+              "patchSlugs": [
+                "cve-2026-4111"
+              ],
               "patched": true
             }
           ],
@@ -128,7 +148,9 @@
               "description": "Rejects an oversized filter block before decoding can enter a state without forward progress.",
               "sha256": "c28af7bc479260c9147b56b70216f3fead4f3aeeb5e7358e09b25449357a9d48",
               "fileUrl": "https://github.com/getpatched/packaging-libarchive/blob/getpatched/focal/patches/CVE-2026-4111.patch",
-              "cves": ["CVE-2026-4111"],
+              "cves": [
+                "CVE-2026-4111"
+              ],
               "upstream": {
                 "repository": "https://github.com/libarchive/libarchive",
                 "commit": "ec19fcbd20b18bd3b0fdcf2b3fb97789cd1bf575",
@@ -189,41 +211,56 @@
         "ubuntu-focal-amd64": {
           "baseVersion": "0.86.1-0ubuntu1.7",
           "version": "0.86.1-0ubuntu1.7+getpatched1",
-          "cves": ["CVE-2025-52885"],
-          "vulnerabilities": [{
-            "id": "CVE-2025-52885",
-            "slug": "cve-2025-52885",
-            "summary": "A use-after-free in Poppler's StructTreeRoot parent-tree parser can be triggered by a crafted PDF.",
-            "advisoryUrl": "https://ubuntu.com/security/CVE-2025-52885",
-            "patchSlugs": ["cve-2025-52885-focal"],
-            "patched": true
-          }],
-          "patches": [{
-            "id": "cve-2025-52885-focal",
-            "slug": "cve-2025-52885-focal",
-            "kind": "security",
-            "title": "Reject duplicate parent-tree keys before vector resizing",
-            "description": "Backports the upstream guard that prevents stale Parent pointers after repeated keys trigger vector reallocation.",
-            "sha256": "2488d5d4b331a37d07ca60e2c0ccc7a6e4f3272cd7052ff00d4ba4462d9e1b72",
-            "fileUrl": "https://github.com/getpatched/packaging-poppler/blob/getpatched/focal/patches/CVE-2025-52885-focal.patch",
-            "cves": ["CVE-2025-52885"],
-            "upstream": {
-              "repository": "https://gitlab.freedesktop.org/poppler/poppler",
-              "commit": "4ce27cc826bf90cc8dbbd8a8c87bd913cccd7ec0",
-              "url": "https://gitlab.freedesktop.org/poppler/poppler/-/commit/4ce27cc826bf90cc8dbbd8a8c87bd913cccd7ec0"
-            },
-            "tests": [{
-              "id": "CVE-2025-52885-structtree-uaf",
-              "baselineExpectation": "The exact installed baseline exits with Valgrind error code 97 and reports an invalid memory access in StructTreeRoot::parentTreeAdd.",
-              "patchedExpectation": "The exact installed patched package completes pdfinfo -struct with exit status 0 and Valgrind reports no errors."
-            }]
-          }],
+          "cves": [
+            "CVE-2025-52885"
+          ],
+          "vulnerabilities": [
+            {
+              "id": "CVE-2025-52885",
+              "slug": "cve-2025-52885",
+              "summary": "A use-after-free in Poppler's StructTreeRoot parent-tree parser can be triggered by a crafted PDF.",
+              "advisoryUrl": "https://ubuntu.com/security/CVE-2025-52885",
+              "patchSlugs": [
+                "cve-2025-52885-focal"
+              ],
+              "patched": true
+            }
+          ],
+          "patches": [
+            {
+              "id": "cve-2025-52885-focal",
+              "slug": "cve-2025-52885-focal",
+              "kind": "security",
+              "title": "Reject duplicate parent-tree keys before vector resizing",
+              "description": "Backports the upstream guard that prevents stale Parent pointers after repeated keys trigger vector reallocation.",
+              "sha256": "2488d5d4b331a37d07ca60e2c0ccc7a6e4f3272cd7052ff00d4ba4462d9e1b72",
+              "fileUrl": "https://github.com/getpatched/packaging-poppler/blob/getpatched/focal/patches/CVE-2025-52885-focal.patch",
+              "cves": [
+                "CVE-2025-52885"
+              ],
+              "upstream": {
+                "repository": "https://gitlab.freedesktop.org/poppler/poppler",
+                "commit": "4ce27cc826bf90cc8dbbd8a8c87bd913cccd7ec0",
+                "url": "https://gitlab.freedesktop.org/poppler/poppler/-/commit/4ce27cc826bf90cc8dbbd8a8c87bd913cccd7ec0"
+              },
+              "tests": [
+                {
+                  "id": "CVE-2025-52885-structtree-uaf",
+                  "baselineExpectation": "The exact installed baseline exits with Valgrind error code 97 and reports an invalid memory access in StructTreeRoot::parentTreeAdd.",
+                  "patchedExpectation": "The exact installed patched package completes pdfinfo -struct with exit status 0 and Valgrind reports no errors."
+                }
+              ]
+            }
+          ],
           "access": "public",
           "delayHours": 0,
           "sponsorEligibility": null,
           "earlyBinaryLicenseId": null,
           "publicContributionSpdx": "MIT",
-          "earlyUse": ["private", "commercial"],
+          "earlyUse": [
+            "private",
+            "commercial"
+          ],
           "earlyRedistributionAllowed": false,
           "status": "development-verified-production-release-pending",
           "verification": "https://github.com/getpatched/platform/actions/runs/41149614570",
@@ -243,14 +280,20 @@
         "ubuntu-focal-amd64": {
           "baseVersion": "0.28.4+dfsg.1-2ubuntu0.1",
           "version": "0.28.4+dfsg.1-2ubuntu0.1+getpatched1",
-          "cves": ["CVE-2026-53584", "CVE-2026-53585", "CVE-2026-53586"],
+          "cves": [
+            "CVE-2026-53584",
+            "CVE-2026-53585",
+            "CVE-2026-53586"
+          ],
           "vulnerabilities": [
             {
               "id": "CVE-2026-53584",
               "slug": "cve-2026-53584",
               "summary": "Malicious submodule paths can escape the repository worktree.",
               "advisoryUrl": "https://ubuntu.com/security/CVE-2026-53584",
-              "patchSlugs": ["cve-2026-53584-focal"],
+              "patchSlugs": [
+                "cve-2026-53584-focal"
+              ],
               "patched": true
             },
             {
@@ -258,7 +301,9 @@
               "slug": "cve-2026-53585",
               "summary": "A malicious pack delta can declare an excessive object size and cause memory exhaustion.",
               "advisoryUrl": "https://ubuntu.com/security/CVE-2026-53585",
-              "patchSlugs": ["cve-2026-53585-focal"],
+              "patchSlugs": [
+                "cve-2026-53585-focal"
+              ],
               "patched": true
             },
             {
@@ -266,7 +311,9 @@
               "slug": "cve-2026-53586",
               "summary": "An HTTP redirect can cause credentials for the original host to be exposed to another host.",
               "advisoryUrl": "https://ubuntu.com/security/CVE-2026-53586",
-              "patchSlugs": ["cve-2026-53586-focal"],
+              "patchSlugs": [
+                "cve-2026-53586-focal"
+              ],
               "patched": true
             }
           ],
@@ -279,17 +326,21 @@
               "description": "Rejects traversal paths read from .gitmodules before submodule operations can escape the worktree.",
               "sha256": "68fac34287ea839bf425864959c8a19a2b874c79a04af33ee51c5d1f2c31d216",
               "fileUrl": "https://github.com/getpatched/packaging-libgit2/blob/getpatched/focal/patches/CVE-2026-53584-focal.patch",
-              "cves": ["CVE-2026-53584"],
+              "cves": [
+                "CVE-2026-53584"
+              ],
               "upstream": {
                 "repository": "https://github.com/libgit2/libgit2",
                 "commit": "419637d3587396f5d139d6d88480eab3cd81e7a1",
                 "url": "https://github.com/libgit2/libgit2/commit/419637d3587396f5d139d6d88480eab3cd81e7a1"
               },
-              "tests": [{
-                "id": "CVE-2026-53584-submodule-path-escape",
-                "baselineExpectation": "The installed baseline creates a malicious subrepository outside its worktree.",
-                "patchedExpectation": "The installed patched package rejects the path and creates no escaped directory."
-              }]
+              "tests": [
+                {
+                  "id": "CVE-2026-53584-submodule-path-escape",
+                  "baselineExpectation": "The installed baseline creates a malicious subrepository outside its worktree.",
+                  "patchedExpectation": "The installed patched package rejects the path and creates no escaped directory."
+                }
+              ]
             },
             {
               "id": "cve-2026-53585-focal",
@@ -299,17 +350,21 @@
               "description": "Rejects an oversized declared delta result before allocating its memory.",
               "sha256": "2063f9e1442d693a738acffa7ac9a491daa71b2f2fd322e18e96954c24dcac0c",
               "fileUrl": "https://github.com/getpatched/packaging-libgit2/blob/getpatched/focal/patches/CVE-2026-53585-focal.patch",
-              "cves": ["CVE-2026-53585"],
+              "cves": [
+                "CVE-2026-53585"
+              ],
               "upstream": {
                 "repository": "https://github.com/libgit2/libgit2",
                 "commit": "c1896f06df22cc0ca5658df3a8f6cd7ede4cd6ae",
                 "url": "https://github.com/libgit2/libgit2/commit/c1896f06df22cc0ca5658df3a8f6cd7ede4cd6ae"
               },
-              "tests": [{
-                "id": "CVE-2026-53585-pack-object-size",
-                "baselineExpectation": "The installed baseline accepts a compact pack declaring a 100 MiB delta result.",
-                "patchedExpectation": "The installed patched package rejects the object at a configured 42 MiB cap."
-              }]
+              "tests": [
+                {
+                  "id": "CVE-2026-53585-pack-object-size",
+                  "baselineExpectation": "The installed baseline accepts a compact pack declaring a 100 MiB delta result.",
+                  "patchedExpectation": "The installed patched package rejects the object at a configured 42 MiB cap."
+                }
+              ]
             },
             {
               "id": "cve-2026-53586-focal",
@@ -319,17 +374,21 @@
               "description": "Passes the actual redirected origin to the credential callback so credentials are not sent to an untrusted host.",
               "sha256": "58d26adfe51215153e369416241dcfcfd100da1c52b9a9c71b0e65b0f23ee677",
               "fileUrl": "https://github.com/getpatched/packaging-libgit2/blob/getpatched/focal/patches/CVE-2026-53586-focal.patch",
-              "cves": ["CVE-2026-53586"],
+              "cves": [
+                "CVE-2026-53586"
+              ],
               "upstream": {
                 "repository": "https://github.com/libgit2/libgit2",
                 "commit": "c1507abc44647b3acd832a33a5b1c8c9f5ba8821",
                 "url": "https://github.com/libgit2/libgit2/commit/c1507abc44647b3acd832a33a5b1c8c9f5ba8821"
               },
-              "tests": [{
-                "id": "CVE-2026-53586-redirect-credential-origin",
-                "baselineExpectation": "After redirect, the vulnerable callback receives the trusted origin and the redirected fixture server receives the dummy credential.",
-                "patchedExpectation": "After redirect, the callback receives the redirected origin and the fixture server receives no Authorization header."
-              }]
+              "tests": [
+                {
+                  "id": "CVE-2026-53586-redirect-credential-origin",
+                  "baselineExpectation": "After redirect, the vulnerable callback receives the trusted origin and the redirected fixture server receives the dummy credential.",
+                  "patchedExpectation": "After redirect, the callback receives the redirected origin and the fixture server receives no Authorization header."
+                }
+              ]
             }
           ],
           "access": "public",
@@ -337,7 +396,10 @@
           "sponsorEligibility": null,
           "earlyBinaryLicenseId": null,
           "publicContributionSpdx": "MIT",
-          "earlyUse": ["private", "commercial"],
+          "earlyUse": [
+            "private",
+            "commercial"
+          ],
           "earlyRedistributionAllowed": false,
           "status": "development-verified-production-release-pending",
           "verification": "https://github.com/getpatched/platform/actions/runs/41162605227",
@@ -352,14 +414,20 @@
         "ubuntu-jammy-amd64": {
           "baseVersion": "1.1.0+dfsg.1-4.1ubuntu0.1",
           "version": "1.1.0+dfsg.1-4.1ubuntu0.1+getpatched1",
-          "cves": ["CVE-2026-53584", "CVE-2026-53585", "CVE-2026-53586"],
+          "cves": [
+            "CVE-2026-53584",
+            "CVE-2026-53585",
+            "CVE-2026-53586"
+          ],
           "vulnerabilities": [
             {
               "id": "CVE-2026-53584",
               "slug": "cve-2026-53584",
               "summary": "Malicious submodule paths can escape the repository worktree.",
               "advisoryUrl": "https://ubuntu.com/security/CVE-2026-53584",
-              "patchSlugs": ["cve-2026-53584-jammy"],
+              "patchSlugs": [
+                "cve-2026-53584-jammy"
+              ],
               "patched": true
             },
             {
@@ -367,7 +435,9 @@
               "slug": "cve-2026-53585",
               "summary": "A malicious pack delta can declare an excessive object size and cause memory exhaustion.",
               "advisoryUrl": "https://ubuntu.com/security/CVE-2026-53585",
-              "patchSlugs": ["cve-2026-53585-jammy"],
+              "patchSlugs": [
+                "cve-2026-53585-jammy"
+              ],
               "patched": true
             },
             {
@@ -375,7 +445,9 @@
               "slug": "cve-2026-53586",
               "summary": "An HTTP redirect can cause credentials for the original host to be exposed to another host.",
               "advisoryUrl": "https://ubuntu.com/security/CVE-2026-53586",
-              "patchSlugs": ["cve-2026-53586-jammy"],
+              "patchSlugs": [
+                "cve-2026-53586-jammy"
+              ],
               "patched": true
             }
           ],
@@ -388,17 +460,21 @@
               "description": "Rejects traversal paths read from .gitmodules before submodule operations can escape the worktree.",
               "sha256": "c1b7d2ba4829ed3d4e611057f1bc3a738dfab38ef9bfab63f6d42de948ceb78f",
               "fileUrl": "https://github.com/getpatched/packaging-libgit2/blob/getpatched/jammy/patches/CVE-2026-53584-jammy.patch",
-              "cves": ["CVE-2026-53584"],
+              "cves": [
+                "CVE-2026-53584"
+              ],
               "upstream": {
                 "repository": "https://github.com/libgit2/libgit2",
                 "commit": "419637d3587396f5d139d6d88480eab3cd81e7a1",
                 "url": "https://github.com/libgit2/libgit2/commit/419637d3587396f5d139d6d88480eab3cd81e7a1"
               },
-              "tests": [{
-                "id": "CVE-2026-53584-submodule-path-escape-jammy",
-                "baselineExpectation": "The exact installed Jammy baseline resolves the malicious submodule path and creates the configured subrepository outside its worktree, inside an isolated temporary parent.",
-                "patchedExpectation": "The exact installed patched Jammy package rejects the path with GIT_EINVALID and creates no directory outside its worktree."
-              }]
+              "tests": [
+                {
+                  "id": "CVE-2026-53584-submodule-path-escape-jammy",
+                  "baselineExpectation": "The exact installed Jammy baseline resolves the malicious submodule path and creates the configured subrepository outside its worktree, inside an isolated temporary parent.",
+                  "patchedExpectation": "The exact installed patched Jammy package rejects the path with GIT_EINVALID and creates no directory outside its worktree."
+                }
+              ]
             },
             {
               "id": "cve-2026-53585-jammy",
@@ -408,21 +484,26 @@
               "description": "Rejects an oversized declared delta result before allocating its memory.",
               "sha256": "9eeb848206ad722884f4ec71389a7fc95eae77a9b2c1ffe4f74e90ab91507414",
               "fileUrl": "https://github.com/getpatched/packaging-libgit2/blob/getpatched/jammy/patches/CVE-2026-53585-jammy.patch",
-              "cves": ["CVE-2026-53585"],
+              "cves": [
+                "CVE-2026-53585"
+              ],
               "upstream": {
                 "repository": "https://github.com/libgit2/libgit2",
                 "commit": "c1896f06df22cc0ca5658df3a8f6cd7ede4cd6ae",
                 "url": "https://github.com/libgit2/libgit2/commit/c1896f06df22cc0ca5658df3a8f6cd7ede4cd6ae"
               },
-              "tests": [{
-                "id": "CVE-2026-53585-pack-object-size-jammy",
-                "baselineExpectation": "The exact installed Jammy baseline accepts the 150-byte pack carrying a declared 100 MiB delta result.",
-                "patchedExpectation": "The exact installed patched Jammy package rejects the object at a 42 MiB configured cap before allocating the declared result."
-              }, {
-                "id": "pack-limit-binary-patch-compatibility-jammy",
-                "baselineExpectation": "Binary patch application succeeds with the default settings.",
-                "patchedExpectation": "A 16-byte binary patch succeeds while the pack object size cap is set to one byte."
-              }]
+              "tests": [
+                {
+                  "id": "CVE-2026-53585-pack-object-size-jammy",
+                  "baselineExpectation": "The exact installed Jammy baseline accepts the 150-byte pack carrying a declared 100 MiB delta result.",
+                  "patchedExpectation": "The exact installed patched Jammy package rejects the object at a 42 MiB configured cap before allocating the declared result."
+                },
+                {
+                  "id": "pack-limit-binary-patch-compatibility-jammy",
+                  "baselineExpectation": "Binary patch application succeeds with the default settings.",
+                  "patchedExpectation": "A 16-byte binary patch succeeds while the pack object size cap is set to one byte."
+                }
+              ]
             },
             {
               "id": "cve-2026-53586-jammy",
@@ -432,17 +513,21 @@
               "description": "Passes the actual redirected origin to the credential callback so credentials are not sent to an untrusted host.",
               "sha256": "94e8fb4eea04e5a22cf544f94679d3628168780094100b7c08373a56619c25a1",
               "fileUrl": "https://github.com/getpatched/packaging-libgit2/blob/getpatched/jammy/patches/CVE-2026-53586-jammy.patch",
-              "cves": ["CVE-2026-53586"],
+              "cves": [
+                "CVE-2026-53586"
+              ],
               "upstream": {
                 "repository": "https://github.com/libgit2/libgit2",
                 "commit": "c1507abc44647b3acd832a33a5b1c8c9f5ba8821",
                 "url": "https://github.com/libgit2/libgit2/commit/c1507abc44647b3acd832a33a5b1c8c9f5ba8821"
               },
-              "tests": [{
-                "id": "CVE-2026-53586-redirect-credential-origin-jammy",
-                "baselineExpectation": "After redirecting to a second localhost origin, the vulnerable credential callback still receives the trusted original origin and returns a fixture-only Basic credential; the redirected server records that exact dummy credential.",
-                "patchedExpectation": "After redirecting to a second localhost origin, the patched callback receives the redirected origin, rejects it as untrusted, and the redirected server observes no Authorization header."
-              }]
+              "tests": [
+                {
+                  "id": "CVE-2026-53586-redirect-credential-origin-jammy",
+                  "baselineExpectation": "After redirecting to a second localhost origin, the vulnerable credential callback still receives the trusted original origin and returns a fixture-only Basic credential; the redirected server records that exact dummy credential.",
+                  "patchedExpectation": "After redirecting to a second localhost origin, the patched callback receives the redirected origin, rejects it as untrusted, and the redirected server observes no Authorization header."
+                }
+              ]
             }
           ],
           "access": "public",
@@ -450,7 +535,10 @@
           "sponsorEligibility": null,
           "earlyBinaryLicenseId": null,
           "publicContributionSpdx": "MIT",
-          "earlyUse": ["private", "commercial"],
+          "earlyUse": [
+            "private",
+            "commercial"
+          ],
           "earlyRedistributionAllowed": false,
           "status": "development-verified-production-release-pending",
           "verification": "https://github.com/getpatched/platform/actions/runs/41167536831",
@@ -463,8 +551,7 @@
           "publicLicenseScope": "getpatched-authored-contributions-only"
         }
       }
-    }
-,
+    },
     {
       "source": "c-ares",
       "targets": {
@@ -669,6 +756,209 @@
           "releaseStatus": "No production release; sponsor flow verification pending",
           "publicLicenseScope": "getpatched-authored-contributions-only",
           "ubuntuProEsmCompatibility": "not-tested-out-of-scope"
+        }
+      }
+    },
+    {
+      "source": "tiff",
+      "targets": {
+        "debian-bookworm-amd64": {
+          "baseVersion": "4.5.0-6+deb12u4",
+          "version": "4.5.0-6+deb12u4+getpatched3",
+          "cves": [
+            "CVE-2025-61144",
+            "CVE-2026-52490"
+          ],
+          "vulnerabilities": [
+            {
+              "id": "CVE-2025-61144",
+              "slug": "cve-2025-61144",
+              "summary": "A high sample count can make tiffcrop's level-2 debug output exceed its fixed sample buffer.",
+              "advisoryUrl": "https://security-tracker.debian.org/tracker/CVE-2025-61144",
+              "patchSlugs": [
+                "cve-2025-61144-bookworm"
+              ],
+              "patched": true
+            },
+            {
+              "id": "CVE-2026-52490",
+              "slug": "cve-2026-52490",
+              "summary": "An overflowing subdivision count can bypass tiffcrop\u2019s section-count limit.",
+              "advisoryUrl": "https://security-tracker.debian.org/tracker/CVE-2026-52490",
+              "patchSlugs": [
+                "cve-2026-52490-bookworm"
+              ],
+              "patched": true
+            }
+          ],
+          "patches": [
+            {
+              "id": "cve-2025-61144-debian",
+              "slug": "cve-2025-61144-bookworm",
+              "kind": "security",
+              "title": "Bound tiffcrop's debug sample dump loop",
+              "description": "Bounds the level-2 debug output loop to the MAX_SAMPLES capacity of its sample buffer.",
+              "sha256": "4a68096fa50e295af6b318c78e3f0c8cc6642752ff8b5365bced6b82235fbfc3",
+              "fileUrl": "https://github.com/getpatched/packaging-tiff/blob/getpatched/debian-bookworm/patches/CVE-2025-61144-debian.patch",
+              "cves": [
+                "CVE-2025-61144"
+              ],
+              "upstream": {
+                "repository": "https://gitlab.com/libtiff/libtiff",
+                "commit": "88cf9dbb48f6e172629795ecffae35d5052f68aa",
+                "url": "https://gitlab.com/libtiff/libtiff/-/commit/88cf9dbb48f6e172629795ecffae35d5052f68aa"
+              },
+              "tests": [
+                {
+                  "id": "tiffcrop-debug-sample-bounds",
+                  "baselineExpectation": "The exact installed baseline reports its recorded Memcheck signature for the level-2 debug sample dump.",
+                  "patchedExpectation": "The installed patched tiffcrop completes the same dump and tiffinfo reads the output."
+                }
+              ]
+            },
+            {
+              "id": "cve-2026-52490-bookworm",
+              "slug": "cve-2026-52490-bookworm",
+              "kind": "security",
+              "title": "Reject tiffcrop subdivision counts that overflow unsigned arithmetic (Bookworm)",
+              "description": "Checks subdivision operands before multiplication in parsing, output-offset calculation, and section writing.",
+              "sha256": "bfeef0ad3ae83c5b489576a6129efc8c0d6ec00f85efaa7a962f07c0a457f7b9",
+              "fileUrl": "https://github.com/getpatched/packaging-tiff/blob/getpatched/debian-bookworm/patches/CVE-2026-52490-bookworm.patch",
+              "cves": [
+                "CVE-2026-52490"
+              ],
+              "upstream": {
+                "repository": "https://gitlab.com/libtiff/libtiff",
+                "commit": "b04e935cb6242f22cc8b63c99a372cf3ea825e4e",
+                "url": "https://gitlab.com/libtiff/libtiff/-/commit/b04e935cb6242f22cc8b63c99a372cf3ea825e4e"
+              },
+              "tests": [
+                {
+                  "id": "tiffcrop-subdivision-overflow-check",
+                  "baselineExpectation": "tiffcrop -S 134217729:32 -h returns zero and displays usage on the exact installed baseline.",
+                  "patchedExpectation": "The same bounded command returns nonzero and reports that the MAX_SECTIONS limit was exceeded."
+                }
+              ]
+            }
+          ],
+          "access": "public",
+          "delayHours": 0,
+          "sponsorEligibility": null,
+          "earlyBinaryLicenseId": null,
+          "publicContributionSpdx": "MIT",
+          "earlyUse": [
+            "private",
+            "commercial"
+          ],
+          "earlyRedistributionAllowed": false,
+          "status": "development-verified-production-release-pending",
+          "verification": "https://github.com/getpatched/platform/actions/runs/41549401946",
+          "sourceUrl": "https://github.com/getpatched/packaging-tiff/tree/getpatched/debian-bookworm",
+          "patchUrl": "https://github.com/getpatched/packaging-tiff/blob/getpatched/debian-bookworm/patches/CVE-2025-61144-debian.patch",
+          "testsUrl": "https://github.com/getpatched/packaging-tiff/tree/getpatched/debian-bookworm/tests",
+          "releasesUrl": "https://github.com/getpatched/packaging-tiff/releases",
+          "releaseStatus": "No production release",
+          "publicLicenseScope": "getpatched-authored-contributions-only",
+          "ubuntuProEsmCompatibility": "not-applicable"
+        },
+        "debian-trixie-amd64": {
+          "baseVersion": "4.7.0-3+deb13u3",
+          "version": "4.7.0-3+deb13u3+getpatched3",
+          "cves": [
+            "CVE-2025-61144",
+            "CVE-2026-52490"
+          ],
+          "vulnerabilities": [
+            {
+              "id": "CVE-2025-61144",
+              "slug": "cve-2025-61144",
+              "summary": "A high sample count can make tiffcrop's level-2 debug output exceed its fixed sample buffer.",
+              "advisoryUrl": "https://security-tracker.debian.org/tracker/CVE-2025-61144",
+              "patchSlugs": [
+                "cve-2025-61144-trixie"
+              ],
+              "patched": true
+            },
+            {
+              "id": "CVE-2026-52490",
+              "slug": "cve-2026-52490",
+              "summary": "An overflowing subdivision count can bypass tiffcrop\u2019s section-count limit.",
+              "advisoryUrl": "https://security-tracker.debian.org/tracker/CVE-2026-52490",
+              "patchSlugs": [
+                "cve-2026-52490-trixie"
+              ],
+              "patched": true
+            }
+          ],
+          "patches": [
+            {
+              "id": "cve-2025-61144-debian",
+              "slug": "cve-2025-61144-trixie",
+              "kind": "security",
+              "title": "Bound tiffcrop's debug sample dump loop",
+              "description": "Bounds the level-2 debug output loop to the MAX_SAMPLES capacity of its sample buffer.",
+              "sha256": "4a68096fa50e295af6b318c78e3f0c8cc6642752ff8b5365bced6b82235fbfc3",
+              "fileUrl": "https://github.com/getpatched/packaging-tiff/blob/getpatched/debian-trixie/patches/CVE-2025-61144-debian.patch",
+              "cves": [
+                "CVE-2025-61144"
+              ],
+              "upstream": {
+                "repository": "https://gitlab.com/libtiff/libtiff",
+                "commit": "88cf9dbb48f6e172629795ecffae35d5052f68aa",
+                "url": "https://gitlab.com/libtiff/libtiff/-/commit/88cf9dbb48f6e172629795ecffae35d5052f68aa"
+              },
+              "tests": [
+                {
+                  "id": "tiffcrop-debug-sample-bounds",
+                  "baselineExpectation": "The exact installed baseline reports its recorded Memcheck signature for the level-2 debug sample dump.",
+                  "patchedExpectation": "The installed patched tiffcrop completes the same dump and tiffinfo reads the output."
+                }
+              ]
+            },
+            {
+              "id": "cve-2026-52490-trixie",
+              "slug": "cve-2026-52490-trixie",
+              "kind": "security",
+              "title": "Reject tiffcrop subdivision counts that overflow unsigned arithmetic (Trixie)",
+              "description": "Checks subdivision operands before multiplication in parsing, output-offset calculation, and section writing.",
+              "sha256": "92ee9a37eff6d6366627a3a2939824f10d2c539aba2964ef777b5fd061d93926",
+              "fileUrl": "https://github.com/getpatched/packaging-tiff/blob/getpatched/debian-trixie/patches/CVE-2026-52490-trixie.patch",
+              "cves": [
+                "CVE-2026-52490"
+              ],
+              "upstream": {
+                "repository": "https://gitlab.com/libtiff/libtiff",
+                "commit": "b04e935cb6242f22cc8b63c99a372cf3ea825e4e",
+                "url": "https://gitlab.com/libtiff/libtiff/-/commit/b04e935cb6242f22cc8b63c99a372cf3ea825e4e"
+              },
+              "tests": [
+                {
+                  "id": "tiffcrop-subdivision-overflow-check",
+                  "baselineExpectation": "tiffcrop -S 134217729:32 -h returns zero and displays usage on the exact installed baseline.",
+                  "patchedExpectation": "The same bounded command returns nonzero and reports that the MAX_SECTIONS limit was exceeded."
+                }
+              ]
+            }
+          ],
+          "access": "public",
+          "delayHours": 0,
+          "sponsorEligibility": null,
+          "earlyBinaryLicenseId": null,
+          "publicContributionSpdx": "MIT",
+          "earlyUse": [
+            "private",
+            "commercial"
+          ],
+          "earlyRedistributionAllowed": false,
+          "status": "development-verified-production-release-pending",
+          "verification": "https://github.com/getpatched/platform/actions/runs/41550809749",
+          "sourceUrl": "https://github.com/getpatched/packaging-tiff/tree/getpatched/debian-trixie",
+          "patchUrl": "https://github.com/getpatched/packaging-tiff/blob/getpatched/debian-trixie/patches/CVE-2025-61144-debian.patch",
+          "testsUrl": "https://github.com/getpatched/packaging-tiff/tree/getpatched/debian-trixie/tests",
+          "releasesUrl": "https://github.com/getpatched/packaging-tiff/releases",
+          "releaseStatus": "No production release",
+          "publicLicenseScope": "getpatched-authored-contributions-only",
+          "ubuntuProEsmCompatibility": "not-applicable"
         }
       }
     }
