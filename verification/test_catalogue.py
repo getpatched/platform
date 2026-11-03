@@ -272,7 +272,13 @@ class PublicCatalogueContract(unittest.TestCase):
                 self.assertTrue(entry["sourceUrl"].startswith(f"https://github.com/getpatched/packaging-{source}/tree/"))
                 self.assertTrue(entry["patchUrl"].startswith(f"https://github.com/getpatched/packaging-{source}/blob/"))
                 branch = target_profile(platform, target_id)["sourceBranch"]
-                self.assertEqual(entry["testsUrl"], f"https://github.com/getpatched/packaging-{source}/tree/{branch}/tests")
+                if source == "tiff" and target_id in {"debian-bookworm-amd64", "debian-trixie-amd64"}:
+                    patch_file = "CVE-2026-52490-bookworm.patch" if target_id == "debian-bookworm-amd64" else "CVE-2026-52490-trixie.patch"
+                    expected_branch = "getpatched/debian-bookworm" if target_id == "debian-bookworm-amd64" else "getpatched/debian-trixie"
+                    self.assertEqual(entry["patchUrl"], f"https://github.com/getpatched/packaging-tiff/blob/{expected_branch}/patches/{patch_file}")
+                    self.assertEqual(entry["testsUrl"], f"https://github.com/getpatched/packaging-tiff/blob/{expected_branch}/patches/metadata.json")
+                else:
+                    self.assertEqual(entry["testsUrl"], f"https://github.com/getpatched/packaging-{source}/tree/{branch}/tests")
                 self.assertEqual(entry["releasesUrl"], f"https://github.com/getpatched/packaging-{source}/releases")
                 if policy["candidateStatus"] == "development-verified-sponsor-flow-pending":
                     self.assertEqual(entry["releaseStatus"], "No production release; sponsor flow verification pending")
