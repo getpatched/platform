@@ -317,9 +317,11 @@ def tiff_bigstrip_baseline_reproduced(check):
         and check.get("memoryMappingDisabled") is True
         and _tiff_bigstrip_probe_command_matches(check)
         and "GETPATCHED_TIFF_MMAP_DISABLED" in stderr
+        and "GETPATCHED_TIFF_SCRATCH_ALLOC_BOUNDED requested=4294967311 cap=65536" in stderr
+        and "GETPATCHED_TIFF_SCRATCH_INIT_BOUNDED requested=4294967311 cap=65536" in stderr
         and bounded_read is not None
         and int(bounded_read.group(1)) > 64 * 1024 * 1024
-        and "got 16 bytes, expected 4294967301" in stderr
+        and "got 64 bytes, expected 4294967301" in stderr
         and read_overrun_reproduced
         and re.search(r"(?m)^==\d+== ERROR SUMMARY: [1-9]\d* errors?", log) is not None
     )
@@ -338,9 +340,11 @@ def tiff_bigstrip_patched_succeeded(check):
         and check.get("memoryMappingDisabled") is True
         and _tiff_bigstrip_probe_command_matches(check)
         and "GETPATCHED_TIFF_MMAP_DISABLED" in stderr
+        and "GETPATCHED_TIFF_SCRATCH_ALLOC_BOUNDED requested=4294967311 cap=65536" in stderr
+        and "GETPATCHED_TIFF_SCRATCH_INIT_BOUNDED requested=4294967311 cap=65536" in stderr
         and "GETPATCHED_TIFF_READ_BOUNDED" not in stderr
         and "GETPATCHED_TIFF_ALLOCATION_REJECTED size=4294967301 cap=67108864" in stderr
-        and "got 16 bytes, expected 4294967301" not in stderr
+        and "got 64 bytes, expected 4294967301" not in stderr
         and memcheck_has_no_errors(check.get("memoryLog", ""))
     )
 

@@ -697,8 +697,10 @@ class TiffBigStripRegressionClassification(unittest.TestCase):
             "memoryMappingDisabled": True,
             "stderr": (
                 "GETPATCHED_TIFF_MMAP_DISABLED\n"
+                "GETPATCHED_TIFF_SCRATCH_ALLOC_BOUNDED requested=4294967311 cap=65536\n"
+                "GETPATCHED_TIFF_SCRATCH_INIT_BOUNDED requested=4294967311 cap=65536\n"
                 "GETPATCHED_TIFF_READ_BOUNDED requested=4294967301 cap=16\n"
-                "TIFFReadRawStrip: got 16 bytes, expected 4294967301.\n"
+                "TIFFReadRawStrip: got 64 bytes, expected 4294967301.\n"
             ),
             "memoryLog": (
                 "==1== Syscall param read(buf) points to unaddressable byte(s)\n"
@@ -723,6 +725,8 @@ class TiffBigStripRegressionClassification(unittest.TestCase):
         self.assertTrue(tiff_bigstrip_baseline_reproduced(check))
         self.assertFalse(tiff_bigstrip_baseline_reproduced(dict(check, stderr="")))
         self.assertFalse(tiff_bigstrip_baseline_reproduced(
+            dict(check, stderr=check["stderr"].replace("GETPATCHED_TIFF_SCRATCH_INIT_BOUNDED", "UNEXPECTED"))))
+        self.assertFalse(tiff_bigstrip_baseline_reproduced(
             dict(check, stderr=check["stderr"].replace("GETPATCHED_TIFF_READ_BOUNDED requested=4294967301 cap=16\n", ""))))
         self.assertFalse(tiff_bigstrip_baseline_reproduced(
             dict(check, stderr=check["stderr"].replace("requested=4294967301", "requested=16"))))
@@ -742,12 +746,16 @@ class TiffBigStripRegressionClassification(unittest.TestCase):
             "allocationCapEnabled": True,
             "stderr": (
                 "GETPATCHED_TIFF_MMAP_DISABLED\n"
+                "GETPATCHED_TIFF_SCRATCH_ALLOC_BOUNDED requested=4294967311 cap=65536\n"
+                "GETPATCHED_TIFF_SCRATCH_INIT_BOUNDED requested=4294967311 cap=65536\n"
                 "GETPATCHED_TIFF_ALLOCATION_REJECTED size=4294967301 cap=67108864\n"
                 "Can't allocate 4294967301 bytes\n"
             ),
             "memoryLog": "==1== ERROR SUMMARY: 0 errors from 0 contexts\n",
         })
         self.assertTrue(tiff_bigstrip_patched_succeeded(check))
+        self.assertFalse(tiff_bigstrip_patched_succeeded(
+            dict(check, stderr=check["stderr"].replace("GETPATCHED_TIFF_SCRATCH_INIT_BOUNDED", "UNEXPECTED"))))
         self.assertFalse(tiff_bigstrip_patched_succeeded(
             dict(check, stderr="Can't allocate 4294967301 bytes\n")))
         self.assertFalse(tiff_bigstrip_patched_succeeded(
