@@ -117,7 +117,7 @@ def libxml2_parameter_entity_baseline_reproduced(check):
             and "xmlNewEntityInputStream" in block.group("body").partition("Block was alloc'd at")[2]
             for block in valgrind_invalid_access_blocks(log)
         )
-        and re.search(r"(?m)^==\d+== ERROR SUMMARY: [1-9]\d* errors?", log)
+        and re.search(r"(?m)^==\d+== ERROR SUMMARY: [1-9]\d* errors?", log) is not None
     )
 
 
@@ -249,7 +249,7 @@ def pixarlog_baseline_reproduced(check):
         and any(block.group("kind").startswith("Invalid write")
                 and "libtiff.so" in block.group("body")
                 for block in valgrind_invalid_access_blocks(log))
-        and re.search(r"(?m)^==\d+== ERROR SUMMARY: [1-9]\d* errors?", log)
+        and re.search(r"(?m)^==\d+== ERROR SUMMARY: [1-9]\d* errors?", log) is not None
     )
 
 

@@ -233,7 +233,9 @@ class PixarLogCVERegressionClassification(unittest.TestCase):
         }
 
     def test_baseline_requires_invalid_write_in_the_exact_multirow_probe(self):
-        self.assertTrue(pixarlog_baseline_reproduced(self.fixture(False)))
+        result = pixarlog_baseline_reproduced(self.fixture(False))
+        self.assertIs(type(result), bool)
+        self.assertTrue(result)
         check = self.fixture(False)
         check["command"][7] = "generate"
         self.assertFalse(pixarlog_baseline_reproduced(check))
