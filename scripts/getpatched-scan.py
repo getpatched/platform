@@ -22,7 +22,7 @@ from regression import (cares_regression_succeeded, consumer_version_succeeded, 
                         libpng_patched_checks_succeeded, poppler_revision6_password_overflow_reproduced, poppler_revision6_probe_command, poppler_uaf_reproduced,
                         expat_consumer_succeeded, expat_regression_succeeded,
                         libxml2_parameter_entity_baseline_reproduced, libxml2_parameter_entity_patched_succeeded,
-                        libxml2_xinclude_nonet_result,
+                        libxml2_xinclude_checks_succeeded,
                         schematron_baseline_reproduced, pixarlog_baseline_reproduced, pixarlog_patched_succeeded,
                         tiff_baseline_reproduced,
                         tiff_subdivision_baseline_reproduced, tiff_subdivision_patched_succeeded,
@@ -415,21 +415,22 @@ def regression_verified_candidate(directory, scan_images_path, target_id, recipe
             validate_tiff_regression_checks(target, checks, phase, trusted_stack)
         elif source == "libxml2":
             target_checks = [cve_checks[cve] for cve in target["targetCves"]]
+            xinclude_ok = (
+                "CVE-2026-86144" not in target["targetCves"]
+                or libxml2_xinclude_checks_succeeded(checks, phase)
+            )
+            target_checks = [check for check in target_checks if check.get("cve") != "CVE-2026-86144"]
             if phase == "baseline":
-                if not all(
+                if not xinclude_ok or not all(
                     libxml2_parameter_entity_baseline_reproduced(check)
                     if check.get("cve") == "CVE-2026-6653"
-                    else libxml2_xinclude_nonet_result(check, phase)
-                    if check.get("cve") == "CVE-2026-86144"
                     else schematron_baseline_reproduced(check)
                     for check in target_checks
                 ):
                     raise ValueError("libxml2 baseline evidence does not reproduce the configured memory fault")
-            elif (not all(
+            elif (not xinclude_ok or not all(
                       libxml2_parameter_entity_patched_succeeded(check)
                       if check.get("cve") == "CVE-2026-6653"
-                      else libxml2_xinclude_nonet_result(check, phase)
-                      if check.get("cve") == "CVE-2026-86144"
                       else check.get("returncode") == 3 and "ERROR SUMMARY: 0 errors" in check.get("memoryLog", "")
                       for check in target_checks
                   )

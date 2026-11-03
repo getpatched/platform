@@ -147,6 +147,16 @@ def libxml2_xinclude_nonet_result(check, phase):
     )
 
 
+def libxml2_xinclude_checks_succeeded(checks, phase):
+    candidates = [check for check in checks if check.get("cve") == "CVE-2026-86144"]
+    apis = [check.get("command", [None, None, None])[2] for check in candidates]
+    return bool(
+        len(candidates) == 2
+        and sorted(apis) == ["document", "tree"]
+        and all(libxml2_xinclude_nonet_result(check, phase) for check in candidates)
+    )
+
+
 def valid_tiff_baseline_stack_signature(expected_stack_frames):
     return (
         isinstance(expected_stack_frames, list)
