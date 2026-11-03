@@ -1048,7 +1048,7 @@
             "CVE-2026-117610": "https://security-tracker.debian.org/tracker/CVE-2026-117610",
             "CVE-2026-41080": "https://security-tracker.debian.org/tracker/CVE-2026-41080"
           },
-          "candidateStatus": "unverified-development-candidate",
+          "candidateStatus": "development-verified-production-release-pending",
           "releaseAccess": {
             "policy": "public-after-checks",
             "sponsorDelayHours": 0,
