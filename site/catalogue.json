@@ -6,28 +6,28 @@
       "releaseVersion": "20.04",
       "codename": "focal",
       "architecture": "amd64",
-      "displayName": "Ubuntu 20.04 LTS (focal) · amd64"
+      "displayName": "Ubuntu 20.04 LTS (focal) \u00b7 amd64"
     },
     "ubuntu-jammy-amd64": {
       "distribution": "Ubuntu",
       "releaseVersion": "22.04",
       "codename": "jammy",
       "architecture": "amd64",
-      "displayName": "Ubuntu 22.04 LTS (jammy) · amd64"
+      "displayName": "Ubuntu 22.04 LTS (jammy) \u00b7 amd64"
     },
     "debian-bookworm-amd64": {
       "distribution": "Debian",
       "releaseVersion": "12",
       "codename": "bookworm",
       "architecture": "amd64",
-      "displayName": "Debian 12 (bookworm) · amd64"
+      "displayName": "Debian 12 (bookworm) \u00b7 amd64"
     },
     "debian-trixie-amd64": {
       "distribution": "Debian",
       "releaseVersion": "13",
       "codename": "trixie",
       "architecture": "amd64",
-      "displayName": "Debian 13 (trixie) · amd64"
+      "displayName": "Debian 13 (trixie) \u00b7 amd64"
     }
   },
   "packages": [
@@ -998,9 +998,10 @@
         },
         "debian-trixie-amd64": {
           "baseVersion": "1.34.5-1+deb13u1",
-          "version": "1.34.5-1+deb13u1+getpatched1",
+          "version": "1.34.5-1+deb13u1+getpatched2",
           "cves": [
-            "CVE-2026-69184"
+            "CVE-2026-69184",
+            "CVE-2026-69186"
           ],
           "vulnerabilities": [
             {
@@ -1012,6 +1013,18 @@
               "advisoryUrl": "https://security-tracker.debian.org/tracker/CVE-2026-69184",
               "patchSlugs": [
                 "cve-2026-69184-pointer-chain"
+              ],
+              "patched": true
+            },
+            {
+              "id": "CVE-2026-69186",
+              "slug": "cve-2026-69186",
+              "summary": "c-ares disproportionate heap allocation from unvalidated DNS record counts",
+              "ubuntuPriority": "medium",
+              "cvssV3": 5.3,
+              "advisoryUrl": "https://security-tracker.debian.org/tracker/CVE-2026-69186",
+              "patchSlugs": [
+                "cve-2026-69186-record-count-allocation"
               ],
               "patched": true
             }
@@ -1040,6 +1053,30 @@
                   "patchedExpectation": "The parser returns ARES_EBADNAME and no record for the same bounded input; valid-name boundary compatibility tests pass."
                 }
               ]
+            },
+            {
+              "id": "cve-2026-69186-record-count-allocation",
+              "slug": "cve-2026-69186-record-count-allocation",
+              "kind": "security",
+              "title": "Validate DNS record counts before preallocation",
+              "description": "Rejects DNS responses whose advertised answer, authority, and additional record counts cannot fit in the remaining wire data before allocating per-section record arrays.",
+              "sha256": "e92a29dc0a6f2d552aa098c38daadba6af0b50bcd3d07635f51a71c30ca54007",
+              "fileUrl": "https://github.com/getpatched/packaging-c-ares/blob/getpatched/debian-trixie/patches/CVE-2026-69186-trixie.patch",
+              "cves": [
+                "CVE-2026-69186"
+              ],
+              "upstream": {
+                "repository": "https://github.com/c-ares/c-ares",
+                "commit": "e47c203f91cd8b749c8736bc18d75a31ffdec8f4",
+                "url": "https://github.com/c-ares/c-ares/commit/e47c203f91cd8b749c8736bc18d75a31ffdec8f4.patch"
+              },
+              "tests": [
+                {
+                  "id": "c-ares-malformed-record-count-allocation",
+                  "baselineExpectation": "The exact installed Trixie baseline rejects a 12-byte DNS response advertising 65,535 records in each section only after record-array preallocation, reaching a Massif peak heap above 8 MiB; it also accepts the valid DNS response control.",
+                  "patchedExpectation": "The exact installed patched Trixie package rejects the malformed response before large record-array allocation with a Massif peak heap below 8 MiB, while accepting the valid DNS response control."
+                }
+              ]
             }
           ],
           "access": "sponsor",
@@ -1053,9 +1090,9 @@
           ],
           "earlyRedistributionAllowed": false,
           "status": "development-verified-sponsor-flow-pending",
-          "verification": "https://github.com/getpatched/platform/actions/runs/41494211851",
+          "verification": "https://github.com/getpatched/platform/actions/runs/41701027308",
           "sourceUrl": "https://github.com/getpatched/packaging-c-ares/tree/getpatched/debian-trixie",
-          "patchUrl": "https://github.com/getpatched/packaging-c-ares/blob/getpatched/debian-trixie/patches/CVE-2026-69184-trixie.patch",
+          "patchUrl": "https://github.com/getpatched/packaging-c-ares/blob/getpatched/debian-trixie/patches/CVE-2026-69186-trixie.patch",
           "testsUrl": "https://github.com/getpatched/packaging-c-ares/tree/getpatched/debian-trixie/tests",
           "releasesUrl": "https://github.com/getpatched/packaging-c-ares/releases",
           "releaseStatus": "No production release; sponsor flow verification pending",
@@ -1160,7 +1197,7 @@
             {
               "id": "CVE-2026-52490",
               "slug": "cve-2026-52490",
-              "summary": "An overflowing subdivision count can bypass tiffcrop’s section-count limit.",
+              "summary": "An overflowing subdivision count can bypass tiffcrop\u2019s section-count limit.",
               "advisoryUrl": "https://security-tracker.debian.org/tracker/CVE-2026-52490",
               "patchSlugs": [
                 "cve-2026-52490-bookworm"
@@ -1327,7 +1364,7 @@
             {
               "id": "CVE-2026-52490",
               "slug": "cve-2026-52490",
-              "summary": "An overflowing subdivision count can bypass tiffcrop’s section-count limit.",
+              "summary": "An overflowing subdivision count can bypass tiffcrop\u2019s section-count limit.",
               "advisoryUrl": "https://security-tracker.debian.org/tracker/CVE-2026-52490",
               "patchSlugs": [
                 "cve-2026-52490-trixie"

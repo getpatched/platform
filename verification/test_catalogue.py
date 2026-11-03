@@ -162,13 +162,19 @@ class PublicCatalogueContract(unittest.TestCase):
         self.assertEqual(target_source_branch(platform, "debian-bookworm-amd64", "libxml2"),
                          "getpatched/debian-bookworm")
 
-    def test_cares_unverified_candidate_uses_allowed_source_branch(self):
+    def test_cares_verified_candidate_uses_maintenance_branch_and_advisory_scope(self):
         platform = json.loads((ROOT / "packages.json").read_text())
         self.assertEqual(
             target_source_branch(platform, "debian-trixie-amd64", "c-ares"),
-            "getpatched/cve-2026-69186-trixie",
+            "getpatched/debian-trixie",
         )
         policy = package_target_policy(platform, "c-ares", "debian-trixie-amd64")
+        self.assertEqual(policy["candidateStatus"], "development-verified-sponsor-flow-pending")
+        self.assertEqual(policy["targetCves"], ["CVE-2026-69184", "CVE-2026-69186"])
+        self.assertEqual(policy["advisoryPackagesByCve"], {
+            "CVE-2026-69184": ["libcares2"],
+            "CVE-2026-69186": ["libcares2"],
+        })
         self.assertFalse(set(policy["binaryPackages"]) & set(policy["builderPackages"]))
         self.assertEqual(policy["builderPackages"], ["libc-ares-dev"])
 
@@ -325,6 +331,15 @@ class PublicCatalogueContract(unittest.TestCase):
                           "cve-2026-76781-debian-trixie", "cve-2026-86141-debian-trixie"})
         self.assertEqual(libxml2_trixie["verification"],
                          "https://github.com/getpatched/platform/actions/runs/41690376263")
+        cares_trixie = entries["c-ares"]["targets"]["debian-trixie-amd64"]
+        self.assertEqual(cares_trixie["version"], "1.34.5-1+deb13u1+getpatched2")
+        self.assertEqual(cares_trixie["cves"], ["CVE-2026-69184", "CVE-2026-69186"])
+        self.assertEqual(cares_trixie["status"], "development-verified-sponsor-flow-pending")
+        self.assertEqual(cares_trixie["verification"],
+                         "https://github.com/getpatched/platform/actions/runs/41701027308")
+        self.assertIn("cve-2026-69186", {v["slug"] for v in cares_trixie["vulnerabilities"]})
+        self.assertIn("cve-2026-69186-record-count-allocation",
+                      {p["slug"] for p in cares_trixie["patches"]})
         self.assertEqual(
             set(entries["tiff"]["targets"]),
             {"debian-bookworm-amd64", "debian-trixie-amd64"},
@@ -394,7 +409,7 @@ class PublicCatalogueContract(unittest.TestCase):
                     ("poppler", "debian-bookworm-amd64"): "41518910177",
                     ("poppler", "debian-trixie-amd64"): "41531130479",
                     ("c-ares", "ubuntu-focal-amd64"): "41492142682",
-                    ("c-ares", "debian-trixie-amd64"): "41494211851",
+                    ("c-ares", "debian-trixie-amd64"): "41701027308",
                     ("brotli", "ubuntu-focal-amd64"): "41492184315",
                     ("expat", "debian-bookworm-amd64"): "41543751522",
                     ("expat", "debian-trixie-amd64"): "41546270294",

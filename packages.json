@@ -917,17 +917,24 @@
             "libc-ares-dev"
           ],
           "targetCve": "CVE-2026-69186",
-          "verificationSourceBranch": "getpatched/cve-2026-69186-trixie",
           "targetCves": [
             "CVE-2026-69184",
             "CVE-2026-69186"
           ],
+          "advisoryPackagesByCve": {
+            "CVE-2026-69184": [
+              "libcares2"
+            ],
+            "CVE-2026-69186": [
+              "libcares2"
+            ]
+          },
           "advisory": "https://security-tracker.debian.org/tracker/CVE-2026-69186",
           "advisories": {
             "CVE-2026-69184": "https://security-tracker.debian.org/tracker/CVE-2026-69184",
             "CVE-2026-69186": "https://security-tracker.debian.org/tracker/CVE-2026-69186"
           },
-          "candidateStatus": "unverified-development-candidate",
+          "candidateStatus": "development-verified-sponsor-flow-pending",
           "releaseAccess": {
             "policy": "sponsor-first",
             "sponsorDelayHours": 168,
