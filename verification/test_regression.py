@@ -725,6 +725,8 @@ class TiffBigStripRegressionClassification(unittest.TestCase):
         self.assertFalse(tiff_bigstrip_baseline_reproduced(
             dict(check, stderr=check["stderr"].replace("GETPATCHED_TIFF_READ_BOUNDED requested=4294967301 cap=16\n", ""))))
         self.assertFalse(tiff_bigstrip_baseline_reproduced(
+            dict(check, stderr=check["stderr"].replace("requested=4294967301", "requested=16"))))
+        self.assertFalse(tiff_bigstrip_baseline_reproduced(
             dict(check, memoryLog=check["memoryLog"].replace("libtiff.so.6.0.0", "unrelated.so"))))
         self.assertFalse(tiff_bigstrip_baseline_reproduced(
             dict(check, memoryLog=check["memoryLog"].replace("block of size 5 alloc'd", "block of size 6 alloc'd"))))

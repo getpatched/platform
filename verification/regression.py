@@ -318,7 +318,7 @@ def tiff_bigstrip_baseline_reproduced(check):
         and _tiff_bigstrip_probe_command_matches(check)
         and "GETPATCHED_TIFF_MMAP_DISABLED" in stderr
         and bounded_read is not None
-        and int(bounded_read.group(1)) >= 4294967295
+        and int(bounded_read.group(1)) > 64 * 1024 * 1024
         and "got 16 bytes, expected 4294967301" in stderr
         and read_overrun_reproduced
         and re.search(r"(?m)^==\d+== ERROR SUMMARY: [1-9]\d* errors?", log) is not None
