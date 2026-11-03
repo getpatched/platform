@@ -50,7 +50,7 @@ def validate_recipe_regression_fixture_hashes(recipe, manifest):
     if not isinstance(metadata_name, str):
         raise RuntimeError("Recipe patch metadata path is missing")
     metadata_path = (root / metadata_name).resolve()
-    if not metadata_path.is_relative_to(root) or not metadata_path.is_file():
+    if not path_is_within(metadata_path, root) or not metadata_path.is_file():
         raise RuntimeError("Recipe patch metadata path is invalid")
     metadata = json.loads(metadata_path.read_text())
     patches = metadata.get("patches")
@@ -75,9 +75,18 @@ def validate_recipe_regression_fixture_hashes(recipe, manifest):
                     or not re.fullmatch(r"[0-9a-f]{64}", str(declared.get("sha256", "")))):
                 raise RuntimeError("Recipe regression files must declare a path and SHA-256")
             fixture = (root / declared["path"]).resolve()
-            if (not fixture.is_relative_to(root) or not fixture.is_file()
+            if (not path_is_within(fixture, root) or not fixture.is_file()
                     or hashlib.sha256(fixture.read_bytes()).hexdigest() != declared["sha256"]):
                 raise RuntimeError("Recipe regression fixture hash does not match patch metadata")
+
+
+def path_is_within(path, root):
+    """Check containment using Path.relative_to for Python 3.8 compatibility."""
+    try:
+        path.relative_to(root)
+    except ValueError:
+        return False
+    return True
 
 
 def schematron_baseline_reproduced(check):
