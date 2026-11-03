@@ -37,6 +37,10 @@ SEVERITIES = {
     "CVE-2026-69184": "HIGH",
     "CVE-2026-111497": "CRITICAL",
 }
+# Refresh the modified timestamp when an existing advisory record changes.
+MODIFIED = {
+    "CVE-2026-12912": "2026-11-03T05:52:23Z",
+}
 
 
 def build_feed(config, verified_candidates=frozenset()):
@@ -68,7 +72,7 @@ def build_feed(config, verified_candidates=frozenset()):
                 if cve not in SUMMARIES:
                     raise ValueError(f"no reviewed advisory summary for {cve}")
                 advisory = grouped.setdefault(cve, {
-                    "schema_version": "1.6.0", "id": cve, "modified": "2026-10-30T05:38:23Z",
+                    "schema_version": "1.6.0", "id": cve, "modified": MODIFIED.get(cve, "2026-10-30T05:38:23Z"),
                     "summary": SUMMARIES[cve],
                     "details": "GetPatched records exact affected package versions and exact reviewed fixes per distribution, release, and architecture. A new target or fixed package version is accepted only after its own build and regression evidence.",
                     "affected": [], "references": [],
