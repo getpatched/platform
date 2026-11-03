@@ -294,6 +294,17 @@ def _tiff_bigstrip_probe_command_matches(check):
 def tiff_bigstrip_baseline_reproduced(check):
     log = check.get("memoryLog", "")
     stderr = check.get("stderr", "")
+    vulnerable_read_blocks = re.finditer(
+        r"(?ms)^==\d+== Syscall param read\(buf\) points to unaddressable byte\(s\)\n"
+        r"(?P<body>.*?)(?=^==\d+== (?:Invalid |Use of |Conditional |Syscall param |ERROR SUMMARY)|\Z)",
+        log,
+    )
+    read_overrun_reproduced = any(
+        "block of size 5 alloc'd" in block.group("body")
+        and "libtiff.so." in block.group("body")
+        and "/usr/bin/tiff2pdf" in block.group("body")
+        for block in vulnerable_read_blocks
+    )
     return (
         check.get("cve") == "CVE-2026-18495"
         and check.get("testId") == "tiff2pdf-bigtiff-strip-length-truncation"
@@ -305,9 +316,9 @@ def tiff_bigstrip_baseline_reproduced(check):
         and check.get("memoryMappingDisabled") is True
         and _tiff_bigstrip_probe_command_matches(check)
         and "GETPATCHED_TIFF_MMAP_DISABLED" in stderr
-        and "got 64 bytes, expected 4294967301" in stderr
-        and "Invalid write of size" in log
-        and "block of size 5 alloc'd" in log
+        and "GETPATCHED_TIFF_READ_BOUNDED requested=4294967301 cap=16" in stderr
+        and "got 16 bytes, expected 4294967301" in stderr
+        and read_overrun_reproduced
         and re.search(r"(?m)^==\d+== ERROR SUMMARY: [1-9]\d* errors?", log) is not None
     )
 
@@ -325,8 +336,9 @@ def tiff_bigstrip_patched_succeeded(check):
         and check.get("memoryMappingDisabled") is True
         and _tiff_bigstrip_probe_command_matches(check)
         and "GETPATCHED_TIFF_MMAP_DISABLED" in stderr
+        and "GETPATCHED_TIFF_READ_BOUNDED" not in stderr
         and "GETPATCHED_TIFF_ALLOCATION_REJECTED size=4294967301 cap=67108864" in stderr
-        and "got 64 bytes, expected 4294967301" not in stderr
+        and "got 16 bytes, expected 4294967301" not in stderr
         and memcheck_has_no_errors(check.get("memoryLog", ""))
     )
 

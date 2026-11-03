@@ -695,10 +695,20 @@ class TiffBigStripRegressionClassification(unittest.TestCase):
             "declaredStripBytes": 4294967301,
             "allocationCapEnabled": False,
             "memoryMappingDisabled": True,
-            "stderr": "GETPATCHED_TIFF_MMAP_DISABLED\nTIFFReadRawStrip: got 64 bytes, expected 4294967301.\n",
+            "stderr": (
+                "GETPATCHED_TIFF_MMAP_DISABLED\n"
+                "GETPATCHED_TIFF_READ_BOUNDED requested=4294967301 cap=16\n"
+                "TIFFReadRawStrip: got 16 bytes, expected 4294967301.\n"
+            ),
             "memoryLog": (
-                "==1== Invalid write of size 1\n"
-                "==1== Address 0x123 is 0 bytes after a block of size 5 alloc'd\n"
+                "==1== Syscall param read(buf) points to unaddressable byte(s)\n"
+                "==1==    at 0xabc: read (read.c:26)\n"
+                "==1==    by 0xdef: ??? (in /usr/lib/x86_64-linux-gnu/libtiff.so.6.0.0)\n"
+                "==1==    by 0x123: ??? (in /usr/bin/tiff2pdf)\n"
+                "==1==  Address 0x123 is 0 bytes after a block of size 5 alloc'd\n"
+                "==1==    at 0xaaa: malloc\n"
+                "==1==    by 0xbbb: _TIFFmalloc (in /tmp/test-shim.so)\n"
+                "==1==    by 0xccc: ??? (in /usr/bin/tiff2pdf)\n"
                 "==1== ERROR SUMMARY: 59 errors from 1 contexts\n"
             ),
             "command": [
@@ -712,6 +722,12 @@ class TiffBigStripRegressionClassification(unittest.TestCase):
         check = self.baseline_check()
         self.assertTrue(tiff_bigstrip_baseline_reproduced(check))
         self.assertFalse(tiff_bigstrip_baseline_reproduced(dict(check, stderr="")))
+        self.assertFalse(tiff_bigstrip_baseline_reproduced(
+            dict(check, stderr=check["stderr"].replace("GETPATCHED_TIFF_READ_BOUNDED requested=4294967301 cap=16\n", ""))))
+        self.assertFalse(tiff_bigstrip_baseline_reproduced(
+            dict(check, memoryLog=check["memoryLog"].replace("libtiff.so.6.0.0", "unrelated.so"))))
+        self.assertFalse(tiff_bigstrip_baseline_reproduced(
+            dict(check, memoryLog=check["memoryLog"].replace("block of size 5 alloc'd", "block of size 6 alloc'd"))))
         self.assertFalse(tiff_bigstrip_baseline_reproduced(dict(check, memoryMappingDisabled=False)))
         self.assertFalse(tiff_bigstrip_baseline_reproduced(
             dict(check, memoryLog="==1== ERROR SUMMARY: 0 errors from 0 contexts\n")))
