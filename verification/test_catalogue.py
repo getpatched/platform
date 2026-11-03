@@ -213,6 +213,17 @@ class PublicCatalogueContract(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "invalid builder package scope"):
             package_target_policy(invalid, "libgit2", "ubuntu-jammy-amd64")
 
+    def test_patched_scan_uses_candidate_built_headers_when_runtime_version_is_patched(self):
+        build_script = (ROOT / "scripts/build-package.py").read_text()
+        scan_containerfile = (ROOT / "build/patched-scan.Containerfile").read_text()
+        policy = json.loads((ROOT / "packages.json").read_text())
+        tiff = package_target_policy(policy, "tiff", "debian-bookworm-amd64")
+        self.assertIn("libtiff-dev", tiff["builderPackages"])
+        self.assertIn('builder_names = set(expected["builderPackages"])', build_script)
+        self.assertIn('"--build-arg", "BUILDER_DEB_PACKAGES=" + " ".join(builder_deb_names)', build_script)
+        self.assertIn("COPY builder-debs/ /tmp/getpatched-builder/", scan_containerfile)
+        self.assertIn("apt-get install -y --no-install-recommends $builder_debs", scan_containerfile)
+
     def test_target_recipe_branch_rejects_untrusted_ref_syntax(self):
         platform = deepcopy(json.loads((ROOT / "packages.json").read_text()))
         platform["targets"]["ubuntu-focal-amd64"]["sourceBranch"] = "getpatched/../main"

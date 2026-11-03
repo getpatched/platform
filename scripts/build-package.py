@@ -340,22 +340,32 @@ def main():
             debs.mkdir()
             binary_manifest = json.loads((output / "binary-manifest.json").read_text())
             selected = []
+            builder_selected = []
+            runtime_names = set(expected["binaryPackages"])
+            builder_names = set(expected["builderPackages"])
             for item in binary_manifest["packages"]:
                 binary_name = item["control"].splitlines()[0].split(": ", 1)[1]
-                if binary_name not in expected["binaryPackages"]:
+                if binary_name not in runtime_names | builder_names:
                     continue
                 target = debs / item["name"]
                 run(["docker", "cp", container + ":/build/" + item["name"], str(target)])
                 if sha256(target) != item["sha256"]:
                     raise RuntimeError("Extracted package differs from recorded binary manifest")
-                selected.append(target)
-            if {p.name.split("_", 1)[0] for p in selected} != set(expected["binaryPackages"]):
+                if binary_name in runtime_names:
+                    selected.append(target)
+                elif binary_name in builder_names:
+                    builder_selected.append(target)
+            if {p.name.split("_", 1)[0] for p in selected} != runtime_names:
                 raise RuntimeError("Could not extract every patched runtime package")
             patched_context = temp / "patched-context"
             patched_context.mkdir()
             (patched_context / "getpatched").mkdir()
+            (patched_context / "builder-debs").mkdir()
             for deb in selected:
                 shutil.copyfile(deb, patched_context / "getpatched" / deb.name)
+            for deb in builder_selected:
+                shutil.copyfile(deb, patched_context / "builder-debs" / deb.name)
+            builder_deb_names = sorted({p.name.split("_", 1)[0] for p in builder_selected})
             shutil.copyfile(ROOT / "build/patched-scan.Containerfile", patched_context / "Dockerfile")
             scan_args = [
                 "docker", "build", "--no-cache", "--platform", container_platform, "--tag", scan_patched,
@@ -367,6 +377,7 @@ def main():
                 "--build-arg", "APT_SOURCES_B64=" + binary_sources,
                 "--build-arg", "BINARY_PACKAGES=" + " ".join(expected["binaryPackages"]),
                 "--build-arg", "BUILDER_PACKAGES=" + " ".join(expected["builderPackages"]),
+                "--build-arg", "BUILDER_DEB_PACKAGES=" + " ".join(builder_deb_names),
                 str(patched_context),
             ]
             run(scan_args)

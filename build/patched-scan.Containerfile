@@ -6,6 +6,7 @@ ARG EXPECTED_VERSION
 ARG APT_SOURCES_B64
 ARG BINARY_PACKAGES
 ARG BUILDER_PACKAGES
+ARG BUILDER_DEB_PACKAGES
 ENV DEBIAN_FRONTEND=noninteractive
 RUN --mount=type=secret,id=runner-ca,target=/tmp/getpatched-runner-ca.crt,required=true \
     set -eu; \
@@ -26,6 +27,7 @@ RUN --mount=type=secret,id=runner-ca,target=/tmp/getpatched-runner-ca.crt,requir
     done; \
     for binary in $BINARY_PACKAGES; do apt-get install -y --no-install-recommends "$binary=$BASELINE_VERSION"; done
 COPY getpatched/ /tmp/getpatched/
+COPY builder-debs/ /tmp/getpatched-builder/
 RUN set -eu; \
     test -n "$BINARY_PACKAGES"; \
     packages=""; \
@@ -35,6 +37,15 @@ RUN set -eu; \
       packages="${packages}${packages:+ }$package"; \
     done; \
     apt-get install -y --no-install-recommends $packages; \
+    if [ -n "$BUILDER_DEB_PACKAGES" ]; then \
+      builder_debs=""; \
+      for binary in $BUILDER_DEB_PACKAGES; do \
+        package="$(find /tmp/getpatched-builder -maxdepth 1 -name "${binary}_*.deb" -print -quit)"; \
+        test -n "$package"; \
+        builder_debs="${builder_debs}${builder_debs:+ }$package"; \
+      done; \
+      apt-get install -y --no-install-recommends $builder_debs; \
+    fi; \
     if [ -n "$BUILDER_PACKAGES" ]; then apt-get install -y --no-install-recommends $BUILDER_PACKAGES; fi; \
     for binary in $BINARY_PACKAGES; do \
       test "$(dpkg-query -W -f='${Version}' "$binary")" = "$EXPECTED_VERSION"; \
