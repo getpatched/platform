@@ -20,12 +20,29 @@ class AdvisoryAuditContract(unittest.TestCase):
             capture_output=True, text=True, check=False,
         )
 
-    def test_expat_reset_advisory_is_candidate_only_and_trixie_scoped(self):
+    def test_expat_reset_advisory_is_verified_and_trixie_scoped(self):
         config = json.loads((ROOT / "packages.json").read_text())
         public_ids = {item["id"] for item in build_feed(config)["vulns"]}
-        self.assertNotIn("CVE-2026-113351", public_ids)
+        self.assertIn("CVE-2026-113351", public_ids)
 
-        candidate = build_feed(config, {("expat", "debian-trixie-amd64")})
+        public_record = next(item for item in build_feed(config)["vulns"]
+                             if item["id"] == "CVE-2026-113351")
+        self.assertEqual(
+            {entry["ecosystem_specific"]["target_id"] for entry in public_record["affected"]},
+            {"debian-trixie-amd64"},
+        )
+        self.assertEqual(
+            {entry["package"]["name"] for entry in public_record["affected"]},
+            {"expat", "libexpat1", "libexpat1-dev"},
+        )
+
+        unverified = json.loads(json.dumps(config))
+        unverified["packages"]["expat"]["targets"]["debian-trixie-amd64"]["candidateStatus"] = (
+            "unverified-development-candidate"
+        )
+        unverified_public = build_feed(unverified)
+        self.assertNotIn("CVE-2026-113351", {item["id"] for item in unverified_public["vulns"]})
+        candidate = build_feed(unverified, {("expat", "debian-trixie-amd64")})
         record = next(item for item in candidate["vulns"] if item["id"] == "CVE-2026-113351")
         self.assertEqual(record["database_specific"]["severity"], "MEDIUM")
         self.assertEqual(
