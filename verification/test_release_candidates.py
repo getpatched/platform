@@ -40,6 +40,23 @@ def source_policy(source, target_id=TARGET_ID):
 
 
 class ReleaseCandidateOutput(unittest.TestCase):
+    def test_binary_package_can_be_selected_for_both_runtime_and_builder_roles(self):
+        runtime_names = {"libcares2", "libc-ares-dev"}
+        builder_names = {"libc-ares-dev"}
+
+        self.assertEqual(
+            BUILD_PACKAGE.package_roles_for_name("libc-ares-dev", runtime_names, builder_names),
+            (True, True),
+        )
+        self.assertEqual(
+            BUILD_PACKAGE.package_roles_for_name("libcares2", runtime_names, builder_names),
+            (True, False),
+        )
+        self.assertEqual(
+            BUILD_PACKAGE.package_roles_for_name("c-ares-doc", runtime_names, builder_names),
+            (False, False),
+        )
+
     def test_poppler_advisory_scan_scope_excludes_docs_binary(self):
         expected = source_policy("poppler")
         self.assertIn("libpoppler-glib-doc", expected["binaryPackages"])

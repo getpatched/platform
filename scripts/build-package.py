@@ -32,6 +32,11 @@ def sha256(path):
     return result.hexdigest()
 
 
+def package_roles_for_name(binary_name, runtime_names, builder_names):
+    """Return every selected role; a package may serve as both runtime and builder."""
+    return binary_name in runtime_names, binary_name in builder_names
+
+
 def persist_release_candidates(selected, binary_manifest, output, package, version, source_commit, target_id, profile):
     if (binary_manifest.get("source") != package or binary_manifest.get("targetId") != target_id
             or binary_manifest.get("version") != version
@@ -345,15 +350,16 @@ def main():
             builder_names = set(expected["builderPackages"])
             for item in binary_manifest["packages"]:
                 binary_name = item["control"].splitlines()[0].split(": ", 1)[1]
-                if binary_name not in runtime_names | builder_names:
+                is_runtime, is_builder = package_roles_for_name(binary_name, runtime_names, builder_names)
+                if not is_runtime and not is_builder:
                     continue
                 target = debs / item["name"]
                 run(["docker", "cp", container + ":/build/" + item["name"], str(target)])
                 if sha256(target) != item["sha256"]:
                     raise RuntimeError("Extracted package differs from recorded binary manifest")
-                if binary_name in runtime_names:
+                if is_runtime:
                     selected.append(target)
-                elif binary_name in builder_names:
+                if is_builder:
                     builder_selected.append(target)
             if {p.name.split("_", 1)[0] for p in selected} != runtime_names:
                 raise RuntimeError("Could not extract every patched runtime package")

@@ -5,6 +5,7 @@ import signal
 import sys
 import tempfile
 import unittest
+from unittest import mock
 
 from regression import (LIBPNG_CVE_2025_65018_FIXTURE, pixarlog_baseline_reproduced, pixarlog_patched_succeeded, libpng_followup_read_is_clean, libpng_output_buffer_result, libpng_overwrite_reproduced, libpng_stride_read_reproduced, memcheck_has_no_errors,
                         libpng_patched_checks_succeeded, tiff_patched_regression_succeeded,
@@ -23,7 +24,37 @@ cares_regression_succeeded, consumer_version_succeeded, poppler_revision6_passwo
                         tiff_null_output_patched_succeeded, parse_callback_url,
                         libgit2_redirect_reproduced, tiff_cve_required,
                         tiff_bigstrip_baseline_reproduced, tiff_bigstrip_patched_succeeded,
-                        tiff_subdivision_baseline_reproduced, tiff_subdivision_patched_succeeded, execute)
+                        tiff_subdivision_baseline_reproduced, tiff_subdivision_patched_succeeded, execute,
+                        path_is_within)
+
+
+class RecipePathContainment(unittest.TestCase):
+    def test_path_is_within_works_on_python_38_without_is_relative_to(self):
+        with tempfile.TemporaryDirectory(prefix="getpatched-path-containment-") as directory:
+            root = Path(directory).resolve()
+            with mock.patch.object(Path, "is_relative_to", side_effect=AssertionError, create=True):
+                self.assertTrue(path_is_within(root / "tests/fixtures/input.xml", root))
+                self.assertFalse(path_is_within(root.parent / "outside.xml", root))
+
+    def test_fixture_validator_rejects_valid_hash_for_path_outside_recipe_root(self):
+        import hashlib
+
+        with tempfile.TemporaryDirectory(prefix="getpatched-recipe-path-containment-") as directory:
+            parent = Path(directory).resolve()
+            root = parent / "recipe"
+            (root / "patches").mkdir(parents=True)
+            outside_fixture = parent / "outside.xml"
+            outside_fixture.write_text("<outside/>")
+            digest = hashlib.sha256(outside_fixture.read_bytes()).hexdigest()
+            (root / "patches/metadata.json").write_text(json.dumps({"patches": [{
+                "referenceFiles": [],
+                "tests": [{"fixtures": [{"path": "../outside.xml", "sha256": digest}]}],
+            }]}))
+
+            with self.assertRaisesRegex(RuntimeError, "fixture hash does not match"):
+                validate_recipe_regression_fixture_hashes(
+                    root, {"patchMetadata": "patches/metadata.json"}
+                )
 
 
 class Libxml2ParameterEntityRegression(unittest.TestCase):
