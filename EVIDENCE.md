@@ -8,7 +8,7 @@
 - **Raw scanner limitation:** pinned Trivy 0.70.0 DB SHA-256 `05a1fa5372e54059b6a7c1fc41afb812fafd9bd56a8e0ab6aa20d7f3f154ff31` still reports CVE-2025-61144, CVE-2026-52490, and CVE-2026-12912 on candidate TIFF package records without a GetPatched fixed version. This is not a Trivy-clean result and remains a production-release blocker.
 - **Consumer/repository check:** `tiffinfo` checks passed. A fresh isolated signed APT client verified Release signatures and fetched the candidate binaries and source; the temporary repository and signing key were discarded. No public binary, signed production index, or release was published.
 - **Retained artifacts:** complete verification reports and source package are retained as workflow artifacts on [hosted run 41584790178](https://github.com/getpatched/platform/actions/runs/41584790178). The patch SHA-256 is `afe2b4ddedd20cd27da6926a5aea1385b2876aad25df198e3abbafb169f2655d`.
-- **Campaign count:** this CVE is not counted yet. Final catalogue CI and fresh independent review of the combined platform/package metadata changes remain required.
+- **Campaign count:** this CVE counts once as development-verified. Hosted quality run [41586475548](https://github.com/getpatched/platform/actions/runs/41586475548) passed and fresh independent review found no actionable findings. Package metadata PR [#5](https://github.com/getpatched/packaging-tiff/pull/5) and README PR [#6](https://github.com/getpatched/packaging-tiff/pull/6) are merged. Raw Trivy still reports the three TIFF CVEs on candidate packages; this remains a production-release blocker, and no binary or signed production index was published.
 # GetPatched evidence index
 
 ## libxml2 CVE-2026-6653 — hosted Debian development verification — 3 Nov 2026
@@ -29,7 +29,7 @@
 
 ## Active 100-CVE goal — 3 Nov 2026
 
-- **Current ledger count: 4/100 distinct CVEs** (TIFF, Poppler, Expat, and libxml2). Each has source recipes, applicable hosted verification, and independent review; libxml2 source PR #10 is merged, while platform PR #109 remains unmerged to avoid production deployment. No production publication is in scope.
+- **Current ledger count: 5/100 distinct CVEs** (TIFF CVE-2026-52490, TIFF CVE-2026-12912, Poppler, Expat, and libxml2). Each has source recipes, applicable hosted verification, and independent review; libxml2 source PR #10 and TIFF CVE-2026-12912 source metadata PR #5 are merged, while platform PR #109 remains unmerged to avoid production deployment. No production publication is in scope.
 
 - Debian Bookworm verification run [41518910177](https://github.com/getpatched/platform/actions/runs/41518910177) and Trixie run [41531130479](https://github.com/getpatched/platform/actions/runs/41531130479) passed the exact pinned source build, installed vulnerable-baseline reproduction, patched installed regression, package-aware before/after scan, `pdfinfo -v` consumer check, and isolated signed APT client checks. The tested versions are `22.12.0-2+deb12u3+getpatched1` and `25.03.0-5+deb13u4+getpatched1`.
 - The candidate-specific GetPatched scanner changes from one matching CVE finding on each exact baseline to zero on its exact patched image, after independently rerunning the paired installed regression. Raw Trivy 0.70.0 reports CVE-2026-107705 for 14 Poppler binary-package records on both baseline and patched images in each Debian run. Preserve that vendor result; the package-aware result is separate and does not mean Trivy is clean. No suppression or ignore rule is used.
