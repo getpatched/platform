@@ -1884,6 +1884,7 @@ function assertRelease(record) {
     ["getpatched/packaging-c-ares", { targetDelays: { "ubuntu-focal-amd64": 168, "debian-trixie-amd64": 168 } }],
     ["getpatched/packaging-brotli", { targetDelays: { "ubuntu-focal-amd64": 168 } }],
     ["getpatched/packaging-expat", { targetDelays: { "debian-bookworm-amd64": 0, "debian-trixie-amd64": 0 } }],
+    ["getpatched/packaging-python-msgpack", { targetDelays: { "debian-bookworm-amd64": 0, "debian-trixie-amd64": 0 } }],
   ]);
   const configuredRepository = approvedRepositories.get(record.repository);
   if (!configuredRepository) throw new Error("repository is not an approved package repository");

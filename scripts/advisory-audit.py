@@ -118,7 +118,7 @@ def main():
             raise ValueError("a configured target CVE lacks passing baseline or installed patched regression evidence")
         expected_binary_names = package["binaryPackages"]
         if (manifest.get("source") != data["source"] or manifest.get("targetId") != data["targetId"]
-                or manifest.get("sourceVersion") != data["baselineVersion"]
+                or manifest.get("sourceVersion") != package.get("sourceVersion", package["baselineVersion"])
                 or manifest.get("version") != data["patchedVersion"]
                 or manifest.get("architecture") != profile["architecture"]):
             raise ValueError("binary manifest does not identify this package target and version")

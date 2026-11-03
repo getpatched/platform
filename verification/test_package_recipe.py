@@ -188,6 +188,15 @@ class PackageRecipeContract(unittest.TestCase):
         self.assertEqual(recipe["policy"]["patches"], ["cve-2026-4111"])
         self.assertEqual(recipe["policy"]["buildPatches"], ["test-zstd-size-tolerance"])
 
+    def test_source_version_can_differ_from_installed_bin_nmu_baseline(self):
+        config = json.loads(json.dumps(PLATFORM_CONFIG))
+        central = config["packages"]["libarchive"]["targets"]["ubuntu-focal-amd64"]
+        central["sourceVersion"] = central["baselineVersion"]
+        central["baselineVersion"] += "+b1"
+        recipe = RECIPE.load_recipe(self.root, config)
+        self.assertEqual(recipe["policy"]["sourceVersion"], "3.4.0-2ubuntu1.5")
+        self.assertEqual(recipe["policy"]["baseVersion"], "3.4.0-2ubuntu1.5+b1")
+
     def test_public_recipe_can_omit_sponsor_binary_terms(self):
         self.manifest["licensing"]["earlyBinaryLicenseId"] = None
         self.manifest["licensing"]["earlyBinaryTermsFile"] = None

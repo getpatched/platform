@@ -27,7 +27,8 @@ def source_policy(source, target_id=TARGET_ID):
     return {
         "source": source, "targetId": target_id,
         "baselineVersion": package["baselineVersion"], "packageVersion": package["packageVersion"],
-        "baseVersion": package["baselineVersion"], "version": package["packageVersion"],
+        "baseVersion": package["baselineVersion"], "sourceVersion": package.get("sourceVersion", package["baselineVersion"]),
+        "version": package["packageVersion"],
         "releaseSerial": package["releaseSerial"], "targetCve": package["targetCve"],
         "targetCves": package["targetCves"], "candidateStatus": package["candidateStatus"],
         "ubuntuProEsmCompatibility": package.get("ubuntuProEsmCompatibility", "not-applicable"),
@@ -40,6 +41,20 @@ def source_policy(source, target_id=TARGET_ID):
 
 
 class ReleaseCandidateOutput(unittest.TestCase):
+    def test_source_and_binary_baseline_versions_are_kept_separate(self):
+        config = json.loads(json.dumps(CONFIG))
+        target = config["packages"]["libarchive"]["targets"][TARGET_ID]
+        target["sourceVersion"] = target["baselineVersion"]
+        target["baselineVersion"] += "+b1"
+        package = package_target_policy(config, "libarchive", TARGET_ID)
+        policy = source_policy("libarchive")
+        policy["baseVersion"] = package["baselineVersion"]
+        policy["sourceVersion"] = package["sourceVersion"]
+        validated, expected, _ = BUILD_PACKAGE.validate_release_policy(policy, config)
+        self.assertEqual(validated, "libarchive")
+        self.assertEqual(expected["baselineVersion"], "3.4.0-2ubuntu1.5+b1")
+        self.assertEqual(policy["sourceVersion"], "3.4.0-2ubuntu1.5")
+
     def test_poppler_advisory_scan_scope_excludes_docs_binary(self):
         expected = source_policy("poppler")
         self.assertIn("libpoppler-glib-doc", expected["binaryPackages"])
@@ -97,7 +112,7 @@ class ReleaseCandidateOutput(unittest.TestCase):
         self.assertNotIn('apt-get install -y --no-install-recommends "$package"', containerfile)
 
     def test_latest_public_focal_candidates_are_eligible_after_verification(self):
-        runnable_candidates = {"libxml2", "libarchive", "libpng1.6", "libgit2", "tiff", "poppler", "c-ares", "brotli", "expat"}
+        runnable_candidates = {"libxml2", "libarchive", "libpng1.6", "libgit2", "tiff", "poppler", "c-ares", "brotli", "expat", "python-msgpack"}
         self.assertTrue(runnable_candidates.issubset(CONFIG["packages"]))
         workflow = (ROOT / ".github/workflows/package-verification.yml").read_text()
         options = re.search(r"options: \[([^]]+)\]", workflow).group(1)

@@ -170,6 +170,7 @@ def validate_release_policy(policy, config):
     expected = package_target_policy(config, package, policy["targetId"])
     expected = dict(expected, targetId=policy["targetId"], codename=profile["codename"], architecture=profile["architecture"])
     if (policy["baseVersion"] != expected["baselineVersion"] or
+        policy.get("sourceVersion", policy["baseVersion"]) != expected.get("sourceVersion", expected["baselineVersion"]) or
         policy["sponsorDelayHours"] != expected["releaseAccess"]["sponsorDelayHours"] or
         policy["version"] != expected["packageVersion"] or
         policy["releaseSerial"] != expected["releaseSerial"] or
@@ -267,6 +268,8 @@ def main():
             "source": package,
             "targetId": recipe["target"]["id"],
             "baseVersion": policy["baseVersion"],
+            "sourceVersion": policy.get("sourceVersion", policy["baseVersion"]),
+            "baselineBinaryVersion": policy["baseVersion"],
             "packageVersion": policy["version"],
             "releaseSerial": policy["releaseSerial"],
             "recipeCommit": commit,
@@ -287,7 +290,7 @@ def main():
                     "sha256": recipe["patchesById"][patch_id]["sha256"],
                     "cves": recipe["patchesById"][patch_id]["cves"],
                     "upstream": recipe["patchesById"][patch_id].get("upstream"),
-                    "sourceVersion": policy["baseVersion"],
+                    "sourceVersion": policy.get("sourceVersion", policy["baseVersion"]),
                 }
                 for patch_id in policy["patches"] + policy.get("buildPatches", [])
             ],
