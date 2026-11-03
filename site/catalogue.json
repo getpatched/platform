@@ -6,28 +6,28 @@
       "releaseVersion": "20.04",
       "codename": "focal",
       "architecture": "amd64",
-      "displayName": "Ubuntu 20.04 LTS (focal) · amd64"
+      "displayName": "Ubuntu 20.04 LTS (focal) \u00b7 amd64"
     },
     "ubuntu-jammy-amd64": {
       "distribution": "Ubuntu",
       "releaseVersion": "22.04",
       "codename": "jammy",
       "architecture": "amd64",
-      "displayName": "Ubuntu 22.04 LTS (jammy) · amd64"
+      "displayName": "Ubuntu 22.04 LTS (jammy) \u00b7 amd64"
     },
     "debian-bookworm-amd64": {
       "distribution": "Debian",
       "releaseVersion": "12",
       "codename": "bookworm",
       "architecture": "amd64",
-      "displayName": "Debian 12 (bookworm) · amd64"
+      "displayName": "Debian 12 (bookworm) \u00b7 amd64"
     },
     "debian-trixie-amd64": {
       "distribution": "Debian",
       "releaseVersion": "13",
       "codename": "trixie",
       "architecture": "amd64",
-      "displayName": "Debian 13 (trixie) · amd64"
+      "displayName": "Debian 13 (trixie) \u00b7 amd64"
     }
   },
   "packages": [
@@ -1125,7 +1125,7 @@
             {
               "id": "CVE-2026-52490",
               "slug": "cve-2026-52490",
-              "summary": "An overflowing subdivision count can bypass tiffcrop’s section-count limit.",
+              "summary": "An overflowing subdivision count can bypass tiffcrop\u2019s section-count limit.",
               "advisoryUrl": "https://security-tracker.debian.org/tracker/CVE-2026-52490",
               "patchSlugs": [
                 "cve-2026-52490-bookworm"
@@ -1292,7 +1292,7 @@
             {
               "id": "CVE-2026-52490",
               "slug": "cve-2026-52490",
-              "summary": "An overflowing subdivision count can bypass tiffcrop’s section-count limit.",
+              "summary": "An overflowing subdivision count can bypass tiffcrop\u2019s section-count limit.",
               "advisoryUrl": "https://security-tracker.debian.org/tracker/CVE-2026-52490",
               "patchSlugs": [
                 "cve-2026-52490-trixie"
@@ -1377,9 +1377,10 @@
       "targets": {
         "debian-bookworm-amd64": {
           "baseVersion": "2.5.0-1+deb12u5",
-          "version": "2.5.0-1+deb12u5+getpatched1",
+          "version": "2.5.0-1+deb12u5+getpatched2",
           "cves": [
-            "CVE-2026-117610"
+            "CVE-2026-117610",
+            "CVE-2026-41080"
           ],
           "vulnerabilities": [
             {
@@ -1389,6 +1390,16 @@
               "advisoryUrl": "https://security-tracker.debian.org/tracker/CVE-2026-117610",
               "patchSlugs": [
                 "cve-2026-117610-expat"
+              ],
+              "patched": true
+            },
+            {
+              "id": "CVE-2026-41080",
+              "slug": "cve-2026-41080",
+              "summary": "Insufficient entropy in Expat\u2019s SipHash key can enable hash flooding via crafted XML.",
+              "advisoryUrl": "https://security-tracker.debian.org/tracker/CVE-2026-41080",
+              "patchSlugs": [
+                "cve-2026-41080-expat-bookworm"
               ],
               "patched": true
             }
@@ -1417,6 +1428,30 @@
                   "patchedExpectation": "The exact installed patched package completes the same parse and invokes the processing-instruction handler once; xmlwf -v reports the matching patched Expat version."
                 }
               ]
+            },
+            {
+              "id": "cve-2026-41080",
+              "slug": "cve-2026-41080-expat-bookworm",
+              "kind": "security",
+              "title": "Use a full 128-bit SipHash secret for XML hash-flooding protection",
+              "description": "Generates a complete 16-byte SipHash key and adds XML_SetHashSalt16Bytes for callers supplying high-quality entropy.",
+              "sha256": "e783729ff8f8e0dc145ed4565c0738b9e04507fd5b7f3bb2ddf3a5b294dc0276",
+              "fileUrl": "https://github.com/getpatched/packaging-expat/blob/getpatched/debian-bookworm/patches/CVE-2026-41080.patch",
+              "cves": [
+                "CVE-2026-41080"
+              ],
+              "upstream": {
+                "repository": "https://github.com/libexpat/libexpat",
+                "commit": "ed80eaea0ce7179b56713fb22fe933b993aee814",
+                "url": "https://github.com/libexpat/libexpat/pull/1183"
+              },
+              "tests": [
+                {
+                  "id": "CVE-2026-41080-16-byte-hash-salt",
+                  "baselineExpectation": "The exact installed Bookworm baseline reports an 8-byte generated hash salt and does not export XML_SetHashSalt16Bytes.",
+                  "patchedExpectation": "The installed candidate reports a 16-byte generated hash salt, exports XML_SetHashSalt16Bytes, rejects NULL inputs, accepts a 16-byte salt before parsing, and rejects late calls."
+                }
+              ]
             }
           ],
           "access": "public",
@@ -1430,7 +1465,7 @@
           ],
           "earlyRedistributionAllowed": false,
           "status": "development-verified-production-release-pending",
-          "verification": "https://github.com/getpatched/platform/actions/runs/41543751522",
+          "verification": "https://github.com/getpatched/platform/actions/runs/41731098257",
           "sourceUrl": "https://github.com/getpatched/packaging-expat/tree/getpatched/debian-bookworm",
           "patchUrl": "https://github.com/getpatched/packaging-expat/blob/getpatched/debian-bookworm/patches/CVE-2026-117610.patch",
           "testsUrl": "https://github.com/getpatched/packaging-expat/tree/getpatched/debian-bookworm/tests",
