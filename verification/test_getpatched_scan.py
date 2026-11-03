@@ -46,6 +46,44 @@ SCANNER_SPEC.loader.exec_module(SCANNER_MODULE)
 
 
 class GetPatchedScannerContract(unittest.TestCase):
+    def test_libxml2_debian_candidate_advisory_is_exact_and_target_scoped(self):
+        target_id = "debian-bookworm-amd64"
+        feed = SCANNER_MODULE.build_feed(
+            json.loads((ROOT / "packages.json").read_text()),
+            {("libxml2", target_id)},
+        )
+        advisory = next(item for item in feed["vulns"] if item["id"] == "CVE-2026-6653")
+        self.assertEqual(
+            [(item["package"]["ecosystem"], item["package"]["name"], item["versions"],
+              item["ecosystem_specific"]["target_id"],
+              item["database_specific"]["getpatched_fixed_version"])
+             for item in advisory["affected"]],
+            [("Debian:12", "libxml2", ["2.9.14+dfsg-1.3~deb12u6"], target_id,
+              "2.9.14+dfsg-1.3~deb12u6+getpatched1")],
+        )
+        self.assertNotIn("debian-trixie-amd64", {
+            item["ecosystem_specific"]["target_id"] for item in advisory["affected"]
+        })
+
+    def test_libxml2_trixie_candidate_advisory_has_its_exact_target_version(self):
+        target_id = "debian-trixie-amd64"
+        feed = SCANNER_MODULE.build_feed(
+            json.loads((ROOT / "packages.json").read_text()),
+            {("libxml2", target_id)},
+        )
+        advisory = next(item for item in feed["vulns"] if item["id"] == "CVE-2026-6653")
+        self.assertEqual(
+            [(item["package"]["ecosystem"], item["package"]["name"], item["versions"],
+              item["ecosystem_specific"]["target_id"],
+              item["database_specific"]["getpatched_fixed_version"])
+             for item in advisory["affected"]],
+            [("Debian:13", "libxml2", ["2.12.7+dfsg+really2.9.14-2.1+deb13u3"], target_id,
+              "2.12.7+dfsg+really2.9.14-2.1+deb13u3+getpatched1")],
+        )
+        self.assertNotIn("debian-bookworm-amd64", {
+            item["ecosystem_specific"]["target_id"] for item in advisory["affected"]
+        })
+
     def test_expat_candidate_requires_exact_crash_or_patched_consumer(self):
         baseline = {"cve": "CVE-2026-117610", "testId": "CVE-2026-117610-empty-nonfinal-subparser",
                     "returncode": -signal.SIGSEGV, "timedOut": False, "passed": True}

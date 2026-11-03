@@ -233,6 +233,58 @@
           "vendorFixedVersions": [
             "2.9.10+dfsg-5ubuntu0.20.04.10+esm1"
           ]
+        },
+        "debian-bookworm-amd64": {
+          "baselineVersion": "2.9.14+dfsg-1.3~deb12u6",
+          "sourcePocket": "release",
+          "packageVersion": "2.9.14+dfsg-1.3~deb12u6+getpatched1",
+          "releaseSerial": 1,
+          "binaryPackages": ["libxml2", "libxml2-utils", "libxml2-dev"],
+          "advisoryPackages": ["libxml2"],
+          "builderPackages": [],
+          "targetCve": "CVE-2026-6653",
+          "targetCves": ["CVE-2026-6653"],
+          "advisory": "https://security-tracker.debian.org/tracker/CVE-2026-6653",
+          "advisories": {
+            "CVE-2026-6653": "https://security-tracker.debian.org/tracker/CVE-2026-6653"
+          },
+          "candidateStatus": "unverified-development-candidate",
+          "releaseAccess": {
+            "policy": "public-after-checks",
+            "sponsorDelayHours": 0,
+            "sponsorEligibility": null,
+            "earlyBinaryLicenseId": null,
+            "publicContributionSpdx": "MIT",
+            "earlyUse": ["private", "commercial"],
+            "earlyRedistributionAllowed": false,
+            "publicLicenseScope": "getpatched-authored-contributions-only"
+          }
+        },
+        "debian-trixie-amd64": {
+          "baselineVersion": "2.12.7+dfsg+really2.9.14-2.1+deb13u3",
+          "sourcePocket": "release",
+          "packageVersion": "2.12.7+dfsg+really2.9.14-2.1+deb13u3+getpatched1",
+          "releaseSerial": 1,
+          "binaryPackages": ["libxml2", "libxml2-utils", "libxml2-dev"],
+          "advisoryPackages": ["libxml2"],
+          "builderPackages": [],
+          "targetCve": "CVE-2026-6653",
+          "targetCves": ["CVE-2026-6653"],
+          "advisory": "https://security-tracker.debian.org/tracker/CVE-2026-6653",
+          "advisories": {
+            "CVE-2026-6653": "https://security-tracker.debian.org/tracker/CVE-2026-6653"
+          },
+          "candidateStatus": "unverified-development-candidate",
+          "releaseAccess": {
+            "policy": "public-after-checks",
+            "sponsorDelayHours": 0,
+            "sponsorEligibility": null,
+            "earlyBinaryLicenseId": null,
+            "publicContributionSpdx": "MIT",
+            "earlyUse": ["private", "commercial"],
+            "earlyRedistributionAllowed": false,
+            "publicLicenseScope": "getpatched-authored-contributions-only"
+          }
         }
       }
     },

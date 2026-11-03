@@ -21,6 +21,7 @@ sys.path.insert(0, str(ROOT / "verification"))
 from regression import (cares_regression_succeeded, consumer_version_succeeded, libpng_overwrite_reproduced, libpng_stride_read_reproduced,
                         libpng_patched_checks_succeeded, poppler_revision6_password_overflow_reproduced, poppler_revision6_probe_command, poppler_uaf_reproduced,
                         expat_consumer_succeeded, expat_regression_succeeded,
+                        libxml2_parameter_entity_baseline_reproduced, libxml2_parameter_entity_patched_succeeded,
                         schematron_baseline_reproduced, tiff_baseline_reproduced,
                         tiff_subdivision_baseline_reproduced, tiff_subdivision_patched_succeeded,
                         valid_tiff_baseline_stack_signature,
@@ -392,10 +393,19 @@ def regression_verified_candidate(directory, scan_images_path, target_id, recipe
         elif source == "libxml2":
             target_checks = [cve_checks[cve] for cve in target["targetCves"]]
             if phase == "baseline":
-                if not all(schematron_baseline_reproduced(check) for check in target_checks):
+                if not all(
+                    libxml2_parameter_entity_baseline_reproduced(check)
+                    if check.get("cve") == "CVE-2026-6653"
+                    else schematron_baseline_reproduced(check)
+                    for check in target_checks
+                ):
                     raise ValueError("libxml2 baseline evidence does not reproduce the configured memory fault")
-            elif (not all(check.get("returncode") == 3 and "ERROR SUMMARY: 0 errors" in check.get("memoryLog", "")
-                          for check in target_checks)
+            elif (not all(
+                      libxml2_parameter_entity_patched_succeeded(check)
+                      if check.get("cve") == "CVE-2026-6653"
+                      else check.get("returncode") == 3 and "ERROR SUMMARY: 0 errors" in check.get("memoryLog", "")
+                      for check in target_checks
+                  )
                   or not any(check.get("command", [None])[0] == "xmllint"
                              and check.get("returncode") == 0 for check in checks)):
                 raise ValueError("libxml2 patched evidence lacks clean memory checks and a consumer check")

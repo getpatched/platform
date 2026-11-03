@@ -1,5 +1,12 @@
 # GetPatched evidence index
 
+## libxml2 CVE-2026-6653 — local development verification — 3 Nov 2026
+
+- Local pinned build pipelines passed for Debian Bookworm amd64 (`2.9.14+dfsg-1.3~deb12u6+getpatched1`) and Trixie amd64 (`2.12.7+dfsg+really2.9.14-2.1+deb13u3+getpatched1`). Both exact installed baselines reproduced the parameter-entity use-after-free under Valgrind, and both candidates passed the same regression. The candidate-only package-aware scanner cleared CVE-2026-6653 on each candidate and retained the unrelated Expat finding. Signed temporary APT-client checks passed.
+- Full reports, hashes, provenance, and caveats are in [`evidence/libxml2-cve-2026-6653-2026-11-03.md`](evidence/libxml2-cve-2026-6653-2026-11-03.md), with unfiltered evidence under `/private/tmp/getpatched-cve-2026-6653-bookworm-verified/` and `/private/tmp/getpatched-cve-2026-6653-trixie-final/`.
+- Trivy 0.70.0 still reports the CVE against `libxml2`, `libxml2-dev`, and `libxml2-utils` after patching because its Debian records do not provide a GetPatched fixed version (`fix_deferred` for Bookworm, `affected` for Trixie). Raw results are preserved; this is not a Trivy-clean claim.
+- Hosted target workflows and public source PR integration remain pending. Both targets remain unverified in policy and uncounted toward 100. No package binary, signed production index, private staging object, or release was published.
+
 ## Expat CVE-2026-117610 — policy-matched development verification — 3 Nov 2026
 
 - Debian's tracker lists Bookworm Security `2.5.0-1+deb12u5` and Trixie Security `2.9.0-1~deb13u1` as vulnerable. Signed Debian Security source indexes authenticate all six pinned source archives; local SHA-256 values match the indexes. Each distro quilt series followed by the GetPatched patch applies with zero fuzz. The C API reproducer crashes against each unpatched source and passes after the backport.

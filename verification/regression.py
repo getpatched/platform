@@ -43,6 +43,43 @@ def execute(command, timeout=30, env=None):
         }
 
 
+def validate_recipe_regression_fixture_hashes(recipe, manifest):
+    """Verify regression inputs declared by the packaging recipe before use."""
+    root = Path(recipe).resolve()
+    metadata_name = manifest.get("patchMetadata")
+    if not isinstance(metadata_name, str):
+        raise RuntimeError("Recipe patch metadata path is missing")
+    metadata_path = (root / metadata_name).resolve()
+    if not metadata_path.is_relative_to(root) or not metadata_path.is_file():
+        raise RuntimeError("Recipe patch metadata path is invalid")
+    metadata = json.loads(metadata_path.read_text())
+    patches = metadata.get("patches")
+    if not isinstance(patches, list) or not patches:
+        raise RuntimeError("Recipe patch metadata has no patches")
+    for patch in patches:
+        if not isinstance(patch, dict):
+            raise RuntimeError("Recipe patch metadata entry is invalid")
+        declared_files = patch.get("referenceFiles", [])
+        if not isinstance(declared_files, list):
+            raise RuntimeError("Recipe reference file declarations are invalid")
+        declared_files = list(declared_files)
+        tests = patch.get("tests", [])
+        if not isinstance(tests, list):
+            raise RuntimeError("Recipe regression test declarations are invalid")
+        for test in tests:
+            if not isinstance(test, dict) or not isinstance(test.get("fixtures", []), list):
+                raise RuntimeError("Recipe regression test fixture declaration is invalid")
+            declared_files.extend(test.get("fixtures", []))
+        for declared in declared_files:
+            if (not isinstance(declared, dict) or not isinstance(declared.get("path"), str)
+                    or not re.fullmatch(r"[0-9a-f]{64}", str(declared.get("sha256", "")))):
+                raise RuntimeError("Recipe regression files must declare a path and SHA-256")
+            fixture = (root / declared["path"]).resolve()
+            if (not fixture.is_relative_to(root) or not fixture.is_file()
+                    or hashlib.sha256(fixture.read_bytes()).hexdigest() != declared["sha256"]):
+                raise RuntimeError("Recipe regression fixture hash does not match patch metadata")
+
+
 def schematron_baseline_reproduced(check):
     log = check.get("memoryLog", "")
     return (
@@ -51,6 +88,47 @@ def schematron_baseline_reproduced(check):
         and "Invalid read" in log
         and "xmlSchematronValidateDoc" in log
         and "libxml2.so." in log
+    )
+
+
+def libxml2_parameter_entity_command(check):
+    command = check.get("command", [])
+    return (
+        len(command) == 8
+        and Path(command[0]).name == "valgrind"
+        and command[1:5] == ["--tool=memcheck", "--error-exitcode=97", "--leak-check=no", "--read-var-info=yes"]
+        and memcheck_log_path_matches(check, command)
+        and Path(command[6]).name == "libxml2-cve-2026-6653"
+        and Path(command[7]).name == "cve-2026-6653.xml"
+    )
+
+
+def libxml2_parameter_entity_baseline_reproduced(check):
+    log = check.get("memoryLog", "")
+    return bool(
+        not check.get("timedOut", False)
+        and check.get("returncode") == 97
+        and libxml2_parameter_entity_command(check)
+        and any(
+            block.group("kind").startswith("Invalid read")
+            and "xmlReadMemory" in block.group("body")
+            and "free'd" in block.group("body")
+            and "libxml2.so." in block.group("body")
+            and "xmlNewEntityInputStream" in block.group("body").partition("Block was alloc'd at")[2]
+            for block in valgrind_invalid_access_blocks(log)
+        )
+        and re.search(r"(?m)^==\d+== ERROR SUMMARY: [1-9]\d* errors?", log)
+    )
+
+
+def libxml2_parameter_entity_patched_succeeded(check):
+    log = check.get("memoryLog", "")
+    return bool(
+        not check.get("timedOut", False)
+        and check.get("returncode") == 0
+        and libxml2_parameter_entity_command(check)
+        and not valgrind_invalid_access_blocks(log)
+        and re.search(r"(?m)^==\d+== ERROR SUMMARY: 0 errors?", log)
     )
 
 
@@ -645,6 +723,7 @@ def main():
     parser.add_argument("--output", type=Path, required=True)
     args = parser.parse_args()
     manifest = json.loads((args.recipe / "package-manifest.json").read_text())
+    validate_recipe_regression_fixture_hashes(args.recipe, manifest)
     policy = json.loads(args.policy.read_text())
     package = policy["source"]
     tiff_baseline_stack_frames = None
@@ -669,23 +748,53 @@ def main():
     with tempfile.TemporaryDirectory(prefix="getpatched-regression-") as directory:
         temp = Path(directory)
         if package == "libxml2":
-            for cve in ("CVE-2025-49794", "CVE-2025-49796"):
-                stem = cve.lower()
-                log = temp / (stem + ".valgrind")
-                check = execute([
-                    "valgrind", "--tool=memcheck", "--error-exitcode=97", "--leak-check=no",
-                    "--read-var-info=yes",
-                    "--log-file=" + str(log), "xmllint", "--nonet", "--schematron",
-                    str(fixtures / (stem + ".sct")), str(fixtures / (stem + "_0.xml")),
-                ])
-                check["cve"] = cve
-                check["memoryLog"] = log.read_text() if log.exists() else ""
-                check["passed"] = not check["timedOut"] and (
-                    schematron_baseline_reproduced(check)
-                    if args.phase == "baseline" else
-                    check["returncode"] == 3 and "ERROR SUMMARY: 0 errors" in check["memoryLog"]
-                )
-                checks.append(check)
+            for cve in policy["targetCves"]:
+                if cve in ("CVE-2025-49794", "CVE-2025-49796"):
+                    stem = cve.lower()
+                    log = temp / (stem + ".valgrind")
+                    check = execute([
+                        "valgrind", "--tool=memcheck", "--error-exitcode=97", "--leak-check=no",
+                        "--read-var-info=yes",
+                        "--log-file=" + str(log), "xmllint", "--nonet", "--schematron",
+                        str(fixtures / (stem + ".sct")), str(fixtures / (stem + "_0.xml")),
+                    ])
+                    check["cve"] = cve
+                    check["memoryLog"] = log.read_text() if log.exists() else ""
+                    check["passed"] = not check["timedOut"] and (
+                        schematron_baseline_reproduced(check)
+                        if args.phase == "baseline" else
+                        check["returncode"] == 3 and "ERROR SUMMARY: 0 errors" in check["memoryLog"]
+                    )
+                    checks.append(check)
+                elif cve == "CVE-2026-6653":
+                    probe = temp / "libxml2-cve-2026-6653"
+                    flags = shlex.split(subprocess.check_output(
+                        ["pkg-config", "--cflags", "--libs", "libxml-2.0"], text=True, timeout=15
+                    ))
+                    compiled = subprocess.run(
+                        ["c++", "-std=c++11", "-O1", "-g", str(fixtures / "cve-2026-6653-harness.cc"),
+                         "-o", str(probe), *flags],
+                        capture_output=True, text=True, timeout=30, check=False,
+                    )
+                    if compiled.returncode != 0:
+                        raise RuntimeError("could not compile the libxml2 CVE-2026-6653 regression harness: " + compiled.stderr[-2000:])
+                    log = temp / "cve-2026-6653.valgrind"
+                    check = execute([
+                        "valgrind", "--tool=memcheck", "--error-exitcode=97", "--leak-check=no",
+                        "--read-var-info=yes", "--log-file=" + str(log), str(probe),
+                        str(fixtures / "cve-2026-6653.xml"),
+                    ])
+                    check["cve"] = cve
+                    check["testId"] = "parameter-entity-eof-use-after-free"
+                    check["memoryLogPath"] = str(log)
+                    check["memoryLog"] = log.read_text() if log.exists() else ""
+                    check["passed"] = (
+                        libxml2_parameter_entity_baseline_reproduced(check)
+                        if args.phase == "baseline" else libxml2_parameter_entity_patched_succeeded(check)
+                    )
+                    checks.append(check)
+                else:
+                    raise RuntimeError("no libxml2 regression is configured for " + cve)
             if args.phase == "patched":
                 normal = temp / "normal.xml"
                 normal.write_text("<document><item>compatible</item></document>\n")

@@ -3,19 +3,95 @@ import json
 from pathlib import Path
 import signal
 import sys
+import tempfile
 import unittest
 
 from regression import (LIBPNG_CVE_2025_65018_FIXTURE, libpng_followup_read_is_clean, libpng_output_buffer_result, libpng_overwrite_reproduced, libpng_stride_read_reproduced, memcheck_has_no_errors,
                         libpng_patched_checks_succeeded, tiff_patched_regression_succeeded,
                         brotli_baseline_reproduced, brotli_patched_succeeded,
                         cares_regression_succeeded, consumer_version_succeeded, expat_consumer_succeeded, expat_regression_succeeded,
+                        libxml2_parameter_entity_baseline_reproduced, libxml2_parameter_entity_patched_succeeded,
                         poppler_uaf_reproduced, schematron_baseline_reproduced,
+                        validate_recipe_regression_fixture_hashes,
 
 cares_regression_succeeded, consumer_version_succeeded, poppler_revision6_password_overflow_reproduced, poppler_uaf_reproduced, poppler_revision6_probe_command, schematron_baseline_reproduced,
                         tiff_baseline_reproduced, tiff_null_output_baseline_reproduced,
                         tiff_null_output_patched_succeeded, parse_callback_url,
                         libgit2_redirect_reproduced, tiff_cve_required,
                         tiff_subdivision_baseline_reproduced, tiff_subdivision_patched_succeeded, execute)
+
+
+class Libxml2ParameterEntityRegression(unittest.TestCase):
+    def test_baseline_requires_invalid_read_after_entity_stream_is_freed(self):
+        log_path = "/tmp/cve-2026-6653.valgrind"
+        check = {
+            "cve": "CVE-2026-6653",
+            "returncode": 97,
+            "timedOut": False,
+            "memoryLogPath": log_path,
+            "command": [
+                "valgrind", "--tool=memcheck", "--error-exitcode=97", "--leak-check=no",
+                "--read-var-info=yes", "--log-file=" + log_path,
+                "/tmp/libxml2-cve-2026-6653", "/recipe/tests/fixtures/cve-2026-6653.xml",
+            ],
+            "memoryLog": (
+                "==123== Invalid read of size 8\n"
+                "==123==    at 0x123: ??? (in /usr/lib/libxml2.so.2)\n"
+                "==123==    by 0x456: xmlReadMemory (in /usr/lib/libxml2.so.2)\n"
+                "==123== Address 0x1 is 0 bytes inside a block of size 32 free'd\n"
+                "==123==  Block was alloc'd at\n"
+                "==123==    at 0x789: xmlNewEntityInputStream (in /usr/lib/libxml2.so.2)\n"
+                "==123== ERROR SUMMARY: 1 errors from 1 contexts\n"
+            ),
+        }
+        self.assertTrue(libxml2_parameter_entity_baseline_reproduced(check))
+        self.assertFalse(libxml2_parameter_entity_baseline_reproduced({**check, "returncode": 0}))
+        self.assertFalse(libxml2_parameter_entity_baseline_reproduced({
+            **check, "memoryLog": (
+                check["memoryLog"].replace("xmlNewEntityInputStream", "unrelated")
+                + "==123== Invalid write of size 1\n"
+                + "==123==    at 0xAAA: xmlNewEntityInputStream (in /usr/lib/libxml2.so.2)\n"
+                + "==123== ERROR SUMMARY: 1 errors from 1 contexts\n"
+            )
+        }))
+
+    def test_regression_runner_rejects_modified_hash_declared_fixtures(self):
+        with tempfile.TemporaryDirectory(prefix="getpatched-regression-fixture-hash-") as directory:
+            root = Path(directory)
+            fixture = root / "tests/fixtures/cve.xml"
+            fixture.parent.mkdir(parents=True)
+            fixture.write_text("<root/>")
+            import hashlib
+            digest = hashlib.sha256(fixture.read_bytes()).hexdigest()
+            metadata = root / "patches/metadata.json"
+            metadata.parent.mkdir()
+            metadata.write_text(json.dumps({"patches": [{"referenceFiles": [], "tests": [{
+                "fixtures": [{"path": "tests/fixtures/cve.xml", "sha256": digest}]
+            }]}]}))
+            manifest = {"patchMetadata": "patches/metadata.json"}
+            validate_recipe_regression_fixture_hashes(root, manifest)
+            fixture.write_text("<modified/>")
+            with self.assertRaisesRegex(RuntimeError, "fixture hash does not match"):
+                validate_recipe_regression_fixture_hashes(root, manifest)
+
+    def test_patched_requires_clean_memcheck_for_same_probe(self):
+        log_path = "/tmp/cve-2026-6653.valgrind"
+        check = {
+            "cve": "CVE-2026-6653",
+            "returncode": 0,
+            "timedOut": False,
+            "memoryLogPath": log_path,
+            "command": [
+                "valgrind", "--tool=memcheck", "--error-exitcode=97", "--leak-check=no",
+                "--read-var-info=yes", "--log-file=" + log_path,
+                "/tmp/libxml2-cve-2026-6653", "/recipe/tests/fixtures/cve-2026-6653.xml",
+            ],
+            "memoryLog": "==123== ERROR SUMMARY: 0 errors from 0 contexts\n",
+        }
+        self.assertTrue(libxml2_parameter_entity_patched_succeeded(check))
+        self.assertFalse(libxml2_parameter_entity_patched_succeeded({
+            **check, "memoryLog": "==123== Invalid read of size 8\n==123== ERROR SUMMARY: 1 errors\n"
+        }))
 
 
 class TiffPolicySelection(unittest.TestCase):
