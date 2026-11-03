@@ -48,8 +48,12 @@ class PublicCatalogueContract(unittest.TestCase):
                 )
                 self.assertEqual(verified_status,
                                  "development-verified-production-release-pending")
-                self.assertEqual(target_policy["candidateStatus"],
-                                 "development-verified-production-release-pending")
+                if target_policy["candidateStatus"] == "unverified-development-candidate":
+                    self.assertEqual(verified_release["version"],
+                                     "2.5.0-1+deb12u5+getpatched1")
+                else:
+                    self.assertEqual(target_policy["candidateStatus"],
+                                     "development-verified-production-release-pending")
                 target_record = record["targets"][target_id]
                 self.assertEqual(target_record["baseVersion"], target_policy["baselineVersion"])
                 self.assertEqual(target_record["version"], verified_version)

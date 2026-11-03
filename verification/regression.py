@@ -645,6 +645,25 @@ def expat_reset_regression_succeeded(check, phase):
             and "fresh_parser_status=ok error=no error" in output)
 
 
+def expat_entropy_regression_succeeded(check, phase):
+    if (check.get("cve") != "CVE-2026-41080"
+            or check.get("testId") != "CVE-2026-41080-16-byte-hash-salt"
+            or check.get("timedOut") is not False
+            or check.get("returncode") != 0):
+        return False
+    entropy_bytes = re.findall(
+        r"(?m)^expat: Entropy: [^\n]+ \(([0-9]+) bytes\)$",
+        check.get("stderr", ""),
+    )
+    if len(entropy_bytes) != 1:
+        return False
+    api_result = check.get("stdout", "").strip()
+    if phase == "baseline":
+        return entropy_bytes == ["8"] and api_result == "hash_salt16_api=unavailable"
+    return (phase == "patched" and entropy_bytes == ["16"]
+            and api_result == "hash_salt16_api=available null_inputs=rejected late_call=rejected")
+
+
 def expat_consumer_succeeded(check, expected_version):
     output = check.get("stdout", "") + check.get("stderr", "")
     return (not check.get("timedOut", False)
@@ -1261,6 +1280,20 @@ def main():
             check["testId"] = "CVE-2026-117610-empty-nonfinal-subparser"
             check["passed"] = expat_regression_succeeded(check, args.phase)
             checks.append(check)
+            if "CVE-2026-41080" in policy["targetCves"]:
+                entropy_probe = compile_pkg_config_probe(
+                    fixtures / "CVE-2026-41080-entropy.c",
+                    temp / "expat-16-byte-hash-salt", ["expat"]
+                )
+                entropy_env = os.environ.copy()
+                entropy_env["EXPAT_ENTROPY_DEBUG"] = "1"
+                entropy_check = execute([str(entropy_probe)], env=entropy_env)
+                entropy_check["cve"] = "CVE-2026-41080"
+                entropy_check["testId"] = "CVE-2026-41080-16-byte-hash-salt"
+                entropy_check["passed"] = expat_entropy_regression_succeeded(
+                    entropy_check, args.phase
+                )
+                checks.append(entropy_check)
             if "CVE-2026-113351" in policy["targetCves"]:
                 reset_probe = compile_pkg_config_probe(
                     fixtures / "CVE-2026-113351-parser-reset.c",
