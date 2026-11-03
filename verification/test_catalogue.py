@@ -372,7 +372,7 @@ class PublicCatalogueContract(unittest.TestCase):
                     ("brotli", "ubuntu-focal-amd64"): "41492184315",
                     ("expat", "debian-bookworm-amd64"): "41543751522",
                     ("expat", "debian-trixie-amd64"): "41546270294",
-                    ("tiff", "debian-bookworm-amd64"): "41604136263",
+                    ("tiff", "debian-bookworm-amd64"): "41604393283",
                     ("tiff", "debian-trixie-amd64"): "41554198692",
                 }[(source, target_id)]
                 self.assertEqual(entry["verification"], f"https://github.com/getpatched/platform/actions/runs/{expected_run}")
