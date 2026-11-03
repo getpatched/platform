@@ -173,6 +173,51 @@ def libxml2_catalog_patched_succeeded(check):
     )
 
 
+def libxml2_regexp_alloc_failure_command(check):
+    command = check.get("command", [])
+    return bool(
+        len(command) == 7
+        and Path(command[0]).name == "valgrind"
+        and command[1:5] == ["--tool=memcheck", "--error-exitcode=97", "--leak-check=no", "--read-var-info=yes"]
+        and memcheck_log_path_matches(check, command)
+        and Path(command[6]).name == "libxml2-cve-2026-86141"
+        and check.get("testId") == "regexp-allocation-failure-null-check"
+        and check.get("injection") == "xmlstrdup-interposer:(alpha|bravo|charlie)"
+    )
+
+
+def libxml2_regexp_alloc_failure_baseline_reproduced(check):
+    return bool(
+        not check.get("timedOut", False)
+        and check.get("returncode") == 97
+        and libxml2_regexp_alloc_failure_command(check)
+        and "GETPATCHED_XMLSTRDUP_FAILURE_INJECTED" in check.get("stderr", "")
+        and any(
+            block.group("kind").startswith("Invalid read")
+            and re.search(r"(?m)^==\d+==\s+at .*\bstrlen(?:@|\s|\()", block.group("body"))
+            and "xmlRegNewParserCtxt" in block.group("body")
+            and "xmlRegexpCompile" in block.group("body")
+            and "libxml2.so." in block.group("body")
+            and re.search(r"(?m)^==\d+==\s+Address 0x0\b", block.group("body"))
+            for block in valgrind_invalid_access_blocks(check.get("memoryLog", ""))
+        )
+        and "Process terminating with default action of signal 11 (SIGSEGV)" in check.get("memoryLog", "")
+        and re.search(r"(?m)^==\d+== ERROR SUMMARY: [1-9]\d* errors?", check.get("memoryLog", ""))
+    )
+
+
+def libxml2_regexp_alloc_failure_patched_succeeded(check):
+    return bool(
+        not check.get("timedOut", False)
+        and check.get("returncode") == 0
+        and libxml2_regexp_alloc_failure_command(check)
+        and "GETPATCHED_XMLSTRDUP_FAILURE_INJECTED" in check.get("stderr", "")
+        and "XML_REGEXP_COMPILE_REJECTED_ALLOCATION_FAILURE" in check.get("stdout", "")
+        and not valgrind_invalid_access_blocks(check.get("memoryLog", ""))
+        and re.search(r"(?m)^==\d+== ERROR SUMMARY: 0 errors?", check.get("memoryLog", ""))
+    )
+
+
 def libxml2_xinclude_nonet_result(check, phase):
     command = check.get("command", [])
     expected_mode = "expect-network" if phase == "baseline" else "expect-blocked"
@@ -204,6 +249,8 @@ def libxml2_baseline_check_succeeded(check):
         return libxml2_parameter_entity_baseline_reproduced(check)
     if cve == "CVE-2026-76781":
         return libxml2_catalog_baseline_reproduced(check)
+    if cve == "CVE-2026-86141":
+        return libxml2_regexp_alloc_failure_baseline_reproduced(check)
     return schematron_baseline_reproduced(check)
 
 
@@ -213,6 +260,8 @@ def libxml2_patched_check_succeeded(check):
         return libxml2_parameter_entity_patched_succeeded(check)
     if cve == "CVE-2026-76781":
         return libxml2_catalog_patched_succeeded(check)
+    if cve == "CVE-2026-86141":
+        return libxml2_regexp_alloc_failure_patched_succeeded(check)
     return check.get("returncode") == 3 and "ERROR SUMMARY: 0 errors" in check.get("memoryLog", "")
 
 
@@ -1057,6 +1106,46 @@ def main():
                     check["passed"] = (
                         libxml2_catalog_baseline_reproduced(check)
                         if args.phase == "baseline" else libxml2_catalog_patched_succeeded(check)
+                    )
+                    checks.append(check)
+                elif cve == "CVE-2026-86141":
+                    probe = temp / "libxml2-cve-2026-86141"
+                    injector = temp / "libxml2-cve-2026-86141-injector.so"
+                    flags = shlex.split(subprocess.check_output(
+                        ["pkg-config", "--cflags", "--libs", "libxml-2.0"], text=True, timeout=15
+                    ))
+                    compiled = subprocess.run(
+                        ["cc", "-std=c11", "-O1", "-g", str(fixtures / "cve-2026-86141-regexp-alloc-failure.c"),
+                         "-o", str(probe), *flags],
+                        capture_output=True, text=True, timeout=30, check=False,
+                    )
+                    if compiled.returncode != 0:
+                        raise RuntimeError("could not compile the libxml2 CVE-2026-86141 regression harness: " + compiled.stderr[-2000:])
+                    injection_build = subprocess.run(
+                        ["cc", "-std=c11", "-O1", "-g", "-fPIC", "-shared",
+                         str(fixtures / "cve-2026-86141-xmlstrdup-interposer.c"),
+                         "-o", str(injector), "-ldl"],
+                        capture_output=True, text=True, timeout=30, check=False,
+                    )
+                    if injection_build.returncode != 0:
+                        raise RuntimeError("could not compile the libxml2 CVE-2026-86141 allocation injector: " + injection_build.stderr[-2000:])
+                    env = os.environ.copy()
+                    env["LD_PRELOAD"] = str(injector)
+                    env["GETPATCHED_FAIL_XMLSTRDUP_PATTERN"] = "(alpha|bravo|charlie)"
+                    log = temp / "cve-2026-86141.valgrind"
+                    check = execute([
+                        "valgrind", "--tool=memcheck", "--error-exitcode=97", "--leak-check=no",
+                        "--read-var-info=yes", "--log-file=" + str(log), str(probe),
+                    ], timeout=15, env=env)
+                    check["cve"] = cve
+                    check["testId"] = "regexp-allocation-failure-null-check"
+                    check["injection"] = "xmlstrdup-interposer:(alpha|bravo|charlie)"
+                    check["memoryLogPath"] = str(log)
+                    check["memoryLog"] = log.read_text() if log.exists() else ""
+                    check["phase"] = args.phase
+                    check["passed"] = (
+                        libxml2_regexp_alloc_failure_baseline_reproduced(check)
+                        if args.phase == "baseline" else libxml2_regexp_alloc_failure_patched_succeeded(check)
                     )
                     checks.append(check)
                 else:

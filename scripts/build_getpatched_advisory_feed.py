@@ -17,6 +17,7 @@ SUMMARIES = {
     "CVE-2026-6653": "libxml2 parameter-entity parsing use-after-free in Debian Bookworm and Trixie",
     "CVE-2026-86144": "libxml2 XInclude processing ignores XML_PARSE_NONET and can trigger network access",
     "CVE-2026-76781": "libxml2 can crash while parsing an XML catalog nextCatalog entry without its required catalog attribute",
+    "CVE-2026-86141": "libxml2 can dereference NULL while creating a regular-expression parser context after allocation failure",
     "CVE-2026-4111": "libarchive RAR5 decompression infinite loop in Ubuntu Focal packages",
     "CVE-2025-65018": "libpng simplified API buffer overflow when converting interlaced 16-bit images to 8-bit output",
     "CVE-2026-22695": "libpng simplified API heap buffer over-read for padded or negative row strides",

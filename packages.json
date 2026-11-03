@@ -274,8 +274,8 @@
         "debian-trixie-amd64": {
           "baselineVersion": "2.12.7+dfsg+really2.9.14-2.1+deb13u3",
           "sourcePocket": "release",
-          "packageVersion": "2.12.7+dfsg+really2.9.14-2.1+deb13u3+getpatched3",
-          "releaseSerial": 3,
+          "packageVersion": "2.12.7+dfsg+really2.9.14-2.1+deb13u3+getpatched4",
+          "releaseSerial": 4,
           "binaryPackages": [
             "libxml2",
             "libxml2-utils",
@@ -285,29 +285,39 @@
             "libxml2"
           ],
           "builderPackages": [],
-          "targetCve": "CVE-2026-76781",
+          "targetCve": "CVE-2026-86141",
           "targetCves": [
             "CVE-2026-6653",
             "CVE-2026-86144",
-            "CVE-2026-76781"
+            "CVE-2026-76781",
+            "CVE-2026-86141"
           ],
-          "advisory": "https://security-tracker.debian.org/tracker/CVE-2026-76781",
+          "advisory": "https://security-tracker.debian.org/tracker/CVE-2026-86141",
           "advisories": {
             "CVE-2026-6653": "https://security-tracker.debian.org/tracker/CVE-2026-6653",
             "CVE-2026-86144": "https://security-tracker.debian.org/tracker/CVE-2026-86144",
-            "CVE-2026-76781": "https://security-tracker.debian.org/tracker/CVE-2026-76781"
+            "CVE-2026-76781": "https://security-tracker.debian.org/tracker/CVE-2026-76781",
+            "CVE-2026-86141": "https://security-tracker.debian.org/tracker/CVE-2026-86141"
           },
-          "candidateStatus": "development-verified-production-release-pending",
+          "candidateStatus": "unverified-development-candidate",
           "verifiedReleases": [
             {
-              "version": "2.12.7+dfsg+really2.9.14-2.1+deb13u3+getpatched1",
-              "releaseSerial": 1,
+              "version": "2.12.7+dfsg+really2.9.14-2.1+deb13u3+getpatched3",
+              "releaseSerial": 3,
               "status": "development-verified-production-release-pending",
               "targetCves": [
-                "CVE-2026-6653"
+                "CVE-2026-6653",
+                "CVE-2026-86144",
+                "CVE-2026-76781"
               ],
               "advisoryPackagesByCve": {
                 "CVE-2026-6653": [
+                  "libxml2"
+                ],
+                "CVE-2026-86144": [
+                  "libxml2"
+                ],
+                "CVE-2026-76781": [
                   "libxml2"
                 ]
               }

@@ -11,6 +11,8 @@ from regression import (LIBPNG_CVE_2025_65018_FIXTURE, pixarlog_baseline_reprodu
                         brotli_baseline_reproduced, brotli_patched_succeeded,
                         cares_regression_succeeded, consumer_version_succeeded, expat_consumer_succeeded, expat_regression_succeeded,
                         libxml2_catalog_baseline_reproduced, libxml2_catalog_patched_succeeded,
+                        libxml2_regexp_alloc_failure_baseline_reproduced,
+                        libxml2_regexp_alloc_failure_patched_succeeded,
                         libxml2_check_cardinality_valid,
                         libxml2_parameter_entity_baseline_reproduced, libxml2_parameter_entity_patched_succeeded,
                         libxml2_xinclude_nonet_result, libxml2_xinclude_checks_succeeded,
@@ -65,16 +67,62 @@ class Libxml2ParameterEntityRegression(unittest.TestCase):
         self.assertFalse(libxml2_catalog_patched_succeeded({**patched, "returncode": 97}))
 
     def test_libxml2_report_cardinality_requires_one_check_per_cve_and_both_xinclude_apis(self):
-        target = ["CVE-2026-6653", "CVE-2026-86144", "CVE-2026-76781"]
+        target = ["CVE-2026-6653", "CVE-2026-86144", "CVE-2026-76781", "CVE-2026-86141"]
         checks = [
             {"cve": "CVE-2026-6653"},
             {"cve": "CVE-2026-86144", "testId": "document"},
             {"cve": "CVE-2026-86144", "testId": "tree"},
             {"cve": "CVE-2026-76781"},
+            {"cve": "CVE-2026-86141"},
         ]
         self.assertTrue(libxml2_check_cardinality_valid(checks, target))
         self.assertFalse(libxml2_check_cardinality_valid(checks[:-1], target))
         self.assertFalse(libxml2_check_cardinality_valid(checks + [checks[0]], target))
+
+    def test_regexp_allocation_failure_classifier_requires_crash_or_clean_rejection(self):
+        log_path = "/tmp/cve-2026-86141.valgrind"
+        memory_log = (
+            "==123== Invalid read of size 1\n"
+            "==123==    at 0x123: strlen (vg_replace_strmem.c:...)\n"
+            "==123==    by 0x456: xmlRegNewParserCtxt (in /usr/lib/libxml2.so.2.9.14)\n"
+            "==123==    by 0x789: xmlRegexpCompile (in /usr/lib/libxml2.so.2.9.14)\n"
+            "==123==  Address 0x0 is not stack'd, malloc'd or (recently) free'd\n"
+            "==123== Process terminating with default action of signal 11 (SIGSEGV)\n"
+            "==123== ERROR SUMMARY: 1 errors from 1 contexts\n"
+        )
+        baseline = {
+            "cve": "CVE-2026-86141",
+            "testId": "regexp-allocation-failure-null-check",
+            "timedOut": False,
+            "returncode": 97,
+            "command": [
+                "/usr/bin/valgrind", "--tool=memcheck", "--error-exitcode=97", "--leak-check=no",
+                "--read-var-info=yes", "--log-file=" + log_path,
+                "/tmp/libxml2-cve-2026-86141",
+            ],
+            "injection": "xmlstrdup-interposer:(alpha|bravo|charlie)",
+            "stderr": "GETPATCHED_XMLSTRDUP_FAILURE_INJECTED\n",
+            "memoryLogPath": log_path,
+            "memoryLog": memory_log,
+        }
+        self.assertTrue(libxml2_regexp_alloc_failure_baseline_reproduced(baseline))
+        self.assertFalse(libxml2_regexp_alloc_failure_baseline_reproduced({**baseline, "returncode": 0}))
+        self.assertFalse(libxml2_regexp_alloc_failure_baseline_reproduced({
+            **baseline, "stderr": "unrelated crash\n"
+        }))
+        self.assertFalse(libxml2_regexp_alloc_failure_baseline_reproduced({
+            **baseline, "memoryLog": memory_log.replace("xmlRegNewParserCtxt", "unrelated_crash")
+        }))
+        patched = {
+            **baseline,
+            "returncode": 0,
+            "stdout": "XML_REGEXP_COMPILE_REJECTED_ALLOCATION_FAILURE\n",
+            "memoryLog": "==123== ERROR SUMMARY: 0 errors from 0 contexts\n",
+        }
+        self.assertTrue(libxml2_regexp_alloc_failure_patched_succeeded(patched))
+        self.assertFalse(libxml2_regexp_alloc_failure_patched_succeeded({
+            **patched, "stdout": ""
+        }))
 
     def test_xinclude_scanner_requires_one_passing_result_per_api(self):
         def check(api, mode, returncode):

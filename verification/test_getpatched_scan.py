@@ -94,7 +94,7 @@ class GetPatchedScannerContract(unittest.TestCase):
             [("Debian:12", "libxml2", ["2.9.14+dfsg-1.3~deb12u6"], "debian-bookworm-amd64",
               "2.9.14+dfsg-1.3~deb12u6+getpatched1"),
              ("Debian:13", "libxml2", ["2.12.7+dfsg+really2.9.14-2.1+deb13u3"], target_id,
-              "2.12.7+dfsg+really2.9.14-2.1+deb13u3+getpatched3")],
+              "2.12.7+dfsg+really2.9.14-2.1+deb13u3+getpatched4")],
         )
 
     def test_libxml2_trixie_xinclude_advisory_is_verified_and_target_scoped(self):
@@ -112,7 +112,7 @@ class GetPatchedScannerContract(unittest.TestCase):
               item["database_specific"]["candidate_version"])
              for item in advisory["affected"]],
             [("Debian:13", "libxml2", ["2.12.7+dfsg+really2.9.14-2.1+deb13u3"], target_id,
-              "2.12.7+dfsg+really2.9.14-2.1+deb13u3+getpatched3")],
+              "2.12.7+dfsg+really2.9.14-2.1+deb13u3+getpatched4")],
         )
 
     def test_libxml2_trixie_catalog_advisory_is_verified_and_target_scoped(self):
@@ -131,7 +131,24 @@ class GetPatchedScannerContract(unittest.TestCase):
               item["database_specific"]["candidate_version"])
              for item in advisory["affected"]],
             [("Debian:13", "libxml2", ["2.12.7+dfsg+really2.9.14-2.1+deb13u3"], target_id,
-              "2.12.7+dfsg+really2.9.14-2.1+deb13u3+getpatched3")],
+              "2.12.7+dfsg+really2.9.14-2.1+deb13u3+getpatched4")],
+        )
+
+    def test_libxml2_trixie_allocation_failure_advisory_is_exact_and_candidate_scoped(self):
+        config = json.loads((ROOT / "packages.json").read_text())
+        policy = config["packages"]["libxml2"]["targets"]["debian-trixie-amd64"]
+        self.assertEqual(policy["advisory"], policy["advisories"][policy["targetCve"]])
+        candidate = SCANNER_MODULE.build_feed(config, {("libxml2", "debian-trixie-amd64")})
+        advisory = next(item for item in candidate["vulns"] if item["id"] == "CVE-2026-86141")
+        self.assertEqual(advisory["summary"],
+                         "libxml2 can dereference NULL while creating a regular-expression parser context after allocation failure")
+        self.assertEqual(
+            [(item["package"]["ecosystem"], item["package"]["name"], item["versions"],
+              item["ecosystem_specific"]["target_id"],
+              item["database_specific"]["candidate_version"])
+             for item in advisory["affected"]],
+            [("Debian:13", "libxml2", ["2.12.7+dfsg+really2.9.14-2.1+deb13u3"],
+              "debian-trixie-amd64", "2.12.7+dfsg+really2.9.14-2.1+deb13u3+getpatched4")],
         )
 
     def test_expat_candidate_requires_exact_crash_or_patched_consumer(self):
