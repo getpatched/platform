@@ -319,6 +319,31 @@ class PackageRecipeContract(unittest.TestCase):
         self.assertIn("test-only build compatibility patch", changelog)
         self.assertIn("Existing Ubuntu changelog entry.", changelog)
 
+    def test_materializer_adds_debian_symbols_to_the_named_library_stanza(self):
+        source = self.root / "symbols-source"
+        (source / "debian").mkdir(parents=True)
+        symbols = source / "debian/libexpat1.symbols"
+        symbols.write_text(
+            "libexpat.so.1 libexpat1 #MINVER#\n"
+            " XML_SetHashSalt@Base 2.1~beta3\n"
+            " XML_SetNamespaceDeclHandler@Base 2.0.1\n"
+            "libexpatw.so.1 libexpat1 #MINVER#\n"
+            " XML_SetHashSalt@Base 2.1~beta3\n"
+            " XML_SetNamespaceDeclHandler@Base 2.0.1\n"
+        )
+        entry = {"package": "libexpat1", "library": "libexpat.so.1",
+                 "after": "XML_SetHashSalt", "symbol": "XML_SetHashSalt16Bytes",
+                 "version": "2.5.0"}
+        MATERIALIZER.add_debian_symbol(source, entry, ["libexpat1"])
+        expected = symbols.read_text()
+        self.assertIn(" XML_SetHashSalt16Bytes@Base 2.5.0\n", expected)
+        self.assertEqual(expected.count("XML_SetHashSalt16Bytes"), 1)
+        MATERIALIZER.add_debian_symbol(source, entry, ["libexpat1"])
+        self.assertEqual(symbols.read_text(), expected)
+        second_library = {**entry, "library": "libexpatw.so.1"}
+        MATERIALIZER.add_debian_symbol(source, second_library, ["libexpat1"])
+        self.assertEqual(symbols.read_text().count("XML_SetHashSalt16Bytes"), 2)
+
 
 class PopplerRecipeContract(unittest.TestCase):
     def test_focal_recipe_pins_source_patch_licensing_and_public_access(self):
