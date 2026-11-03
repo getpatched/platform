@@ -132,6 +132,21 @@ def libxml2_parameter_entity_patched_succeeded(check):
     )
 
 
+def libxml2_xinclude_nonet_result(check, phase):
+    command = check.get("command", [])
+    expected_mode = "expect-network" if phase == "baseline" else "expect-blocked"
+    expected_code = 10 if phase == "baseline" else 0
+    return bool(
+        not check.get("timedOut", False)
+        and len(command) == 4
+        and Path(command[0]).name == "libxml2-cve-2026-86144"
+        and Path(command[1]).name == "cve-2026-86144-xinclude.xml"
+        and command[2] in ("document", "tree")
+        and command[3] == expected_mode
+        and check.get("returncode") == expected_code
+    )
+
+
 def valid_tiff_baseline_stack_signature(expected_stack_frames):
     return (
         isinstance(expected_stack_frames, list)
@@ -919,6 +934,28 @@ def main():
                         if args.phase == "baseline" else libxml2_parameter_entity_patched_succeeded(check)
                     )
                     checks.append(check)
+                elif cve == "CVE-2026-86144":
+                    probe = temp / "libxml2-cve-2026-86144"
+                    flags = shlex.split(subprocess.check_output(
+                        ["pkg-config", "--cflags", "--libs", "libxml-2.0"], text=True, timeout=15
+                    ))
+                    compiled = subprocess.run(
+                        ["c++", "-std=c++11", "-O1", "-g", str(fixtures / "cve-2026-86144-xinclude-harness.cc"),
+                         "-pthread", "-o", str(probe), *flags],
+                        capture_output=True, text=True, timeout=30, check=False,
+                    )
+                    if compiled.returncode != 0:
+                        raise RuntimeError("could not compile the libxml2 CVE-2026-86144 regression harness: " + compiled.stderr[-2000:])
+                    for api in ("document", "tree"):
+                        mode = "expect-network" if args.phase == "baseline" else "expect-blocked"
+                        check = execute([
+                            str(probe), str(fixtures / "cve-2026-86144-xinclude.xml"), api, mode,
+                        ], timeout=10)
+                        check["cve"] = cve
+                        check["testId"] = "xinclude-nonet-" + api
+                        check["phase"] = args.phase
+                        check["passed"] = libxml2_xinclude_nonet_result(check, args.phase)
+                        checks.append(check)
                 else:
                     raise RuntimeError("no libxml2 regression is configured for " + cve)
             if args.phase == "patched":
