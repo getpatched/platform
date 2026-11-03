@@ -182,7 +182,7 @@ def libxml2_regexp_alloc_failure_command(check):
         and memcheck_log_path_matches(check, command)
         and Path(command[6]).name == "libxml2-cve-2026-86141"
         and check.get("testId") == "regexp-allocation-failure-null-check"
-        and check.get("injection") == "xmlstrdup-interposer:(alpha|bravo|charlie)"
+        and check.get("injection") == "xmlMemSetup:test_strdup"
     )
 
 
@@ -1110,7 +1110,6 @@ def main():
                     checks.append(check)
                 elif cve == "CVE-2026-86141":
                     probe = temp / "libxml2-cve-2026-86141"
-                    injector = temp / "libxml2-cve-2026-86141-injector.so"
                     flags = shlex.split(subprocess.check_output(
                         ["pkg-config", "--cflags", "--libs", "libxml-2.0"], text=True, timeout=15
                     ))
@@ -1121,28 +1120,14 @@ def main():
                     )
                     if compiled.returncode != 0:
                         raise RuntimeError("could not compile the libxml2 CVE-2026-86141 regression harness: " + compiled.stderr[-2000:])
-                    injection_build = subprocess.run(
-                        ["cc", "-std=c11", "-O1", "-g", "-fPIC", "-shared",
-                         str(fixtures / "cve-2026-86141-xmlstrdup-interposer.c"),
-                         *shlex.split(subprocess.check_output(
-                             ["pkg-config", "--cflags", "libxml-2.0"], text=True, timeout=15
-                         )),
-                         "-o", str(injector), "-ldl"],
-                        capture_output=True, text=True, timeout=30, check=False,
-                    )
-                    if injection_build.returncode != 0:
-                        raise RuntimeError("could not compile the libxml2 CVE-2026-86141 allocation injector: " + injection_build.stderr[-2000:])
-                    env = os.environ.copy()
-                    env["LD_PRELOAD"] = str(injector)
-                    env["GETPATCHED_FAIL_XMLSTRDUP_PATTERN"] = "(alpha|bravo|charlie)"
                     log = temp / "cve-2026-86141.valgrind"
                     check = execute([
                         "valgrind", "--tool=memcheck", "--error-exitcode=97", "--leak-check=no",
                         "--read-var-info=yes", "--log-file=" + str(log), str(probe),
-                    ], timeout=15, env=env)
+                    ], timeout=15)
                     check["cve"] = cve
                     check["testId"] = "regexp-allocation-failure-null-check"
-                    check["injection"] = "xmlstrdup-interposer:(alpha|bravo|charlie)"
+                    check["injection"] = "xmlMemSetup:test_strdup"
                     check["memoryLogPath"] = str(log)
                     check["memoryLog"] = log.read_text() if log.exists() else ""
                     check["phase"] = args.phase
