@@ -253,7 +253,7 @@ class GetPatchedScannerContract(unittest.TestCase):
             "magickBinaryOwner": "imagemagick-7.q16",
             "magickBinaryPath": "/usr/bin/magick-im7.q16",
         }
-        cdl_clean = "==1== definitely lost: 0 bytes in 0 blocks\n==1== ERROR SUMMARY: 0 errors from 0 contexts\n"
+        cdl_clean = "==1==    definitely lost: 0 bytes in 0 blocks\n==1== ERROR SUMMARY: 0 errors from 0 contexts\n"
 
         def cdl_check(version, phase):
             fixture = "/recipe/tests/fixtures/cve-2026-116159-input.ppm"
@@ -269,7 +269,7 @@ class GetPatchedScannerContract(unittest.TestCase):
                     "==1==    at 0x10: FileToString (blob.c:1)\n"
                     f"==1==    by 0x20: {caller} (operation.c:1)\n"
                     "==1== \n==1== LEAK SUMMARY:\n"
-                    "==1== definitely lost: 16 bytes in 1 blocks\n"
+                    "==1==    definitely lost: 16 bytes in 1 blocks\n"
                     "==1== ERROR SUMMARY: 1 errors from 1 contexts\n"
                 )
                 operands = ([fixture, "-cdl", cdl, output]

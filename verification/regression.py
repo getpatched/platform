@@ -628,7 +628,7 @@ def imagemagick_cdl_check_succeeded(check, phase):
                     or Path(output_path).name != "mogrify-input.ppm"))):
             return False
         log = item.get("memoryLog", "")
-        leaked = re.search(r"(?m)^==\d+== definitely lost: [1-9]\d* bytes in [1-9]\d* blocks", log)
+        leaked = re.search(r"(?m)^==\d+==\s+definitely lost: [1-9]\d* bytes in [1-9]\d* blocks", log)
         if phase == "baseline":
             allocation_caller = {
                 "imagemagick-cdl-cli": "CLIOption",
@@ -2017,7 +2017,7 @@ def main():
             if check.get("testId") == "imagemagick-cdl-memory-release":
                 for subcheck in check.get("subchecks", []):
                     log = subcheck.get("memoryLog", "")
-                    lost = re.search(r"(?m)^==\d+== definitely lost: .*", log)
+                    lost = re.search(r"(?m)^==\d+==\s+definitely lost:.*", log)
                     callers = [line.strip() for line in log.splitlines()
                                if "FileToString" in line or "CLIOption" in line
                                or "MogrifyImage" in line]

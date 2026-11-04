@@ -334,7 +334,7 @@ class ImageMagickMorphRegression(unittest.TestCase):
 class ImageMagickCdlRegression(unittest.TestCase):
     def check(self, phase):
         version = "8:7.1.1.43+dfsg1-1+deb13u13" + ("+getpatched2" if phase == "patched" else "")
-        clean = "==1== definitely lost: 0 bytes in 0 blocks\n==1== ERROR SUMMARY: 0 errors from 0 contexts\n"
+        clean = "==1==    definitely lost: 0 bytes in 0 blocks\n==1== ERROR SUMMARY: 0 errors from 0 contexts\n"
 
         def leak_log(caller):
             return (
@@ -342,7 +342,7 @@ class ImageMagickCdlRegression(unittest.TestCase):
                 "==1==    at 0x10: FileToString (blob.c:1)\n"
                 f"==1==    by 0x20: {caller} (operation.c:1)\n"
                 "==1== \n==1== LEAK SUMMARY:\n"
-                "==1== definitely lost: 16 bytes in 1 blocks\n"
+                "==1==    definitely lost: 16 bytes in 1 blocks\n"
                 "==1== ERROR SUMMARY: 1 errors from 1 contexts\n"
             )
         subchecks = []
@@ -384,7 +384,7 @@ class ImageMagickCdlRegression(unittest.TestCase):
         self.assertTrue(imagemagick_cdl_check_succeeded(self.check("baseline"), "baseline"))
         missing_second_leak = self.check("baseline")
         missing_second_leak["subchecks"][1]["memoryLog"] = (
-            "==1== definitely lost: 0 bytes in 0 blocks\n==1== ERROR SUMMARY: 0 errors from 0 contexts\n")
+            "==1==    definitely lost: 0 bytes in 0 blocks\n==1== ERROR SUMMARY: 0 errors from 0 contexts\n")
         missing_second_leak["subchecks"][1]["returncode"] = 0
         self.assertFalse(imagemagick_cdl_check_succeeded(missing_second_leak, "baseline"))
 
