@@ -2013,6 +2013,23 @@ def main():
     args.output.write_text(json.dumps(report, indent=2) + "\n")
     print(package, args.phase, "PASS" if report["passed"] else "FAIL")
     if not report["passed"]:
+        for check in checks:
+            if check.get("testId") == "imagemagick-cdl-memory-release":
+                for subcheck in check.get("subchecks", []):
+                    log = subcheck.get("memoryLog", "")
+                    lost = re.search(r"(?m)^==\d+== definitely lost: .*", log)
+                    callers = [line.strip() for line in log.splitlines()
+                               if "FileToString" in line or "CLISimpleOperatorImage" in line
+                               or "MogrifyImage" in line]
+                    print("ImageMagick CDL diagnostic:", json.dumps({
+                        "phase": args.phase,
+                        "testId": subcheck.get("testId"),
+                        "returncode": subcheck.get("returncode"),
+                        "timedOut": subcheck.get("timedOut"),
+                        "outputInspectReturncode": subcheck.get("outputInspectReturncode"),
+                        "definitelyLost": lost.group(0) if lost else None,
+                        "allocationCallers": callers[:12],
+                    }, sort_keys=True))
         raise SystemExit(1)
 
 
