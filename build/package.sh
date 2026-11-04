@@ -34,7 +34,25 @@ if [[ "$target" == "debian-trixie-amd64" && "$(python3 -c 'import json; print(js
 fi
 dpkg-source -b .
 export DEB_BUILD_OPTIONS='check parallel=1'
-dpkg-buildpackage -b -us -uc -j1
+if ! dpkg-buildpackage -b -us -uc -j1; then
+  {
+    echo 'Debian build failed; captured upstream test diagnostics follow.'
+    if [[ -f /build/source/test-suite.log ]]; then
+      echo '=== /build/source/test-suite.log ==='
+      tail -n 250 /build/source/test-suite.log
+    fi
+    for test_dir in /tmp/bsdunzip_test.*; do
+      [[ -d "$test_dir" ]] || continue
+      for diagnostic in "$test_dir"/*; do
+        [[ -f "$diagnostic" ]] || continue
+        echo "=== $diagnostic ==="
+        head -c 32768 "$diagnostic"
+        echo
+      done
+    done
+  } | head -c 65536 > /output/build-failure-diagnostics.txt || true
+  exit 1
+fi
 cp /build/*.buildinfo /output/
 dpkg -i /build/*.deb
 python3 /verification/regression.py --recipe /recipe --policy /output/package-policy.json --phase patched --output /output/patched-regression.json
