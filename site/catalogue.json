@@ -1631,6 +1631,75 @@
           "ubuntuProEsmCompatibility": "not-applicable"
         }
       }
+    },
+  {
+    "source": "imagemagick",
+    "targets": {
+      "debian-trixie-amd64": {
+        "baseVersion": "8:7.1.1.43+dfsg1-1+deb13u13",
+        "version": "8:7.1.1.43+dfsg1-1+deb13u13+getpatched1",
+        "cves": [
+          "CVE-2026-119124"
+        ],
+        "vulnerabilities": [
+          {
+            "id": "CVE-2026-119124",
+            "slug": "cve-2026-119124",
+            "summary": "MorphImages can write one pixel past the allocated image row when frames have different channel layouts.",
+            "advisoryUrl": "https://security-tracker.debian.org/tracker/CVE-2026-119124",
+            "patchSlugs": [
+              "cve-2026-119124-trixie"
+            ],
+            "patched": true
+          }
+        ],
+        "patches": [
+          {
+            "id": "cve-2026-119124-trixie",
+            "slug": "cve-2026-119124-trixie",
+            "kind": "security",
+            "title": "Bound MorphImages pixel-channel access",
+            "description": "Uses the output image channel layout for writes and reads source pixels by channel, preventing out-of-bounds access when input frames have different channel layouts.",
+            "sha256": "088d417d715c83a15e4bd3ba7fdd41fc2a1d22e551b7b48c4d6cb02f962b8c4a",
+            "fileUrl": "https://github.com/getpatched/packaging-imagemagick/blob/getpatched/debian-trixie/patches/CVE-2026-119124.patch",
+            "cves": [
+              "CVE-2026-119124"
+            ],
+            "upstream": {
+              "repository": "https://github.com/ImageMagick/ImageMagick",
+              "commit": "270f70f609f659a01aaa2a8ed7bd887f79722d45",
+              "url": "https://github.com/ImageMagick/ImageMagick/commit/270f70f609f659a01aaa2a8ed7bd887f79722d45"
+            },
+            "tests": [
+              {
+                "id": "imagemagick-morph-channel-bounds",
+                "baselineExpectation": "The exact installed Debian Trixie baseline reports an invalid write from MorphImages when morphing the GrayscaleAlpha frame into the sRGB frame.",
+                "patchedExpectation": "The installed patched package processes the same frames with no invalid memory accesses and emits a three-frame result."
+              }
+            ]
+          }
+        ],
+        "access": "public",
+        "delayHours": 0,
+        "sponsorEligibility": null,
+        "earlyBinaryLicenseId": null,
+        "publicContributionSpdx": "MIT",
+        "earlyUse": [
+          "private",
+          "commercial"
+        ],
+        "earlyRedistributionAllowed": false,
+        "status": "development-verified-production-release-pending",
+        "verification": "https://github.com/getpatched/platform/actions/runs/41793654256",
+        "sourceUrl": "https://github.com/getpatched/packaging-imagemagick/tree/getpatched/debian-trixie",
+        "patchUrl": "https://github.com/getpatched/packaging-imagemagick/blob/getpatched/debian-trixie/patches/CVE-2026-119124.patch",
+        "testsUrl": "https://github.com/getpatched/packaging-imagemagick/tree/getpatched/debian-trixie/tests",
+        "releasesUrl": "https://github.com/getpatched/packaging-imagemagick/releases",
+        "releaseStatus": "No production release",
+        "publicLicenseScope": "getpatched-authored-contributions-only",
+        "ubuntuProEsmCompatibility": "not-applicable"
+      }
     }
+  }
   ]
 }

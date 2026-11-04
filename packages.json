@@ -1007,7 +1007,7 @@
           "targetCves": ["CVE-2026-119124"],
           "advisory": "https://security-tracker.debian.org/tracker/CVE-2026-119124",
           "advisories": {"CVE-2026-119124": "https://security-tracker.debian.org/tracker/CVE-2026-119124"},
-          "candidateStatus": "unverified-development-candidate",
+          "candidateStatus": "development-verified-production-release-pending",
           "releaseAccess": {
             "policy": "public-after-checks", "sponsorDelayHours": 0,
             "sponsorEligibility": null, "earlyBinaryLicenseId": null,
