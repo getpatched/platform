@@ -1208,11 +1208,42 @@ def main():
             if policy["targetId"] == "debian-trixie-amd64":
                 source_report_path = args.output.parent / f"libarchive-source-ubsan-{args.phase}.json"
                 source_report = json.loads(source_report_path.read_text())
+                source_provenance_path = args.output.parent / "source-provenance.json"
+                if (not source_provenance_path.is_file()
+                        or hashlib.sha256(source_provenance_path.read_bytes()).hexdigest()
+                        != source_report.get("sourceProvenanceSha256")):
+                    raise RuntimeError("exact-source UBSan report is not bound to this build's pinned source provenance")
+                recipe_manifest = json.loads((args.recipe / "package-manifest.json").read_text())
+                recipe_target_ref = next(item for item in recipe_manifest["targets"] if item["id"] == policy["targetId"])
+                recipe_target = json.loads((args.recipe / recipe_target_ref["file"]).read_text())
+                recipe_patch_metadata = json.loads((args.recipe / recipe_manifest["patchMetadata"]).read_text())
+                recipe_patches = [
+                    item for item in recipe_patch_metadata["patches"]
+                    if item.get("id") in recipe_target["patches"] and "CVE-2026-16517" in item.get("cves", [])
+                ]
+                if len(recipe_patches) != 1:
+                    raise RuntimeError("recipe does not identify one exact CVE-2026-16517 patch")
+                expected_patch = recipe_patches[0]
                 if (source_report.get("runner") != "getpatched-libarchive-source-ubsan/1"
                         or source_report.get("phase") != args.phase
                         or source_report.get("cryptoBackend") != "nettle"
+                        or source_report.get("evidenceType") != "exact-source-ubsan; installed package behavior is reported separately"
+                        or source_report.get("targetId") != policy["targetId"]
+                        or source_report.get("sourceVersion") != policy["baseVersion"]
+                        or source_report.get("sourceDescriptorSha256") != recipe_target["source"]["descriptor"]["sha256"]
+                        or source_report.get("patchId") != expected_patch["id"]
+                        or source_report.get("patchSha256") != expected_patch["sha256"]
+                        or source_report.get("changelogVersion") != (policy["baseVersion"] if args.phase == "baseline" else policy["version"])
+                        or not re.fullmatch(r"[0-9a-f]{64}", str(source_report.get("sourceProvenanceSha256", "")))
+                        or not re.fullmatch(r"[0-9a-f]{64}", str(source_report.get("sourceTreeSha256", "")))
+                        or not re.fullmatch(r"[0-9a-f]{64}", str(source_report.get("vulnerableFileSha256", "")))
+                        or source_report.get("patchApplied") is not (args.phase == "patched")
                         or source_report.get("passed") is not True):
                     raise RuntimeError("exact-source UBSan regression is missing or failed")
+                if args.phase == "baseline" and source_report.get("sourceVulnerabilityReproduced") is not True:
+                    raise RuntimeError("exact-source UBSan baseline did not reproduce the signed overflow")
+                if args.phase == "patched" and source_report.get("patchedBehavior") is not True:
+                    raise RuntimeError("exact-source patched UBSan test did not complete cleanly")
                 probe = compile_pkg_config_probe(
                     fixtures / "zip-encrypted-size-overflow.c", temp / "zip-encrypted-size-overflow", ["libarchive"]
                 )
@@ -1224,7 +1255,8 @@ def main():
                     and "GETPATCHED:ZIP_HEADER_RETURN" in check["stderr"]
                 )
                 check["sourceRegressionSha256"] = hashlib.sha256(source_report_path.read_bytes()).hexdigest()
-                check["vulnerabilityReproduced"] = source_report.get("vulnerabilityReproduced") is True
+                check["sourceProvenanceSha256"] = source_report["sourceProvenanceSha256"]
+                check["sourceVulnerabilityReproduced"] = source_report.get("sourceVulnerabilityReproduced") is True
                 check["patchedBehavior"] = source_report.get("patchedBehavior") is True
                 check["passed"] = check["headerGenerationSucceeded"] and source_report["passed"] is True
                 checks.append(check)

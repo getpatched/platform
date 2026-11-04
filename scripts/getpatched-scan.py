@@ -438,7 +438,7 @@ def regression_verified_candidate(directory, scan_images_path, target_id, recipe
             if phase == "baseline":
                 if target["targetCves"][0] == "CVE-2026-16517":
                     if (check.get("passed") is not True
-                            or check.get("vulnerabilityReproduced") is not True
+                            or check.get("sourceVulnerabilityReproduced") is not True
                             or not re.fullmatch(r"[0-9a-f]{64}", str(check.get("sourceRegressionSha256", "")))):
                         raise ValueError("libarchive baseline evidence lacks the exact-source UBSan overflow reproduction")
                 elif check.get("timedOut") is not True:

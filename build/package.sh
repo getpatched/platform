@@ -14,8 +14,10 @@ cp /originals/*.orig.tar.* /build/
 cd /build/source
 target="$(python3 -c 'import json; print(json.load(open("/package-policy.json"))["targetId"])')"
 if [[ "$target" == "debian-trixie-amd64" && "$(python3 -c 'import json; print(json.load(open("/package-policy.json"))["source"])')" == "libarchive" ]]; then
+  cp /source-provenance.json /output/source-provenance.json
   python3 /verification/libarchive-source-ubsan.py --source /build/source \
     --fixture /recipe/tests/fixtures/zip-encrypted-size-overflow.c \
+    --recipe /recipe --policy /package-policy.json --source-provenance /source-provenance.json \
     --phase baseline --output /output/libarchive-source-ubsan-baseline.json
 fi
 python3 /materialize-package.py --recipe /recipe --source /build/source --target "$target" \
@@ -27,6 +29,7 @@ dpkg-source --before-build .
 if [[ "$target" == "debian-trixie-amd64" && "$(python3 -c 'import json; print(json.load(open("/package-policy.json"))["source"])')" == "libarchive" ]]; then
   python3 /verification/libarchive-source-ubsan.py --source /build/source \
     --fixture /recipe/tests/fixtures/zip-encrypted-size-overflow.c \
+    --recipe /recipe --policy /package-policy.json --source-provenance /source-provenance.json \
     --phase patched --output /output/libarchive-source-ubsan-patched.json
 fi
 dpkg-source -b .

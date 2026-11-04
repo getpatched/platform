@@ -108,15 +108,40 @@ def main():
             if (baseline_ubsan.get("runner") != "getpatched-libarchive-source-ubsan/1"
                     or baseline_ubsan.get("phase") != "baseline"
                     or baseline_ubsan.get("cryptoBackend") != "nettle"
-                    or baseline_ubsan.get("vulnerabilityReproduced") is not True
+                    or baseline_ubsan.get("evidenceType") != "exact-source-ubsan; installed package behavior is reported separately"
+                    or baseline_ubsan.get("sourceVulnerabilityReproduced") is not True
                     or baseline_ubsan.get("passed") is not True
                     or patched_ubsan.get("runner") != "getpatched-libarchive-source-ubsan/1"
                     or patched_ubsan.get("phase") != "patched"
                     or patched_ubsan.get("cryptoBackend") != "nettle"
+                    or patched_ubsan.get("evidenceType") != "exact-source-ubsan; installed package behavior is reported separately"
                     or patched_ubsan.get("patchedBehavior") is not True
                     or patched_ubsan.get("passed") is not True
+                    or baseline_ubsan.get("targetId") != data["targetId"]
+                    or patched_ubsan.get("targetId") != data["targetId"]
+                    or baseline_ubsan.get("sourceVersion") != data["baselineVersion"]
+                    or patched_ubsan.get("sourceVersion") != data["baselineVersion"]
+                    or baseline_ubsan.get("changelogVersion") != data["baselineVersion"]
+                    or patched_ubsan.get("changelogVersion") != data["patchedVersion"]
+                    or baseline_ubsan.get("sourceProvenanceSha256") != provenance.get("sourceProvenanceSha256")
+                    or patched_ubsan.get("sourceProvenanceSha256") != provenance.get("sourceProvenanceSha256")
+                    or baseline_ubsan.get("sourceDescriptorSha256") != provenance.get("sourceDescriptor", {}).get("sha256")
+                    or patched_ubsan.get("sourceDescriptorSha256") != provenance.get("sourceDescriptor", {}).get("sha256")
+                    or baseline_ubsan.get("sourceProvenanceSha256") != provenance.get("sourceProvenanceSha256")
+                    or patched_ubsan.get("sourceProvenanceSha256") != provenance.get("sourceProvenanceSha256")
+                    or baseline_ubsan.get("patchId") != patched_ubsan.get("patchId")
+                    or baseline_ubsan.get("patchSha256") != patched_ubsan.get("patchSha256")
+                    or baseline_ubsan.get("patchApplied") is not False
+                    or patched_ubsan.get("patchApplied") is not True
+                    or baseline_ubsan.get("sourceTreeSha256") == patched_ubsan.get("sourceTreeSha256")
+                    or baseline_ubsan.get("vulnerableFileSha256") == patched_ubsan.get("vulnerableFileSha256")
                     or baseline_ubsan.get("fixtureSha256") != patched_ubsan.get("fixtureSha256")):
                 raise ValueError("exact-source UBSan evidence does not prove baseline overflow and patched success")
+            if (data["source"] == "libarchive" and data["targetId"] == "debian-trixie-amd64"
+                    and not any(item.get("id") == baseline_ubsan.get("patchId")
+                                and item.get("sha256") == baseline_ubsan.get("patchSha256")
+                                for item in provenance.get("patches", []))):
+                raise ValueError("UBSan patch identity does not match the pinned source provenance")
         if (policy.get("source") != data["source"] or policy.get("targetId") != data["targetId"] or policy.get("targetCves") != targets
                 or policy.get("baseVersion") != data["baselineVersion"]
                 or policy.get("version") != data["patchedVersion"]
@@ -136,6 +161,18 @@ def main():
         patched_cves = {check.get("cve") for check in patched.get("checks", []) if check.get("passed")}
         if not set(targets).issubset(baseline_cves) or not set(targets).issubset(patched_cves):
             raise ValueError("a configured target CVE lacks passing baseline or installed patched regression evidence")
+        if data["source"] == "libarchive" and data["targetId"] == "debian-trixie-amd64":
+            baseline_probe = next((check for check in baseline.get("checks", []) if check.get("cve") == "CVE-2026-16517"), {})
+            patched_probe = next((check for check in patched.get("checks", []) if check.get("cve") == "CVE-2026-16517"), {})
+            if (baseline_probe.get("sourceVulnerabilityReproduced") is not True
+                    or baseline_probe.get("headerGenerationSucceeded") is not True
+                    or patched_probe.get("patchedBehavior") is not True
+                    or patched_probe.get("headerGenerationSucceeded") is not True
+                    or baseline_probe.get("sourceRegressionSha256") != sha256(data["sourceUbsanBaseline"])
+                    or patched_probe.get("sourceRegressionSha256") != sha256(data["sourceUbsanPatched"])
+                    or baseline_probe.get("sourceProvenanceSha256") != provenance.get("sourceProvenanceSha256")
+                    or patched_probe.get("sourceProvenanceSha256") != provenance.get("sourceProvenanceSha256")):
+                raise ValueError("installed package behavior is not bound to its matching exact-source UBSan evidence")
         expected_binary_names = package["binaryPackages"]
         if (manifest.get("source") != data["source"] or manifest.get("targetId") != data["targetId"]
                 or manifest.get("sourceVersion") != package.get("sourceVersion", package["baselineVersion"])
@@ -240,6 +277,10 @@ def main():
                     "baselineSha256": sha256(data["sourceUbsanBaseline"]),
                     "patched": str(data["sourceUbsanPatched"]),
                     "patchedSha256": sha256(data["sourceUbsanPatched"]),
+                    "sourceProvenanceSha256": provenance.get("sourceProvenanceSha256"),
+                    "baselineSourceTreeSha256": source_ubsan["baseline"].get("sourceTreeSha256"),
+                    "patchedSourceTreeSha256": source_ubsan["patched"].get("sourceTreeSha256"),
+                    "patchSha256": source_ubsan["baseline"].get("patchSha256"),
                 } if source_ubsan else None),
             },
             "assessment": {"vendorPublishedVersionStatus": {"targetRecords": before_osv, "missingTargetIds": missing_osv_targets(before_osv), "interpretation": "public distribution OSV response preserved as vendor-reference evidence; target-record absence is not interpreted as clean or affected status"}, "aptToStatus": "backport regression and exact installed-package scan verified for configured target CVEs", "rawTrivyTargetFindingsAfter": sorted(after_target_hits), "unrelatedTrivyFindingsPreserved": True},

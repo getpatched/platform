@@ -334,6 +334,7 @@ def main():
                 "releaseSerial": policy["releaseSerial"],
                 "sourceDescriptor": {"name": recipe["descriptor"]["name"], "sha256": recipe["descriptor"]["sha256"]},
                 "downloadedSourceAssets": downloaded_sources,
+                "sourceProvenanceSha256": sha256(provenance_path),
                 "patches": source_provenance["patches"],
                 "recipeManifestSha256": source_provenance["recipeManifestSha256"],
             })
