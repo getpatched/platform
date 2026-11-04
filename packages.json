@@ -381,6 +381,32 @@
           "vendorFixedVersions": [
             "3.4.0-2ubuntu1.5+esm1"
           ]
+        },
+        "debian-trixie-amd64": {
+          "baselineVersion": "3.7.4-4+deb13u1",
+          "sourcePocket": "release",
+          "packageVersion": "3.7.4-4+deb13u1+getpatched1",
+          "releaseSerial": 1,
+          "binaryPackages": ["libarchive13t64", "libarchive-tools"],
+          "advisoryPackages": ["libarchive13t64", "libarchive-tools"],
+          "builderPackages": ["libarchive-dev"],
+          "targetCve": "CVE-2026-16517",
+          "targetCves": ["CVE-2026-16517"],
+          "advisory": "https://security-tracker.debian.org/tracker/CVE-2026-16517",
+          "advisoryPackagesByCve": {
+            "CVE-2026-16517": ["libarchive13t64", "libarchive-tools"]
+          },
+          "candidateStatus": "development-verified-production-release-pending",
+          "releaseAccess": {
+            "policy": "public-after-checks",
+            "sponsorDelayHours": 0,
+            "sponsorEligibility": null,
+            "earlyBinaryLicenseId": null,
+            "publicContributionSpdx": "MIT",
+            "earlyUse": ["private", "commercial"],
+            "earlyRedistributionAllowed": false,
+            "publicLicenseScope": "getpatched-authored-contributions-only"
+          }
         }
       }
     },

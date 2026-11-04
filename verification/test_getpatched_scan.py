@@ -46,6 +46,29 @@ SCANNER_SPEC.loader.exec_module(SCANNER_MODULE)
 
 
 class GetPatchedScannerContract(unittest.TestCase):
+    def test_libarchive_trixie_independent_regression_receives_pinned_source_evidence(self):
+        with tempfile.TemporaryDirectory(prefix="getpatched-libarchive-source-evidence-") as directory:
+            root = Path(directory)
+            source = root / "candidate"
+            proof = root / "proof"
+            source.mkdir()
+            proof.mkdir()
+            for name in SCANNER_MODULE.LIBARCHIVE_TRIXIE_SOURCE_EVIDENCE:
+                (source / name).write_text(name + "\n")
+
+            SCANNER_MODULE.copy_source_regression_evidence(
+                source, proof, "libarchive", "debian-trixie-amd64"
+            )
+
+            for name in SCANNER_MODULE.LIBARCHIVE_TRIXIE_SOURCE_EVIDENCE:
+                self.assertEqual((proof / name).read_text(), name + "\n")
+
+            (source / "libarchive-source-ubsan-patched.json").unlink()
+            with self.assertRaisesRegex(ValueError, "missing exact-source regression evidence"):
+                SCANNER_MODULE.copy_source_regression_evidence(
+                    source, proof, "libarchive", "debian-trixie-amd64"
+                )
+
     def test_verified_cares_69186_advisory_is_published_and_trixie_scoped(self):
         config = json.loads((ROOT / "packages.json").read_text())
         policy = config["packages"]["c-ares"]["targets"]["debian-trixie-amd64"]
@@ -968,7 +991,7 @@ raise SystemExit(3)
             "CVE-2026-53584", "CVE-2026-53585", "CVE-2026-53586",
             "CVE-2025-52885", "CVE-2026-69184", "CVE-2026-111497",
             "CVE-2026-117610", "CVE-2026-69186",
-            "CVE-2026-86144", "CVE-2026-76781", "CVE-2026-86141",
+            "CVE-2026-86144", "CVE-2026-76781", "CVE-2026-86141", "CVE-2026-16517",
 
 "CVE-2025-52885", "CVE-2026-107705", "CVE-2026-69184", "CVE-2026-111497",
             "CVE-2025-61144", "CVE-2026-52490", "CVE-2026-12912", "CVE-2026-18495",

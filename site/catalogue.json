@@ -449,6 +449,61 @@
           "releasesUrl": "https://github.com/getpatched/packaging-libarchive/releases",
           "releaseStatus": "No production release",
           "publicLicenseScope": "getpatched-authored-contributions-only"
+        },
+        "debian-trixie-amd64": {
+          "baseVersion": "3.7.4-4+deb13u1",
+          "version": "3.7.4-4+deb13u1+getpatched1",
+          "cves": ["CVE-2026-16517"],
+          "vulnerabilities": [
+            {
+              "id": "CVE-2026-16517",
+              "slug": "cve-2026-16517",
+              "summary": "A signed integer overflow in libarchive's ZIP writer can occur with encrypted entries near the maximum supported file size.",
+              "advisoryUrl": "https://security-tracker.debian.org/tracker/CVE-2026-16517",
+              "patchSlugs": ["cve-2026-16517-trixie"],
+              "patched": true
+            }
+          ],
+          "patches": [
+            {
+              "id": "cve-2026-16517-trixie",
+              "slug": "cve-2026-16517-trixie",
+              "kind": "security",
+              "title": "Avoid signed overflow in encrypted ZIP size calculations",
+              "description": "Avoids adding encryption overhead before the Zip64 size comparison and rejects encrypted stored sizes that cannot safely include their overhead.",
+              "sha256": "77711b224330d6491831497136f627dcf3871de72f93e2e7e550d57553fbfc5c",
+              "fileUrl": "https://github.com/getpatched/packaging-libarchive/blob/getpatched/debian-trixie/patches/CVE-2026-16517.patch",
+              "cves": ["CVE-2026-16517"],
+              "upstream": {
+                "repository": "https://github.com/libarchive/libarchive",
+                "commit": "1c6e7b491f60fce335c20a9692f870d1f1ca39aa",
+                "url": "https://github.com/libarchive/libarchive/commit/1c6e7b491f60fce335c20a9692f870d1f1ca39aa"
+              },
+              "tests": [
+                {
+                  "id": "zip-encrypted-size-overflow",
+                  "baselineExpectation": "The exact Trixie source reproduces signed overflow under UBSan; the installed baseline completes the bounded ZIP-header regression.",
+                  "patchedExpectation": "The patched source has no UBSan overflow and the installed package passes the ZIP-header and bsdtar consumer regressions."
+                }
+              ]
+            }
+          ],
+          "access": "public",
+          "delayHours": 0,
+          "sponsorEligibility": null,
+          "earlyBinaryLicenseId": null,
+          "publicContributionSpdx": "MIT",
+          "earlyUse": ["private", "commercial"],
+          "earlyRedistributionAllowed": false,
+          "status": "development-verified-production-release-pending",
+          "verification": "https://github.com/getpatched/platform/actions/runs/41756486947",
+          "ubuntuProEsmCompatibility": "not-applicable",
+          "sourceUrl": "https://github.com/getpatched/packaging-libarchive/tree/getpatched/debian-trixie",
+          "patchUrl": "https://github.com/getpatched/packaging-libarchive/blob/getpatched/debian-trixie/patches/CVE-2026-16517.patch",
+          "testsUrl": "https://github.com/getpatched/packaging-libarchive/tree/getpatched/debian-trixie/tests",
+          "releasesUrl": "https://github.com/getpatched/packaging-libarchive/releases",
+          "releaseStatus": "No production release",
+          "publicLicenseScope": "getpatched-authored-contributions-only"
         }
       }
     },

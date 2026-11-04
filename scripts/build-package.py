@@ -334,6 +334,7 @@ def main():
                 "releaseSerial": policy["releaseSerial"],
                 "sourceDescriptor": {"name": recipe["descriptor"]["name"], "sha256": recipe["descriptor"]["sha256"]},
                 "downloadedSourceAssets": downloaded_sources,
+                "sourceProvenanceSha256": sha256(provenance_path),
                 "patches": source_provenance["patches"],
                 "recipeManifestSha256": source_provenance["recipeManifestSha256"],
             })
@@ -456,6 +457,8 @@ def main():
                 "targetCves": policy["targetCves"], "beforeTrivy": str(output / (package + "-trivy-before.json")),
                 "afterTrivy": str(output / (package + "-trivy-after.json")), "beforeOsv": osv_evidence["before"], "afterOsv": osv_evidence["after"],
                 "baselineRegression": str(output / "baseline-regression.json"), "patchedRegression": str(output / "patched-regression.json"),
+                "sourceUbsanBaseline": str(output / "libarchive-source-ubsan-baseline.json") if (output / "libarchive-source-ubsan-baseline.json").exists() else None,
+                "sourceUbsanPatched": str(output / "libarchive-source-ubsan-patched.json") if (output / "libarchive-source-ubsan-patched.json").exists() else None,
                 "buildProvenance": str(output / "build-provenance.json"), "binaryManifest": str(output / "binary-manifest.json"),
                 "packagePolicy": str(output / "package-policy.json"), "databaseSha256": database_hash, "sourceCommit": commit,
                 "beforeScanMetadata": str(output / (package + "-trivy-before-metadata.json")),

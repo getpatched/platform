@@ -36,6 +36,11 @@ from regression import (cares_record_count_regression_succeeded, cares_regressio
 DEFAULT_FEED = ROOT / "advisories" / "getpatched-osv.json"
 MAX_STATUS_BYTES = 16 * 1024 * 1024
 MAX_FEED_BYTES = 4 * 1024 * 1024
+LIBARCHIVE_TRIXIE_SOURCE_EVIDENCE = (
+    "source-provenance.json",
+    "libarchive-source-ubsan-baseline.json",
+    "libarchive-source-ubsan-patched.json",
+)
 
 
 def parse_status(path):
@@ -43,6 +48,18 @@ def parse_status(path):
     if path.stat().st_size > MAX_STATUS_BYTES:
         raise ValueError("dpkg status inventory exceeds the 16 MiB scanner limit")
     return parse_status_text(path.read_text())
+
+
+def copy_source_regression_evidence(directory, destination, source, target_id):
+    if source != "libarchive" or target_id != "debian-trixie-amd64":
+        return
+    directory = Path(directory)
+    destination = Path(destination)
+    for name in LIBARCHIVE_TRIXIE_SOURCE_EVIDENCE:
+        evidence = directory / name
+        if not evidence.is_file():
+            raise ValueError(f"candidate scan is missing exact-source regression evidence: {name}")
+        shutil.copyfile(evidence, destination / name)
 
 
 def validate_followup_assessment_checks(target, checks, phase):
@@ -350,6 +367,7 @@ def regression_verified_candidate(directory, scan_images_path, target_id, recipe
     verification_id = uuid.uuid4().hex
     with tempfile.TemporaryDirectory(prefix="getpatched-verified-candidate-") as temporary:
         temp = Path(temporary)
+        copy_source_regression_evidence(directory, temp, source, target_id)
         for phase, image_key, report_phase, version in (
             ("before", "baselineImageId", "baseline", target["baselineVersion"]),
             ("after", "patchedImageId", "patched", target["packageVersion"]),
@@ -377,7 +395,8 @@ def regression_verified_candidate(directory, scan_images_path, target_id, recipe
             ]
             executed = subprocess.run(command, capture_output=True, text=True, timeout=240, check=False)
             if executed.returncode != 0 or not report_path.is_file():
-                raise ValueError("independent installed regression execution failed for the candidate scan images")
+                detail = (executed.stderr or executed.stdout)[-2000:]
+                raise ValueError("independent installed regression execution failed for the candidate scan images: " + detail)
             report_paths[report_phase] = report_path
         baseline = json.loads(report_paths["baseline"].read_text())
         patched = json.loads(report_paths["patched"].read_text())
@@ -436,9 +455,17 @@ def regression_verified_candidate(directory, scan_images_path, target_id, recipe
         elif source == "libarchive":
             check = cve_checks[target["targetCves"][0]]
             if phase == "baseline":
-                if check.get("timedOut") is not True:
+                if target["targetCves"][0] == "CVE-2026-16517":
+                    if (check.get("passed") is not True
+                            or check.get("sourceVulnerabilityReproduced") is not True
+                            or not re.fullmatch(r"[0-9a-f]{64}", str(check.get("sourceRegressionSha256", "")))):
+                        raise ValueError("libarchive baseline evidence lacks the exact-source UBSan overflow reproduction")
+                elif check.get("timedOut") is not True:
                     raise ValueError("libarchive baseline evidence does not reproduce the configured bounded timeout")
             elif (check.get("returncode") != 0 or check.get("timedOut")
+                  or (target["targetCves"][0] == "CVE-2026-16517"
+                      and (check.get("patchedBehavior") is not True or check.get("passed") is not True
+                           or not re.fullmatch(r"[0-9a-f]{64}", str(check.get("sourceRegressionSha256", "")))))
                   or len([item for item in checks if item.get("passed") is True
                           and item.get("command", [None])[0] == "bsdtar"]) < 2):
                 raise ValueError("libarchive patched evidence lacks a clean probe and tar consumer round trip")

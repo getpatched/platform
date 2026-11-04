@@ -331,6 +331,13 @@ class PublicCatalogueContract(unittest.TestCase):
                           "cve-2026-76781-debian-trixie", "cve-2026-86141-debian-trixie"})
         self.assertEqual(libxml2_trixie["verification"],
                          "https://github.com/getpatched/platform/actions/runs/41690376263")
+        libarchive_trixie = entries["libarchive"]["targets"]["debian-trixie-amd64"]
+        self.assertEqual(libarchive_trixie["cves"], ["CVE-2026-16517"])
+        self.assertEqual(libarchive_trixie["version"], "3.7.4-4+deb13u1+getpatched1")
+        self.assertEqual({item["slug"] for item in libarchive_trixie["vulnerabilities"]},
+                         {"cve-2026-16517"})
+        self.assertEqual({item["slug"] for item in libarchive_trixie["patches"]},
+                         {"cve-2026-16517-trixie"})
         cares_trixie = entries["c-ares"]["targets"]["debian-trixie-amd64"]
         self.assertEqual(cares_trixie["version"], "1.34.5-1+deb13u1+getpatched2")
         self.assertEqual(cares_trixie["cves"], ["CVE-2026-69184", "CVE-2026-69186"])
@@ -403,6 +410,7 @@ class PublicCatalogueContract(unittest.TestCase):
                     ("libxml2", "debian-bookworm-amd64"): "41575270372",
                     ("libxml2", "debian-trixie-amd64"): "41690376263",
                     ("libarchive", "ubuntu-focal-amd64"): "40899709850",
+                    ("libarchive", "debian-trixie-amd64"): "41756486947",
                     ("libgit2", "ubuntu-focal-amd64"): "41162605227",
                     ("libgit2", "ubuntu-jammy-amd64"): "41167536831",
                     ("poppler", "ubuntu-focal-amd64"): "41149614570",

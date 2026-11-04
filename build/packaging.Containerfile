@@ -37,7 +37,7 @@ RUN --mount=type=secret,id=runner-ca,target=/tmp/getpatched-runner-ca.crt,requir
         exit 1; \
       }; \
     done; \
-    apt_retry install -y --no-install-recommends build-essential fakeroot dpkg-dev apt-utils gnupg python3 valgrind pkg-config; \
+    apt_retry install -y --no-install-recommends build-essential cmake fakeroot dpkg-dev apt-utils gnupg python3 valgrind pkg-config; \
     apt_retry build-dep -y --no-install-recommends "$SOURCE_PACKAGE"; \
     for binary in $install_packages; do apt_retry install -y --no-install-recommends "$binary=$EXPECTED_VERSION"; done; \
     rm -rf /var/lib/apt/lists/*
