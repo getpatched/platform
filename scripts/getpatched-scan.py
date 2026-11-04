@@ -26,6 +26,7 @@ from regression import (cares_record_count_regression_succeeded, cares_regressio
                         libxml2_baseline_check_succeeded, libxml2_check_cardinality_valid,
                         libxml2_patched_check_succeeded,
                         libxml2_xinclude_checks_succeeded,
+                        imagemagick_morph_check_succeeded,
                         pixarlog_baseline_reproduced, pixarlog_patched_succeeded,
                         tiff_baseline_reproduced,
                         tiff_subdivision_baseline_reproduced, tiff_subdivision_patched_succeeded,
@@ -72,6 +73,21 @@ def validate_followup_assessment_checks(target, checks, phase):
             raise ValueError(f"candidate regression report lacks the assessed follow-up check for {cve}")
         if assessment["candidateDisposition"] != "fixed-in-backport":
             raise ValueError(f"patched disposition for follow-up {cve} is not explicitly assessed")
+
+
+def imagemagick_candidate_regression_succeeded(checks, target_cves, phase, expected_version):
+    cve = "CVE-2026-119124"
+    if target_cves != [cve]:
+        return False
+    matches = [check for check in checks if check.get("cve") == cve]
+    return (
+        len(matches) == 1
+        and matches[0].get("passed") is True
+        and matches[0].get("expectedPackageVersion") == expected_version
+        and all(version == expected_version
+                for version in matches[0].get("installedPackageVersions", {}).values())
+        and imagemagick_morph_check_succeeded(matches[0], phase)
+    )
 
 
 def tiff_baseline_stack_signature(recipe_directory, target_id):
@@ -533,6 +549,15 @@ def regression_verified_candidate(directory, scan_images_path, target_id, recipe
             expected_version = target["baselineVersion"].split("-", 1)[0]
             if not expat_candidate_checks_succeeded(check, checks, phase, expected_version):
                 raise ValueError(f"Expat {phase} evidence lacks its exact vulnerability or matching xmlwf consumer result")
+        elif source == "imagemagick":
+            expected_version = target["baselineVersion"] if phase == "baseline" else target["packageVersion"]
+            if not imagemagick_candidate_regression_succeeded(
+                checks, target["targetCves"], phase, expected_version
+            ):
+                raise ValueError(
+                    f"ImageMagick {phase} evidence lacks the exact MorphImages bounds regression "
+                    "or three-frame output check"
+                )
         else:
             raise ValueError("candidate regression runner has no package-specific evidence classifier")
     directory.mkdir(parents=True, exist_ok=True)

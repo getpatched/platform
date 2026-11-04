@@ -20,6 +20,50 @@ def sha256(path):
     return hashlib.sha256(Path(path).read_bytes()).hexdigest()
 
 
+def binary_manifest_has_exact_package(entries, binary, version, architecture, installed_architecture):
+    matches = [entry for entry in entries
+               if isinstance(entry, dict)
+               and isinstance(entry.get("control"), str)
+               and entry.get("control", "").startswith("Package: " + binary + "\n")]
+    if len(matches) != 1:
+        return False
+    entry = matches[0]
+    fields = {}
+    current_field = None
+    for line in entry["control"].splitlines():
+        if not line:
+            return False
+        if line[0] in " \t":
+            if current_field is None:
+                return False
+            fields[current_field] += "\n" + line[1:]
+            continue
+        field, separator, value = line.partition(": ")
+        normalized_field = field.lower()
+        if (not separator or not re.fullmatch(r"[a-z][a-z0-9-]*", normalized_field)
+                or normalized_field in fields):
+            return False
+        fields[normalized_field] = value
+        current_field = normalized_field
+    name = entry.get("name", "")
+    file_version = version.split(":", 1)[1] if ":" in version else version
+    file_architecture = fields.get("architecture")
+    # build-package.py recomputes each configured .deb's digest and compares it
+    # with this manifest before invoking the audit; this check validates the
+    # retained digest field and package identity.
+    return (
+        isinstance(name, str)
+        and fields.get("package") == binary
+        and fields.get("version") == version
+        and file_architecture in {architecture, "all"}
+        and file_architecture == installed_architecture
+        and name == f"{binary}_{file_version}_{file_architecture}.deb"
+        and type(entry.get("bytes")) is int
+        and entry["bytes"] > 0
+        and re.fullmatch(r"[0-9a-f]{64}", entry.get("sha256", "")) is not None
+    )
+
+
 def verification_advisory_feed(data, config):
     canonical = load(data["aptToFeed"])
     if canonical != build_feed(config):
@@ -180,10 +224,8 @@ def main():
                 or manifest.get("architecture") != profile["architecture"]):
             raise ValueError("binary manifest does not identify this package target and version")
         manifest_packages = manifest.get("packages", [])
-        for binary in expected_binary_names:
-            candidates = [p for p in manifest_packages if p.get("control", "").startswith("Package: " + binary + "\n")]
-            if len(candidates) != 1 or not re.fullmatch(r"[0-9a-f]{64}", candidates[0].get("sha256", "")) or data["patchedVersion"] not in candidates[0].get("name", ""):
-                raise ValueError("binary manifest lacks exact version and SHA-256 for " + binary)
+        if not isinstance(manifest_packages, list):
+            raise ValueError("binary manifest package list is malformed")
         if not re.fullmatch(r"[0-9a-f]{64}", data["databaseSha256"]):
             raise ValueError("invalid pinned scanner database digest")
         # The distribution OSV query is an unmodified public-vendor reference.
@@ -206,6 +248,10 @@ def main():
                 expected_version = data["baselineVersion"] if phase == "before" else data["patchedVersion"]
                 if len(matches) != 1 or matches[0].get("ID") != binary + "@" + expected_version:
                     raise ValueError(f"{phase} Trivy report does not identify {binary} at the expected version")
+                if phase == "after" and not binary_manifest_has_exact_package(
+                        manifest_packages, binary, data["patchedVersion"], profile["architecture"],
+                        matches[0].get("Arch")):
+                    raise ValueError("binary manifest lacks exact version, architecture and SHA-256 for " + binary)
             scan_metadata[phase] = {"imageId": sidecar["imageId"], "databaseSha256": sidecar["databaseSha256"], "reportSha256": sidecar["reportSha256"]}
         getpatched_feed = verification_advisory_feed(data, config)
         verification_feed_sha256 = sha256(data["aptToVerificationFeed"])

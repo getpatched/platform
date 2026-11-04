@@ -38,6 +38,7 @@ SUMMARIES = {
     "CVE-2026-111497": "Brotli decoder out-of-bounds write on invalid block switches",
     "CVE-2026-117610": "Expat NULL dereference when an external-entity subparser starts with empty non-final input",
     "CVE-2026-57585": "python-msgpack streaming Unpacker can crash when reused after a caught decoding error",
+    "CVE-2026-119124": "ImageMagick MorphImages can write one pixel past the allocated image row",
 }
 SEVERITIES = {
     "CVE-2026-16517": "LOW",

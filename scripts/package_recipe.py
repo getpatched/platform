@@ -92,7 +92,8 @@ def validate_source_asset(asset, package, version, *, distribution, descriptor=F
         raise RuntimeError(f"Source asset must use an approved HTTPS {distribution} source host: {name}")
     if descriptor and not name.endswith(".dsc"):
         raise RuntimeError("The pinned source descriptor must be a .dsc file")
-    if name.endswith(".dsc") and name != f"{package}_{version}.dsc":
+    filename_version = version.split(":", 1)[-1]
+    if name.endswith(".dsc") and name != f"{package}_{filename_version}.dsc":
         raise RuntimeError("Source descriptor filename does not match package and source version")
     return asset
 

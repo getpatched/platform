@@ -529,6 +529,50 @@ def valgrind_invalid_access_blocks(log):
     return list(pattern.finditer(log))
 
 
+def valgrind_reports_out_of_bounds_address(body):
+    return re.search(
+        r"(?m)^==\d+==[ \t]+Address 0x[0-9a-fA-F]+ is \d+ bytes (?:after|before) a block of size \d+ alloc'd$",
+        body,
+    ) is not None
+
+
+def imagemagick_morph_check_succeeded(check, phase):
+    command = check.get("command")
+    if (not isinstance(command, list) or len(command) != 12
+            or command[:5] != ["valgrind", "--tool=memcheck", "--error-exitcode=97",
+                              "--leak-check=no", "--track-origins=yes"]
+            or not command[5].startswith("--log-file=")
+            or command[6] != "/usr/bin/magick"
+            or [Path(item).name for item in (command[7], command[8], command[11])]
+            != ["first-graya.png", "second-srgb.png", "morph.miff"]
+            or command[9:11] != ["-morph", "1"]
+            or Path(command[7]).parent != Path(command[8]).parent
+            or Path(command[7]).parent.name != "fixtures"
+            or check.get("memoryLogPath") != command[5].split("=", 1)[1]
+            or check.get("cve") != "CVE-2026-119124"
+            or check.get("testId") != "imagemagick-morph-channel-bounds"
+            or check.get("magickBinaryOwner") != "imagemagick-7.q16"
+            or check.get("magickBinaryPath") != "/usr/bin/magick-im7.q16"
+            or check.get("installedPackageVersions") != {
+                name: check.get("expectedPackageVersion") for name in (
+                    "imagemagick-7.q16", "libmagickcore-7.q16-10", "libmagickwand-7.q16-10"
+                )
+            }):
+        return False
+    log = check.get("memoryLog", "")
+    invalid_writes = [block for block in valgrind_invalid_access_blocks(log)
+                      if block.group("kind").startswith("Invalid write")]
+    if phase == "baseline":
+        return (not check.get("timedOut", False) and check.get("returncode") == 97
+                and any("MorphImages" in block.group("body")
+                        and valgrind_reports_out_of_bounds_address(block.group("body"))
+                        for block in invalid_writes))
+    return (not check.get("timedOut", False) and check.get("returncode") == 0
+            and check.get("outputFrames") == 3
+            and check.get("outputInspectReturncode") == 0
+            and not valgrind_invalid_access_blocks(log) and memcheck_has_no_errors(log))
+
+
 def memcheck_log_path_matches(check, command):
     memory_log_path = check.get("memoryLogPath")
     return (
@@ -1717,6 +1761,50 @@ def main():
                     consumer = execute(["pdfinfo", "-v"])
                     consumer["passed"] = consumer_version_succeeded(consumer, "pdfinfo version")
                     checks.append(consumer)
+        elif package == "imagemagick":
+            expected_version = policy["baseVersion"] if args.phase == "baseline" else policy["version"]
+            installed_versions = {}
+            for binary_package in policy["binaryPackages"]:
+                installed_version = subprocess.check_output(
+                    ["dpkg-query", "-W", "-f=${Version}", binary_package], text=True
+                )
+                if installed_version != expected_version:
+                    raise RuntimeError(
+                        f"Installed ImageMagick package version mismatch: {binary_package}="
+                        f"{installed_version} != {expected_version}"
+                    )
+                installed_versions[binary_package] = installed_version
+            binary_path = Path("/usr/bin/magick").resolve(strict=True)
+            if binary_path != Path("/usr/bin/magick-im7.q16"):
+                raise RuntimeError(f"/usr/bin/magick resolves to an unexpected binary: {binary_path}")
+            binary_owner = subprocess.check_output(
+                ["dpkg-query", "-S", str(binary_path)], text=True
+            ).split(":", 1)[0]
+            if binary_owner != "imagemagick-7.q16":
+                raise RuntimeError(f"{binary_path} is not owned by the pinned imagemagick-7.q16 package")
+            log = temp / "CVE-2026-119124.valgrind"
+            output = temp / "morph.miff"
+            check = execute([
+                "valgrind", "--tool=memcheck", "--error-exitcode=97", "--leak-check=no",
+                "--track-origins=yes", "--log-file=" + str(log), "/usr/bin/magick",
+                str(fixtures / "first-graya.png"), str(fixtures / "second-srgb.png"),
+                "-morph", "1", str(output),
+            ], timeout=120)
+            check["cve"] = "CVE-2026-119124"
+            check["testId"] = "imagemagick-morph-channel-bounds"
+            check["memoryLogPath"] = str(log)
+            check["memoryLog"] = log.read_text(errors="replace") if log.exists() else ""
+            check["expectedPackageVersion"] = expected_version
+            check["installedPackageVersions"] = installed_versions
+            check["magickBinaryOwner"] = binary_owner
+            check["magickBinaryPath"] = str(binary_path)
+            if args.phase == "patched" and output.is_file():
+                frames = subprocess.run(["/usr/bin/magick", "identify", "-format", "x", str(output)],
+                                        capture_output=True, text=True, timeout=30, check=False)
+                check["outputFrames"] = len(frames.stdout) if frames.returncode == 0 else None
+                check["outputInspectReturncode"] = frames.returncode
+            check["passed"] = imagemagick_morph_check_succeeded(check, args.phase)
+            checks.append(check)
         elif package == "libgit2":
             patched = args.phase == "patched"
             pack_probe = compile_libgit2_probe(

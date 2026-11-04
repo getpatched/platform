@@ -226,6 +226,61 @@ class GetPatchedScannerContract(unittest.TestCase):
         self.assertFalse(SCANNER_MODULE.expat_candidate_checks_succeeded(
             patched, [patched, wrong_version], "patched", "2.5.0"))
 
+    def test_imagemagick_candidate_requires_exact_bounds_regression_and_version(self):
+        baseline_version = "8:7.1.1.43+dfsg1-1+deb13u13"
+        patched_version = baseline_version + "+getpatched1"
+        command = [
+            "valgrind", "--tool=memcheck", "--error-exitcode=97", "--leak-check=no",
+            "--track-origins=yes", "--log-file=/tmp/CVE-2026-119124.valgrind",
+            "/usr/bin/magick", "/recipe/tests/fixtures/first-graya.png",
+            "/recipe/tests/fixtures/second-srgb.png", "-morph", "1", "/tmp/morph.miff",
+        ]
+        versions = {name: baseline_version for name in (
+            "imagemagick-7.q16", "libmagickcore-7.q16-10", "libmagickwand-7.q16-10"
+        )}
+        baseline = {
+            "cve": "CVE-2026-119124", "testId": "imagemagick-morph-channel-bounds",
+            "command": command, "returncode": 97, "timedOut": False, "passed": True,
+            "memoryLogPath": "/tmp/CVE-2026-119124.valgrind",
+            "memoryLog": (
+                "==1== Invalid write of size 2\n"
+                "==1==    by 0x123: MorphImages (visual-effects.c:1)\n"
+                "==1==  Address 0x100 is 0 bytes after a block of size 16 alloc'd\n"
+                "==1== ERROR SUMMARY: 1 errors from 1 contexts\n"
+            ),
+            "expectedPackageVersion": baseline_version,
+            "installedPackageVersions": versions,
+            "magickBinaryOwner": "imagemagick-7.q16",
+            "magickBinaryPath": "/usr/bin/magick-im7.q16",
+        }
+        self.assertTrue(SCANNER_MODULE.imagemagick_candidate_regression_succeeded(
+            [baseline], ["CVE-2026-119124"], "baseline", baseline_version
+        ))
+        self.assertFalse(SCANNER_MODULE.imagemagick_candidate_regression_succeeded(
+            [baseline], ["CVE-2026-119124"], "baseline", "wrong-version"
+        ))
+        self.assertFalse(SCANNER_MODULE.imagemagick_candidate_regression_succeeded(
+            [baseline, baseline], ["CVE-2026-119124"], "baseline", baseline_version
+        ))
+        patched = {
+            **baseline,
+            "returncode": 0,
+            "memoryLog": "==1== ERROR SUMMARY: 0 errors from 0 contexts\n",
+            "expectedPackageVersion": patched_version,
+            "installedPackageVersions": {name: patched_version for name in versions},
+            "outputFrames": 3,
+            "outputInspectReturncode": 0,
+        }
+        self.assertTrue(SCANNER_MODULE.imagemagick_candidate_regression_succeeded(
+            [patched], ["CVE-2026-119124"], "patched", patched_version
+        ))
+        self.assertFalse(SCANNER_MODULE.imagemagick_candidate_regression_succeeded(
+            [{**patched, "outputFrames": 2}], ["CVE-2026-119124"], "patched", patched_version
+        ))
+        self.assertFalse(SCANNER_MODULE.imagemagick_candidate_regression_succeeded(
+            [patched], ["CVE-2026-119123"], "patched", patched_version
+        ))
+
     def test_poppler_revision6_candidate_requires_clean_regression_and_consumer(self):
         cve_check = {
             "cve": "CVE-2026-107705",

@@ -79,6 +79,19 @@ class PackageRecipeContract(unittest.TestCase):
         with self.assertRaisesRegex(RuntimeError, "approved HTTPS Debian source host"):
             RECIPE.validate_source_asset(asset, "libarchive", version, distribution="Debian", descriptor=True)
 
+    def test_debian_imagemagick_security_descriptor_omits_the_epoch(self):
+        version = "8:7.1.1.43+dfsg1-1+deb13u13"
+        asset = {
+            "name": "imagemagick_7.1.1.43+dfsg1-1+deb13u13.dsc",
+            "url": "https://snapshot.debian.org/archive/debian-security/20261030T000000Z/pool/updates/main/i/imagemagick/imagemagick_7.1.1.43+dfsg1-1+deb13u13.dsc",
+            "sha256": "bbd83d09b7e11a0c13b0334bb6703abf86359243d5283a0b0edbbe47e187ebca",
+            "bytes": 5165,
+        }
+        self.assertEqual(
+            RECIPE.validate_source_asset(asset, "imagemagick", version, distribution="Debian", descriptor=True),
+            asset,
+        )
+
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory(prefix="getpatched-recipe-test-")
         self.addCleanup(self.temp.cleanup)
