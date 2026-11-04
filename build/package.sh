@@ -34,6 +34,9 @@ if [[ "$target" == "debian-trixie-amd64" && "$(python3 -c 'import json; print(js
 fi
 dpkg-source -b .
 export DEB_BUILD_OPTIONS='check parallel=1'
+if [[ "$target" == "debian-trixie-amd64" && "$(python3 -c 'import json; print(json.load(open("/package-policy.json"))["source"])')" == "libarchive" ]]; then
+  export LC_ALL=C.UTF-8
+fi
 if ! dpkg-buildpackage -b -us -uc -j1; then
   {
     echo 'Debian build failed; captured upstream test diagnostics follow.'
