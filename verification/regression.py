@@ -545,6 +545,7 @@ def imagemagick_morph_check_succeeded(check, phase):
             or check.get("cve") != "CVE-2026-119124"
             or check.get("testId") != "imagemagick-morph-channel-bounds"
             or check.get("magickBinaryOwner") != "imagemagick-7.q16"
+            or check.get("magickBinaryPath") != "/usr/bin/magick-im7.q16"
             or check.get("installedPackageVersions") != {
                 name: check.get("expectedPackageVersion") for name in (
                     "imagemagick-7.q16", "libmagickcore-7.q16-10", "libmagickwand-7.q16-10"
@@ -1764,11 +1765,14 @@ def main():
                         f"{installed_version} != {expected_version}"
                     )
                 installed_versions[binary_package] = installed_version
+            binary_path = Path("/usr/bin/magick").resolve(strict=True)
+            if binary_path != Path("/usr/bin/magick-im7.q16"):
+                raise RuntimeError(f"/usr/bin/magick resolves to an unexpected binary: {binary_path}")
             binary_owner = subprocess.check_output(
-                ["dpkg-query", "-S", "/usr/bin/magick"], text=True
+                ["dpkg-query", "-S", str(binary_path)], text=True
             ).split(":", 1)[0]
             if binary_owner != "imagemagick-7.q16":
-                raise RuntimeError("/usr/bin/magick is not owned by the pinned imagemagick-7.q16 package")
+                raise RuntimeError(f"{binary_path} is not owned by the pinned imagemagick-7.q16 package")
             log = temp / "CVE-2026-119124.valgrind"
             output = temp / "morph.miff"
             check = execute([
@@ -1784,6 +1788,7 @@ def main():
             check["expectedPackageVersion"] = expected_version
             check["installedPackageVersions"] = installed_versions
             check["magickBinaryOwner"] = binary_owner
+            check["magickBinaryPath"] = str(binary_path)
             if args.phase == "patched" and output.is_file():
                 frames = subprocess.run(["/usr/bin/magick", "identify", "-format", "x", str(output)],
                                         capture_output=True, text=True, timeout=30, check=False)

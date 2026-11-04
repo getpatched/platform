@@ -296,6 +296,7 @@ class ImageMagickMorphRegression(unittest.TestCase):
                 name: version for name in ("imagemagick-7.q16", "libmagickcore-7.q16-10", "libmagickwand-7.q16-10")
             },
             "magickBinaryOwner": "imagemagick-7.q16",
+            "magickBinaryPath": "/usr/bin/magick-im7.q16",
         }
         if frames is not None:
             report["outputFrames"] = frames
