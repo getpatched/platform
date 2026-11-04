@@ -13,12 +13,22 @@ dpkg-source -x "${descriptors[0]}" /build/source
 cp /originals/*.orig.tar.* /build/
 cd /build/source
 target="$(python3 -c 'import json; print(json.load(open("/package-policy.json"))["targetId"])')"
+if [[ "$target" == "debian-trixie-amd64" && "$(python3 -c 'import json; print(json.load(open("/package-policy.json"))["source"])')" == "libarchive" ]]; then
+  python3 /verification/libarchive-source-ubsan.py --source /build/source \
+    --fixture /recipe/tests/fixtures/zip-encrypted-size-overflow.c \
+    --phase baseline --output /output/libarchive-source-ubsan-baseline.json
+fi
 python3 /materialize-package.py --recipe /recipe --source /build/source --target "$target" \
   --policy /package-policy.json --provenance /source-provenance.json \
   --source-provenance /output/source-provenance.json
 dpkg-query -W -f='${binary:Package}\t${Version}\t${Architecture}\n' > /output/build-toolchain.tsv
 python3 /verification/regression.py --recipe /recipe --policy /output/package-policy.json --phase baseline --output /output/baseline-regression.json
 dpkg-source --before-build .
+if [[ "$target" == "debian-trixie-amd64" && "$(python3 -c 'import json; print(json.load(open("/package-policy.json"))["source"])')" == "libarchive" ]]; then
+  python3 /verification/libarchive-source-ubsan.py --source /build/source \
+    --fixture /recipe/tests/fixtures/zip-encrypted-size-overflow.c \
+    --phase patched --output /output/libarchive-source-ubsan-patched.json
+fi
 dpkg-source -b .
 export DEB_BUILD_OPTIONS='check parallel=1'
 dpkg-buildpackage -b -us -uc -j1

@@ -1876,7 +1876,7 @@ function assertRelease(record) {
   if (!record || !["prepared", "sponsor-period", "public"].includes(record.state)) throw new Error("invalid release state");
   const approvedRepositories = new Map([
     ["getpatched/packaging-libxml2", { targetDelays: { "ubuntu-focal-amd64": 168, "debian-bookworm-amd64": 0, "debian-trixie-amd64": 0 } }],
-    ["getpatched/packaging-libarchive", { targetDelays: { "ubuntu-focal-amd64": 0 } }],
+    ["getpatched/packaging-libarchive", { targetDelays: { "ubuntu-focal-amd64": 0, "debian-trixie-amd64": 0 } }],
     ["getpatched/packaging-libpng1.6", { targetDelays: { "ubuntu-focal-amd64": 0 } }],
     ["getpatched/packaging-libgit2", { targetDelays: { "ubuntu-focal-amd64": 0, "ubuntu-jammy-amd64": 0 } }],
     ["getpatched/packaging-tiff", { targetDelays: { "ubuntu-focal-amd64": 0, "debian-bookworm-amd64": 0, "debian-trixie-amd64": 0 } }],

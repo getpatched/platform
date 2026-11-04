@@ -1206,24 +1206,27 @@ def main():
                 checks.append(check)
         elif package == "libarchive":
             if policy["targetId"] == "debian-trixie-amd64":
+                source_report_path = args.output.parent / f"libarchive-source-ubsan-{args.phase}.json"
+                source_report = json.loads(source_report_path.read_text())
+                if (source_report.get("runner") != "getpatched-libarchive-source-ubsan/1"
+                        or source_report.get("phase") != args.phase
+                        or source_report.get("cryptoBackend") != "nettle"
+                        or source_report.get("passed") is not True):
+                    raise RuntimeError("exact-source UBSan regression is missing or failed")
                 probe = compile_pkg_config_probe(
                     fixtures / "zip-encrypted-size-overflow.c", temp / "zip-encrypted-size-overflow", ["libarchive"]
                 )
                 check = execute([str(probe)], timeout=5)
                 check["cve"] = "CVE-2026-16517"
-                check["vulnerabilityReproduced"] = (
-                    check["timedOut"]
-                    and "GETPATCHED:ZIP_HEADER_START" in check["stderr"]
-                    and "GETPATCHED:ZIP_HEADER_RETURN" not in check["stderr"]
-                    if args.phase == "baseline" else False
-                )
-                check["patchedBehavior"] = (
+                check["headerGenerationSucceeded"] = (
                     not check["timedOut"] and check["returncode"] == 0
                     and "GETPATCHED:ZIP_HEADER_START" in check["stderr"]
                     and "GETPATCHED:ZIP_HEADER_RETURN" in check["stderr"]
-                    if args.phase == "patched" else False
                 )
-                check["passed"] = check["vulnerabilityReproduced"] if args.phase == "baseline" else check["patchedBehavior"]
+                check["sourceRegressionSha256"] = hashlib.sha256(source_report_path.read_bytes()).hexdigest()
+                check["vulnerabilityReproduced"] = source_report.get("vulnerabilityReproduced") is True
+                check["patchedBehavior"] = source_report.get("patchedBehavior") is True
+                check["passed"] = check["headerGenerationSucceeded"] and source_report["passed"] is True
                 checks.append(check)
                 if args.phase == "patched":
                     item = temp / "consumer.txt"

@@ -97,6 +97,26 @@ def main():
         manifest = load(data["binaryManifest"])
         baseline = load(data["baselineRegression"])
         patched = load(data["patchedRegression"])
+        source_ubsan = None
+        if data["source"] == "libarchive" and data["targetId"] == "debian-trixie-amd64":
+            source_ubsan = {
+                "baseline": load(data["sourceUbsanBaseline"]),
+                "patched": load(data["sourceUbsanPatched"]),
+            }
+            baseline_ubsan = source_ubsan["baseline"]
+            patched_ubsan = source_ubsan["patched"]
+            if (baseline_ubsan.get("runner") != "getpatched-libarchive-source-ubsan/1"
+                    or baseline_ubsan.get("phase") != "baseline"
+                    or baseline_ubsan.get("cryptoBackend") != "nettle"
+                    or baseline_ubsan.get("vulnerabilityReproduced") is not True
+                    or baseline_ubsan.get("passed") is not True
+                    or patched_ubsan.get("runner") != "getpatched-libarchive-source-ubsan/1"
+                    or patched_ubsan.get("phase") != "patched"
+                    or patched_ubsan.get("cryptoBackend") != "nettle"
+                    or patched_ubsan.get("patchedBehavior") is not True
+                    or patched_ubsan.get("passed") is not True
+                    or baseline_ubsan.get("fixtureSha256") != patched_ubsan.get("fixtureSha256")):
+                raise ValueError("exact-source UBSan evidence does not prove baseline overflow and patched success")
         if (policy.get("source") != data["source"] or policy.get("targetId") != data["targetId"] or policy.get("targetCves") != targets
                 or policy.get("baseVersion") != data["baselineVersion"]
                 or policy.get("version") != data["patchedVersion"]
@@ -212,7 +232,16 @@ def main():
             "canonicalOsv": {"ecosystem": profile["advisoryEcosystem"], "before": {"responseSha256": sha256(data["beforeOsv"]), "targetRecords": before_osv, "missingTargetIds": missing_osv_targets(before_osv), "allRecordIds": baseline_records}, "after": {"responseSha256": sha256(data["afterOsv"]), "targetRecords": after_osv, "missingTargetIds": missing_osv_targets(after_osv), "allRecordIds": patched_records}},
             "trivy": {"before": {"sha256": sha256(data["beforeTrivy"]), "packageCount": len(before_pkgs), "findingCount": len(before_vulns), "targetFindings": [v for v in before_vulns if v.get("VulnerabilityID") in targets]}, "after": {"sha256": sha256(data["afterTrivy"]), "packageCount": len(after_pkgs), "findingCount": len(after_vulns), "targetFindings": [v for v in after_vulns if v.get("VulnerabilityID") in targets]}, "unrelatedFindings": unrelated},
             "aptToAdvisoryIntegration": {"source": "GetPatched OSV-format candidate feed scan of installed dpkg status plus distribution OSV vendor-reference queries and installed regression evidence", "scanner": "getpatched-dpkg-osv/1", "feedMode": "candidate-verification-only", "canonicalFeedSha256": sha256(data["aptToFeed"]), "verificationFeedSha256": verification_feed_sha256, "feedSha256": verification_feed_sha256, "before": getpatched_scans["before"], "after": getpatched_scans["after"], "baselineTargetFindingIds": getpatched_scans["before"]["targetFindingIds"], "patchedTargetFindingIds": getpatched_scans["after"]["targetFindingIds"], "unrelatedFindingIds": sorted(set(getpatched_scans["before"]["unrelatedFindingIds"]) | set(getpatched_scans["after"]["unrelatedFindingIds"])), "rawTrivyBaselineTargetFindingIds": sorted(before_target_hits), "rawTrivyPatchedTargetFindingIds": sorted(after_target_hits), "findings": integrated_findings, "claim": "isolated candidate verification feed, generated from the canonical feed and exact candidate policy; raw vendor Trivy findings, including any target findings, remain separately preserved and do not determine backport eligibility"},
-            "regression": {"baseline": str(data["baselineRegression"]), "patched": str(data["patchedRegression"]), "targetCves": targets},
+            "regression": {
+                "baseline": str(data["baselineRegression"]), "patched": str(data["patchedRegression"]),
+                "targetCves": targets,
+                "sourceUbsan": ({
+                    "baseline": str(data["sourceUbsanBaseline"]),
+                    "baselineSha256": sha256(data["sourceUbsanBaseline"]),
+                    "patched": str(data["sourceUbsanPatched"]),
+                    "patchedSha256": sha256(data["sourceUbsanPatched"]),
+                } if source_ubsan else None),
+            },
             "assessment": {"vendorPublishedVersionStatus": {"targetRecords": before_osv, "missingTargetIds": missing_osv_targets(before_osv), "interpretation": "public distribution OSV response preserved as vendor-reference evidence; target-record absence is not interpreted as clean or affected status"}, "aptToStatus": "backport regression and exact installed-package scan verified for configured target CVEs", "rawTrivyTargetFindingsAfter": sorted(after_target_hits), "unrelatedTrivyFindingsPreserved": True},
             "passed": True,
         }
