@@ -631,7 +631,7 @@ def imagemagick_cdl_check_succeeded(check, phase):
         leaked = re.search(r"(?m)^==\d+== definitely lost: [1-9]\d* bytes in [1-9]\d* blocks", log)
         if phase == "baseline":
             allocation_caller = {
-                "imagemagick-cdl-cli": "CLISimpleOperatorImage",
+                "imagemagick-cdl-cli": "CLIOption",
                 "imagemagick-cdl-mogrify": "MogrifyImage",
             }[test_id]
             leak_blocks = valgrind_definite_leak_blocks(log)
@@ -2019,7 +2019,7 @@ def main():
                     log = subcheck.get("memoryLog", "")
                     lost = re.search(r"(?m)^==\d+== definitely lost: .*", log)
                     callers = [line.strip() for line in log.splitlines()
-                               if "FileToString" in line or "CLISimpleOperatorImage" in line
+                               if "FileToString" in line or "CLIOption" in line
                                or "MogrifyImage" in line]
                     print("ImageMagick CDL diagnostic:", json.dumps({
                         "phase": args.phase,

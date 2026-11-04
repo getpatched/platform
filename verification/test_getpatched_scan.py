@@ -263,7 +263,7 @@ class GetPatchedScannerContract(unittest.TestCase):
                                     ("imagemagick-cdl-mogrify", "/usr/bin/mogrify")):
                 log_path = "/tmp/" + test_id + ".valgrind"
                 output = "/tmp/cdl.miff" if test_id == "imagemagick-cdl-cli" else "/tmp/mogrify-input.ppm"
-                caller = "CLISimpleOperatorImage" if test_id == "imagemagick-cdl-cli" else "MogrifyImage"
+                caller = "CLIOption" if test_id == "imagemagick-cdl-cli" else "MogrifyImage"
                 cdl_leak = (
                     "==1== 16 bytes in 1 blocks are definitely lost in loss record 1 of 1\n"
                     "==1==    at 0x10: FileToString (blob.c:1)\n"

@@ -363,7 +363,7 @@ class ImageMagickCdlRegression(unittest.TestCase):
                 "returncode": 0 if phase == "patched" else 97,
                 "timedOut": False,
                 "memoryLog": clean if phase == "patched" else leak_log(
-                    "CLISimpleOperatorImage" if test_id == "imagemagick-cdl-cli" else "MogrifyImage"),
+                    "CLIOption" if test_id == "imagemagick-cdl-cli" else "MogrifyImage"),
                 "memoryLogPath": log_path,
                 "inputSourcePath": source_input,
                 "inputPath": source_input if test_id == "imagemagick-cdl-cli" else output,
