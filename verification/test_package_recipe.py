@@ -63,6 +63,22 @@ class PackageRecipeContract(unittest.TestCase):
         with self.assertRaisesRegex(RuntimeError, "approved HTTPS Ubuntu source host"):
             RECIPE.validate_source_asset(asset, "libgit2", version, distribution="Ubuntu", descriptor=True)
 
+    def test_debian_archive_mirror_is_approved_but_suffix_hosts_are_rejected(self):
+        version = "3.7.4-4+deb13u1"
+        asset = {
+            "name": f"libarchive_{version}.dsc",
+            "url": f"https://deb.debian.org/debian/pool/main/liba/libarchive/libarchive_{version}.dsc",
+            "sha256": "a" * 64,
+            "bytes": 2634,
+        }
+        self.assertEqual(
+            RECIPE.validate_source_asset(asset, "libarchive", version, distribution="Debian", descriptor=True),
+            asset,
+        )
+        asset["url"] = asset["url"].replace("deb.debian.org", "deb.debian.org.example")
+        with self.assertRaisesRegex(RuntimeError, "approved HTTPS Debian source host"):
+            RECIPE.validate_source_asset(asset, "libarchive", version, distribution="Debian", descriptor=True)
+
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory(prefix="getpatched-recipe-test-")
         self.addCleanup(self.temp.cleanup)
