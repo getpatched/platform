@@ -68,7 +68,10 @@ def persist_release_candidates(selected, binary_manifest, output, package, versi
     if not source_paths or not any(path.suffix == ".dsc" for path in source_paths):
         raise RuntimeError("Complete Debian source package is required for a release candidate")
     source_candidates = []
-    source_prefix = f"{package}_{version}"
+    # Debian source archive filenames omit the epoch even though the package
+    # version recorded in control metadata and provenance includes it.
+    filename_version = version.split(":", 1)[1] if ":" in version else version
+    source_prefix = f"{package}_{filename_version}"
     for path in source_paths:
         if path.is_symlink() or not path.is_file() or path.parent != source_dir:
             raise RuntimeError("Source package contains a non-regular or nested candidate")
@@ -76,12 +79,15 @@ def persist_release_candidates(selected, binary_manifest, output, package, versi
             raise RuntimeError("Unexpected file in the Debian source package candidate")
         is_original = ".orig.tar." in path.name
         is_debian = ".debian.tar." in path.name
-        expected_prefix = f"{package}_{version}" if not is_original else f"{package}_"
+        expected_prefix = source_prefix if not is_original else f"{package}_"
         if not path.name.startswith(expected_prefix):
             raise RuntimeError("Source package filename does not match the candidate source and version")
+        if path.name.endswith(".dsc") and path.name != source_prefix + ".dsc":
+            raise RuntimeError("Source descriptor filename does not match the candidate source and version")
         if is_original and not re.fullmatch(re.escape(package) + r"_[A-Za-z0-9.+~:-]+\.orig\.tar\.[A-Za-z0-9]+(?:\.asc)?", path.name):
             raise RuntimeError("Original source tarball filename is invalid")
-        if is_debian and not path.name.startswith(source_prefix + ".debian.tar."):
+        if is_debian and not re.fullmatch(
+                re.escape(source_prefix) + r"\.debian\.tar\.(?:gz|bz2|xz|zst)", path.name):
             raise RuntimeError("Debian source tarball filename does not match the candidate version")
         source_candidates.append({
             "name": path.name,

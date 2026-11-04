@@ -41,6 +41,67 @@ def source_policy(source, target_id=TARGET_ID):
 
 
 class ReleaseCandidateOutput(unittest.TestCase):
+    def test_debian_source_filenames_omit_version_epoch(self):
+        with tempfile.TemporaryDirectory() as directory:
+            output = Path(directory) / "output"
+            source = output / "source"
+            source.mkdir(parents=True)
+            source_files = (
+                "imagemagick_7.1.1.43+dfsg1-1+deb13u13+getpatched1.dsc",
+                "imagemagick_7.1.1.43+dfsg1.orig.tar.xz",
+                "imagemagick_7.1.1.43+dfsg1-1+deb13u13+getpatched1.debian.tar.xz",
+            )
+            for name in source_files:
+                (source / name).write_bytes(b"source artifact")
+            version = "8:7.1.1.43+dfsg1-1+deb13u13+getpatched1"
+            manifest = {
+                "source": "imagemagick", "targetId": "debian-trixie-amd64",
+                "version": version, "architecture": "amd64", "packages": [],
+            }
+            BUILD_PACKAGE.persist_release_candidates(
+                [], manifest, output, "imagemagick", version, "c" * 40,
+                "debian-trixie-amd64", target_profile(CONFIG, "debian-trixie-amd64"),
+            )
+            saved = json.loads((output / "release-candidates.json").read_text())
+            self.assertEqual({item["name"] for item in saved["sourceFiles"]}, set(source_files))
+
+    def test_debian_source_descriptor_rejects_epoch_in_filename(self):
+        with tempfile.TemporaryDirectory() as directory:
+            output = Path(directory) / "output"
+            source = output / "source"
+            source.mkdir(parents=True)
+            (source / "imagemagick_8:7.1.1.43+dfsg1-1+deb13u13+getpatched1.dsc").write_bytes(b"descriptor")
+            version = "8:7.1.1.43+dfsg1-1+deb13u13+getpatched1"
+            manifest = {
+                "source": "imagemagick", "targetId": "debian-trixie-amd64",
+                "version": version, "architecture": "amd64", "packages": [],
+            }
+            with self.assertRaisesRegex(RuntimeError, "Source package filename"):
+                BUILD_PACKAGE.persist_release_candidates(
+                    [], manifest, output, "imagemagick", version, "c" * 40,
+                    "debian-trixie-amd64", target_profile(CONFIG, "debian-trixie-amd64"),
+                )
+
+    def test_debian_source_tarball_rejects_unexpected_suffix(self):
+        with tempfile.TemporaryDirectory() as directory:
+            output = Path(directory) / "output"
+            source = output / "source"
+            source.mkdir(parents=True)
+            prefix = "imagemagick_7.1.1.43+dfsg1-1+deb13u13+getpatched1"
+            (source / f"{prefix}.dsc").write_bytes(b"descriptor")
+            (source / "imagemagick_7.1.1.43+dfsg1.orig.tar.xz").write_bytes(b"upstream")
+            (source / f"{prefix}.debian.tar.xz.evil").write_bytes(b"debian source")
+            version = "8:7.1.1.43+dfsg1-1+deb13u13+getpatched1"
+            manifest = {
+                "source": "imagemagick", "targetId": "debian-trixie-amd64",
+                "version": version, "architecture": "amd64", "packages": [],
+            }
+            with self.assertRaisesRegex(RuntimeError, "Debian source tarball filename"):
+                BUILD_PACKAGE.persist_release_candidates(
+                    [], manifest, output, "imagemagick", version, "c" * 40,
+                    "debian-trixie-amd64", target_profile(CONFIG, "debian-trixie-amd64"),
+                )
+
     def test_source_and_binary_baseline_versions_are_kept_separate(self):
         config = json.loads(json.dumps(CONFIG))
         target = config["packages"]["libarchive"]["targets"][TARGET_ID]
