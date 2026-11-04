@@ -293,6 +293,7 @@ class PublicCatalogueContract(unittest.TestCase):
         expected_catalogue = {
             source for source, record in platform["packages"].items()
             if any(target.get("candidateStatus", "").startswith("development-verified")
+                   or target.get("verifiedReleases")
                    for target in record["targets"].values())
         }
         self.assertEqual(set(entries), expected_catalogue)
@@ -341,12 +342,12 @@ class PublicCatalogueContract(unittest.TestCase):
                          {"cve-2026-16517-trixie"})
         imagemagick = entries["imagemagick"]["targets"]["debian-trixie-amd64"]
         imagemagick_policy = package_target_policy(platform, "imagemagick", "debian-trixie-amd64")
-        self.assertEqual(imagemagick_policy["candidateStatus"],
-                         "development-verified-production-release-pending")
+        self.assertEqual(imagemagick_policy["candidateStatus"], "unverified-development-candidate")
+        prior_verified = imagemagick_policy["verifiedReleases"][-1]
         self.assertEqual(imagemagick["baseVersion"], imagemagick_policy["baselineVersion"])
-        self.assertEqual(imagemagick["version"], imagemagick_policy["packageVersion"])
-        self.assertEqual(imagemagick["cves"], ["CVE-2026-119124"])
-        self.assertEqual(imagemagick["status"], imagemagick_policy["candidateStatus"])
+        self.assertEqual(imagemagick["version"], prior_verified["version"])
+        self.assertEqual(imagemagick["cves"], prior_verified["targetCves"])
+        self.assertEqual(imagemagick["status"], prior_verified["status"])
         self.assertEqual(imagemagick["access"], "public")
         self.assertEqual(imagemagick["delayHours"], 0)
         self.assertEqual(imagemagick["verification"],
@@ -363,13 +364,13 @@ class PublicCatalogueContract(unittest.TestCase):
                          "270f70f609f659a01aaa2a8ed7bd887f79722d45")
         advisory = next(item for item in feed["vulns"] if item["id"] == "CVE-2026-119124")
         self.assertEqual(advisory["database_specific"]["verification_status"],
-                         imagemagick_policy["candidateStatus"])
+                         prior_verified["status"])
         self.assertEqual({item["package"]["name"] for item in advisory["affected"]},
                          {"libmagickcore-7.q16-10"})
         self.assertEqual(advisory["affected"][0]["versions"],
                          [imagemagick_policy["baselineVersion"]])
         self.assertEqual(advisory["affected"][0]["database_specific"]["candidate_version"],
-                         imagemagick_policy["packageVersion"])
+                         prior_verified["version"])
         cares_trixie = entries["c-ares"]["targets"]["debian-trixie-amd64"]
         self.assertEqual(cares_trixie["version"], "1.34.5-1+deb13u1+getpatched2")
         self.assertEqual(cares_trixie["cves"], ["CVE-2026-69184", "CVE-2026-69186"])

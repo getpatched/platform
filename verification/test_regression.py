@@ -6,7 +6,7 @@ import sys
 import tempfile
 import unittest
 
-from regression import (imagemagick_morph_check_succeeded, LIBPNG_CVE_2025_65018_FIXTURE, pixarlog_baseline_reproduced, pixarlog_patched_succeeded, libpng_followup_read_is_clean, libpng_output_buffer_result, libpng_overwrite_reproduced, libpng_stride_read_reproduced, memcheck_has_no_errors,
+from regression import (imagemagick_cdl_check_succeeded, imagemagick_morph_check_succeeded, LIBPNG_CVE_2025_65018_FIXTURE, pixarlog_baseline_reproduced, pixarlog_patched_succeeded, libpng_followup_read_is_clean, libpng_output_buffer_result, libpng_overwrite_reproduced, libpng_stride_read_reproduced, memcheck_has_no_errors,
                         libpng_patched_checks_succeeded, tiff_patched_regression_succeeded,
                         brotli_baseline_reproduced, brotli_patched_succeeded,
                         cares_record_count_regression_succeeded, cares_regression_succeeded,
@@ -329,6 +329,47 @@ class ImageMagickMorphRegression(unittest.TestCase):
         clean = "==1== ERROR SUMMARY: 0 errors from 0 contexts\n"
         self.assertTrue(imagemagick_morph_check_succeeded(self.check(clean, 0, 3), "patched"))
         self.assertFalse(imagemagick_morph_check_succeeded(self.check(clean, 0, 2), "patched"))
+
+
+class ImageMagickCdlRegression(unittest.TestCase):
+    def check(self, phase):
+        version = "8:7.1.1.43+dfsg1-1+deb13u13" + ("+getpatched2" if phase == "patched" else "")
+        leaked = "==1== definitely lost: 16 bytes in 1 blocks\n==1== ERROR SUMMARY: 1 errors from 1 contexts\n"
+        clean = "==1== definitely lost: 0 bytes in 0 blocks\n==1== ERROR SUMMARY: 0 errors from 0 contexts\n"
+        return {
+            "cve": "CVE-2026-116159", "testId": "imagemagick-cdl-memory-release",
+            "expectedPackageVersion": version,
+            "installedPackageVersions": {name: version for name in (
+                "imagemagick-7.q16", "libmagickcore-7.q16-10", "libmagickwand-7.q16-10")},
+            "magickBinaryOwner": "imagemagick-7.q16",
+            "subchecks": [{
+                "testId": test_id,
+                "command": ["valgrind", "--tool=memcheck", "--error-exitcode=97", "--leak-check=full",
+                            "--show-leak-kinds=definite", "--errors-for-leak-kinds=definite",
+                            "--log-file=/tmp/test.valgrind", binary, "-cdl",
+                            "/recipe/tests/fixtures/cve-2026-116159.cdl.xml",
+                            "/recipe/tests/fixtures/cve-2026-116159-input.ppm"],
+                "returncode": 0 if phase == "patched" else 97,
+                "timedOut": False, "memoryLog": clean if phase == "patched" else leaked,
+                "outputInspectReturncode": 0,
+            } for test_id, binary in (("imagemagick-cdl-cli", "/usr/bin/magick"),
+                                      ("imagemagick-cdl-mogrify", "/usr/bin/mogrify"))],
+        }
+
+    def test_requires_leak_in_both_baseline_entry_points(self):
+        self.assertTrue(imagemagick_cdl_check_succeeded(self.check("baseline"), "baseline"))
+        missing_second_leak = self.check("baseline")
+        missing_second_leak["subchecks"][1]["memoryLog"] = (
+            "==1== definitely lost: 0 bytes in 0 blocks\n==1== ERROR SUMMARY: 0 errors from 0 contexts\n")
+        missing_second_leak["subchecks"][1]["returncode"] = 0
+        self.assertFalse(imagemagick_cdl_check_succeeded(missing_second_leak, "baseline"))
+
+    def test_requires_both_patched_entry_points_to_be_memcheck_clean(self):
+        self.assertTrue(imagemagick_cdl_check_succeeded(self.check("patched"), "patched"))
+        regressed = self.check("patched")
+        regressed["subchecks"][0]["memoryLog"] = (
+            "==1== definitely lost: 16 bytes in 1 blocks\n==1== ERROR SUMMARY: 1 errors from 1 contexts\n")
+        self.assertFalse(imagemagick_cdl_check_succeeded(regressed, "patched"))
 
 
 class TiffPolicySelection(unittest.TestCase):

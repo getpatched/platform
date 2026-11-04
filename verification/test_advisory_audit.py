@@ -263,11 +263,12 @@ class AdvisoryAuditContract(unittest.TestCase):
 
         public_ids = {item["id"] for item in build_feed(config)["vulns"]}
         candidate = build_feed(config, {("imagemagick", "debian-trixie-amd64")})
-        self.assertNotIn("CVE-2026-119124", public_ids)
-        advisory = next(item for item in candidate["vulns"] if item["id"] == "CVE-2026-119124")
+        self.assertIn("CVE-2026-119124", public_ids)
+        self.assertNotIn("CVE-2026-116159", public_ids)
+        advisory = next(item for item in candidate["vulns"] if item["id"] == "CVE-2026-116159")
         self.assertEqual(
             advisory["summary"],
-            "ImageMagick MorphImages can write one pixel past the allocated image row",
+            "ImageMagick retains memory allocated for a color decision list after applying -cdl",
         )
         self.assertEqual(advisory["affected"][0]["database_specific"]["candidate_status"],
                          "development-verified-production-release-pending")
