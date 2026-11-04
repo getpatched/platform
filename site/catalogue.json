@@ -496,7 +496,7 @@
           "earlyUse": ["private", "commercial"],
           "earlyRedistributionAllowed": false,
           "status": "development-verified-production-release-pending",
-          "verification": "https://github.com/getpatched/platform/actions/runs/41753666978",
+          "verification": "https://github.com/getpatched/platform/actions/runs/41756486947",
           "ubuntuProEsmCompatibility": "not-applicable",
           "sourceUrl": "https://github.com/getpatched/packaging-libarchive/tree/getpatched/debian-trixie",
           "patchUrl": "https://github.com/getpatched/packaging-libarchive/blob/getpatched/debian-trixie/patches/CVE-2026-16517.patch",

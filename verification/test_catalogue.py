@@ -410,7 +410,7 @@ class PublicCatalogueContract(unittest.TestCase):
                     ("libxml2", "debian-bookworm-amd64"): "41575270372",
                     ("libxml2", "debian-trixie-amd64"): "41690376263",
                     ("libarchive", "ubuntu-focal-amd64"): "40899709850",
-                    ("libarchive", "debian-trixie-amd64"): "41753666978",
+                    ("libarchive", "debian-trixie-amd64"): "41756486947",
                     ("libgit2", "ubuntu-focal-amd64"): "41162605227",
                     ("libgit2", "ubuntu-jammy-amd64"): "41167536831",
                     ("poppler", "ubuntu-focal-amd64"): "41149614570",
