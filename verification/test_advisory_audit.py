@@ -210,6 +210,22 @@ class AdvisoryAuditContract(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "exact configured source and target"):
                 module.verification_advisory_feed(data, config)
 
+    def test_imagemagick_candidate_summary_is_verification_only_until_passed(self):
+        config = json.loads((ROOT / "packages.json").read_text())
+        target = config["packages"]["imagemagick"]["targets"]["debian-trixie-amd64"]
+        self.assertEqual(target["candidateStatus"], "unverified-development-candidate")
+
+        public_ids = {item["id"] for item in build_feed(config)["vulns"]}
+        candidate = build_feed(config, {("imagemagick", "debian-trixie-amd64")})
+        self.assertNotIn("CVE-2026-119124", public_ids)
+        advisory = next(item for item in candidate["vulns"] if item["id"] == "CVE-2026-119124")
+        self.assertEqual(
+            advisory["summary"],
+            "ImageMagick MorphImages can write one pixel past the allocated image row",
+        )
+        self.assertEqual(advisory["affected"][0]["database_specific"]["candidate_status"],
+                         "development-verified-production-release-pending")
+
     def test_vendor_osv_absence_on_patched_version_is_preserved_but_not_treated_as_scan_evidence(self):
         with tempfile.TemporaryDirectory(prefix="getpatched-audit-osv-absence-") as directory:
             root = Path(directory)
