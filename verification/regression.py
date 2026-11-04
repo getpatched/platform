@@ -628,7 +628,12 @@ def imagemagick_cdl_check_succeeded(check, phase):
                     or Path(output_path).name != "mogrify-input.ppm"))):
             return False
         log = item.get("memoryLog", "")
-        leaked = re.search(r"(?m)^==\d+==\s+definitely lost: [1-9]\d* bytes in [1-9]\d* blocks", log)
+        lost_summary = re.search(
+            r"(?m)^==\d+==[ \t]+definitely lost: ([\d,]+) bytes in ([\d,]+) blocks", log
+        )
+        leaked = (lost_summary is not None
+                  and int(lost_summary.group(1).replace(",", "")) > 0
+                  and int(lost_summary.group(2).replace(",", "")) > 0)
         if phase == "baseline":
             allocation_caller = {
                 "imagemagick-cdl-cli": "CLIOption",
@@ -647,9 +652,9 @@ def imagemagick_cdl_check_succeeded(check, phase):
 def valgrind_definite_leak_blocks(log):
     """Return individual definite-leak allocation records, excluding summary text."""
     pattern = re.compile(
-        r"(?ms)^==\d+== \d+ bytes in \d+ blocks are definitely lost in loss record \d+ of \d+\n"
-        r"(?P<body>.*?)(?=^==\d+== \d+ bytes in \d+ blocks are definitely lost in loss record "
-        r"|^==\d+== (?:LEAK SUMMARY:|HEAP SUMMARY:|ERROR SUMMARY:)|\Z)"
+        r"(?ms)^==\d+==[ \t]+[\d,]+ bytes in [\d,]+ blocks are definitely lost in loss record \d+ of \d+\n"
+        r"(?P<body>.*?)(?=^==\d+==[ \t]+[\d,]+ bytes in [\d,]+ blocks are definitely lost in loss record "
+        r"|^==\d+==[ \t]+(?:LEAK SUMMARY:|HEAP SUMMARY:|ERROR SUMMARY:)|\Z)"
     )
     return [match.group("body") for match in pattern.finditer(log)]
 
