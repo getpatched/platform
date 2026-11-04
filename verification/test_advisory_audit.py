@@ -29,6 +29,52 @@ class AdvisoryAuditContract(unittest.TestCase):
             self.assertNotEqual(result.returncode, 0)
             self.assertIn("required evidence", result.stderr.lower())
 
+    def test_binary_manifest_uses_control_version_when_deb_filename_omits_epoch(self):
+        from importlib.util import module_from_spec, spec_from_file_location
+        spec = spec_from_file_location("advisory_audit", AUDIT)
+        module = module_from_spec(spec)
+        spec.loader.exec_module(module)
+        version = "8:7.1.1.43+dfsg1-1+deb13u13+getpatched1"
+        entry = {
+            "name": "imagemagick-7.q16_7.1.1.43+dfsg1-1+deb13u13+getpatched1_amd64.deb",
+            "bytes": 123,
+            "sha256": "a" * 64,
+            "control": (
+                "Package: imagemagick-7.q16\n"
+                f"Version: {version}\n"
+                "Architecture: amd64\n"
+            ),
+        }
+        self.assertTrue(module.binary_manifest_has_exact_package(
+            [entry], "imagemagick-7.q16", version, "amd64", "amd64"))
+        wrong_version = dict(entry, control=entry["control"].replace(version, version.removeprefix("8:")))
+        self.assertFalse(module.binary_manifest_has_exact_package(
+            [wrong_version], "imagemagick-7.q16", version, "amd64", "amd64"))
+        wrong_hash = dict(entry, sha256="not-a-hash")
+        self.assertFalse(module.binary_manifest_has_exact_package(
+            [wrong_hash], "imagemagick-7.q16", version, "amd64", "amd64"))
+        duplicate_version = dict(entry, control=entry["control"] + f"Version: {version}\n")
+        self.assertFalse(module.binary_manifest_has_exact_package(
+            [duplicate_version], "imagemagick-7.q16", version, "amd64", "amd64"))
+        malformed_control = dict(entry, control=entry["control"] + "malformed field\n")
+        self.assertFalse(module.binary_manifest_has_exact_package(
+            [malformed_control], "imagemagick-7.q16", version, "amd64", "amd64"))
+        wrong_architecture = dict(entry, control=entry["control"].replace("amd64", "arm64"))
+        self.assertFalse(module.binary_manifest_has_exact_package(
+            [wrong_architecture], "imagemagick-7.q16", version, "amd64", "amd64"))
+        wrong_filename = dict(entry, name=entry["name"].replace("_amd64.deb", "_all.deb"))
+        self.assertFalse(module.binary_manifest_has_exact_package(
+            [wrong_filename], "imagemagick-7.q16", version, "amd64", "amd64"))
+        target_independent = dict(
+            entry,
+            name=entry["name"].replace("_amd64.deb", "_all.deb"),
+            control=entry["control"].replace("Architecture: amd64", "Architecture: all"),
+        )
+        self.assertTrue(module.binary_manifest_has_exact_package(
+            [target_independent], "imagemagick-7.q16", version, "amd64", "all"))
+        self.assertFalse(module.binary_manifest_has_exact_package(
+            [target_independent], "imagemagick-7.q16", version, "amd64", "amd64"))
+
     def test_raw_reports_are_hash_bound_and_not_rewritten(self):
         with tempfile.TemporaryDirectory(prefix="getpatched-audit-test-") as directory:
             root = Path(directory)
@@ -38,8 +84,8 @@ class AdvisoryAuditContract(unittest.TestCase):
             verification_feed.write_text(json.dumps(candidate_feed, indent=2, sort_keys=True) + "\n")
             before = root / "before.json"
             after = root / "after.json"
-            before_data = {"Results": [{"Packages": [{"Name": "libarchive13", "Version": "3.4.0", "Release": "2ubuntu1.5", "ID": "libarchive13@3.4.0-2ubuntu1.5"}, {"Name": "libarchive-tools", "Version": "3.4.0", "Release": "2ubuntu1.5", "ID": "libarchive-tools@3.4.0-2ubuntu1.5"}], "Vulnerabilities": [{"VulnerabilityID": "CVE-UNRELATED", "PkgName": "libarchive13"}]}]}
-            after_data = {"Results": [{"Packages": [{"Name": "libarchive13", "Version": "3.4.0", "Release": "2ubuntu1.5+getpatched1", "ID": "libarchive13@3.4.0-2ubuntu1.5+getpatched1"}, {"Name": "libarchive-tools", "Version": "3.4.0", "Release": "2ubuntu1.5+getpatched1", "ID": "libarchive-tools@3.4.0-2ubuntu1.5+getpatched1"}], "Vulnerabilities": [{"VulnerabilityID": "CVE-UNRELATED", "PkgName": "libarchive13"}, {"VulnerabilityID": "CVE-2026-4111", "PkgName": "libarchive13"}]}]}
+            before_data = {"Results": [{"Packages": [{"Name": "libarchive13", "Version": "3.4.0", "Release": "2ubuntu1.5", "ID": "libarchive13@3.4.0-2ubuntu1.5", "Arch": "amd64"}, {"Name": "libarchive-tools", "Version": "3.4.0", "Release": "2ubuntu1.5", "ID": "libarchive-tools@3.4.0-2ubuntu1.5", "Arch": "amd64"}], "Vulnerabilities": [{"VulnerabilityID": "CVE-UNRELATED", "PkgName": "libarchive13"}]}]}
+            after_data = {"Results": [{"Packages": [{"Name": "libarchive13", "Version": "3.4.0", "Release": "2ubuntu1.5+getpatched1", "ID": "libarchive13@3.4.0-2ubuntu1.5+getpatched1", "Arch": "amd64"}, {"Name": "libarchive-tools", "Version": "3.4.0", "Release": "2ubuntu1.5+getpatched1", "ID": "libarchive-tools@3.4.0-2ubuntu1.5+getpatched1", "Arch": "amd64"}], "Vulnerabilities": [{"VulnerabilityID": "CVE-UNRELATED", "PkgName": "libarchive13"}, {"VulnerabilityID": "CVE-2026-4111", "PkgName": "libarchive13"}]}]}
             before.write_text(json.dumps(before_data))
             after.write_text(json.dumps(after_data))
             osv_before = root / "osv-before.json"
