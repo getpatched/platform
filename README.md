@@ -6,7 +6,7 @@ The only configured pilot target is Ubuntu 20.04 (focal), amd64. The package rec
 
 This is an implementation in progress. No package is claimed fixed or supported until its release evidence is published.
 
-The current verification record and open acceptance gates are indexed in [`EVIDENCE.md`](EVIDENCE.md); see [`STATUS.md`](STATUS.md) for the latest checkpoint.
+The current verification record and open acceptance gates are indexed in [`EVIDENCE.md`](EVIDENCE.md); see [`STATUS.md`](STATUS.md) for the latest checkpoint. The campaign has 16 distinct development-verified CVEs; this records package verification only, not a production release.
 
 ## Source preflight
 
