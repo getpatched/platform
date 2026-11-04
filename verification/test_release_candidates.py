@@ -97,7 +97,7 @@ class ReleaseCandidateOutput(unittest.TestCase):
         self.assertNotIn('apt-get install -y --no-install-recommends "$package"', containerfile)
 
     def test_latest_public_focal_candidates_are_eligible_after_verification(self):
-        runnable_candidates = {"libxml2", "libarchive", "libpng1.6", "libgit2", "tiff", "poppler", "c-ares", "brotli"}
+        runnable_candidates = {"libxml2", "libarchive", "libpng1.6", "libgit2", "tiff", "poppler", "c-ares", "brotli", "imagemagick"}
         self.assertTrue(runnable_candidates.issubset(CONFIG["packages"]))
         workflow = (ROOT / ".github/workflows/package-verification.yml").read_text()
         options = re.search(r"options: \[([^]]+)\]", workflow).group(1)

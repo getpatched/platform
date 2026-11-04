@@ -6,12 +6,49 @@ import sys
 import unittest
 
 from regression import (LIBPNG_CVE_2025_65018_FIXTURE, libpng_followup_read_is_clean, libpng_output_buffer_result, libpng_overwrite_reproduced, libpng_stride_read_reproduced, memcheck_has_no_errors,
+                        imagemagick_morph_check_succeeded,
                         libpng_patched_checks_succeeded, tiff_patched_regression_succeeded,
                         brotli_baseline_reproduced, brotli_patched_succeeded,
                         cares_regression_succeeded, consumer_version_succeeded, poppler_revision6_password_overflow_reproduced, poppler_uaf_reproduced, poppler_revision6_probe_command, schematron_baseline_reproduced,
                         tiff_baseline_reproduced, tiff_null_output_baseline_reproduced,
                         tiff_null_output_patched_succeeded, parse_callback_url,
                         libgit2_redirect_reproduced, tiff_cve_required, execute)
+
+
+class ImageMagickMorphRegression(unittest.TestCase):
+    def check(self, log, rc, frames=None):
+        version = "8:7.1.1.43+dfsg1-1+deb13u12"
+        report = {
+            "command": ["valgrind", "--tool=memcheck", "--error-exitcode=97", "--leak-check=no",
+                        "--track-origins=yes", "--log-file=/tmp/CVE-2026-119124.valgrind",
+                        "/usr/bin/magick", "/recipe/tests/fixtures/first-graya.png",
+                        "/recipe/tests/fixtures/second-srgb.png", "-morph", "1", "/tmp/morph.miff"],
+            "returncode": rc, "timedOut": False, "memoryLog": log,
+            "memoryLogPath": "/tmp/CVE-2026-119124.valgrind",
+            "cve": "CVE-2026-119124", "testId": "imagemagick-morph-channel-bounds",
+            "expectedPackageVersion": version,
+            "installedPackageVersions": {
+                name: version for name in ("imagemagick-7.q16", "libmagickcore-7.q16-10", "libmagickwand-7.q16-10")
+            },
+            "magickBinaryOwner": "imagemagick-7.q16",
+        }
+        if frames is not None:
+            report["outputFrames"] = frames
+            report["outputInspectReturncode"] = 0
+        return report
+
+    def test_baseline_requires_invalid_write_stack_to_include_morphimages(self):
+        log = ("==1== Invalid write of size 4\n==1==    by 0x123: MorphImages (visual-effects.c:1)\n"
+               "==1== ERROR SUMMARY: 1 errors from 1 contexts\n")
+        self.assertTrue(imagemagick_morph_check_succeeded(self.check(log, 97), "baseline"))
+        unrelated = ("==1== Invalid write of size 4\n==1==    by 0x123: unrelated_function (other.c:1)\n"
+                     "==1== ERROR SUMMARY: 1 errors from 1 contexts\n==1== MorphImages was mentioned elsewhere\n")
+        self.assertFalse(imagemagick_morph_check_succeeded(self.check(unrelated, 97), "baseline"))
+
+    def test_patched_requires_three_frames_and_clean_memcheck(self):
+        clean = "==1== ERROR SUMMARY: 0 errors from 0 contexts\n"
+        self.assertTrue(imagemagick_morph_check_succeeded(self.check(clean, 0, 3), "patched"))
+        self.assertFalse(imagemagick_morph_check_succeeded(self.check(clean, 0, 2), "patched"))
 
 
 class TiffPolicySelection(unittest.TestCase):

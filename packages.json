@@ -474,6 +474,32 @@
         }
       }
     },
+    "imagemagick": {
+      "targets": {
+        "debian-trixie-amd64": {
+          "baselineVersion": "8:7.1.1.43+dfsg1-1+deb13u12",
+          "sourcePocket": "release",
+          "packageEcosystem": "Debian:13",
+          "packageVersion": "8:7.1.1.43+dfsg1-1+deb13u12+getpatched1",
+          "releaseSerial": 1,
+          "binaryPackages": ["imagemagick-7.q16", "libmagickcore-7.q16-10", "libmagickwand-7.q16-10"],
+          "advisoryPackages": ["libmagickcore-7.q16-10"],
+          "builderPackages": [],
+          "targetCve": "CVE-2026-119124",
+          "targetCves": ["CVE-2026-119124"],
+          "advisory": "https://security-tracker.debian.org/tracker/CVE-2026-119124",
+          "advisories": {"CVE-2026-119124": "https://security-tracker.debian.org/tracker/CVE-2026-119124"},
+          "candidateStatus": "unverified-development-candidate",
+          "releaseAccess": {
+            "policy": "public-after-checks", "sponsorDelayHours": 0,
+            "sponsorEligibility": null, "earlyBinaryLicenseId": null,
+            "publicContributionSpdx": "MIT", "earlyUse": ["private", "commercial"],
+            "earlyRedistributionAllowed": false,
+            "publicLicenseScope": "getpatched-authored-contributions-only"
+          }
+        }
+      }
+    },
     "brotli": {
       "targets": {
         "ubuntu-focal-amd64": {

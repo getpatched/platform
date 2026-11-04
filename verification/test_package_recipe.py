@@ -56,6 +56,19 @@ class PackageRecipeContract(unittest.TestCase):
         with self.assertRaisesRegex(RuntimeError, "approved HTTPS Ubuntu source host"):
             RECIPE.validate_source_asset(asset, "libgit2", version, distribution="Ubuntu", descriptor=True)
 
+    def test_debian_source_descriptor_filename_omits_the_epoch(self):
+        version = "8:7.1.1.43+dfsg1-1+deb13u12"
+        asset = {
+            "name": "imagemagick_7.1.1.43+dfsg1-1+deb13u12.dsc",
+            "url": "https://snapshot.debian.org/archive/debian/20261030T000000Z/pool/main/i/imagemagick/imagemagick_7.1.1.43+dfsg1-1+deb13u12.dsc",
+            "sha256": "a" * 64,
+            "bytes": 5263,
+        }
+        self.assertEqual(
+            RECIPE.validate_source_asset(asset, "imagemagick", version, distribution="Debian", descriptor=True),
+            asset,
+        )
+
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory(prefix="getpatched-recipe-test-")
         self.addCleanup(self.temp.cleanup)

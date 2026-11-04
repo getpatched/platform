@@ -27,6 +27,7 @@ SUMMARIES = {
     "CVE-2026-107705": "Poppler revision 6 PDF password-length stack buffer overflow",
     "CVE-2026-69184": "c-ares CPU exhaustion from unbounded DNS compression-pointer chains",
     "CVE-2026-111497": "Brotli decoder out-of-bounds write on invalid block switches",
+    "CVE-2026-119124": "ImageMagick MorphImages writes beyond the output pixel channel layout when input frames have different channel layouts",
 }
 SEVERITIES = {
     "CVE-2026-69184": "HIGH",
