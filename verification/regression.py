@@ -529,6 +529,13 @@ def valgrind_invalid_access_blocks(log):
     return list(pattern.finditer(log))
 
 
+def valgrind_reports_out_of_bounds_address(body):
+    return re.search(
+        r"(?m)^==\d+== Address 0x[0-9a-fA-F]+ is \d+ bytes (?:after|before) a block of size \d+ alloc'd$",
+        body,
+    ) is not None
+
+
 def imagemagick_morph_check_succeeded(check, phase):
     command = check.get("command")
     if (not isinstance(command, list) or len(command) != 12
@@ -557,7 +564,9 @@ def imagemagick_morph_check_succeeded(check, phase):
                       if block.group("kind").startswith("Invalid write")]
     if phase == "baseline":
         return (not check.get("timedOut", False) and check.get("returncode") == 97
-                and any("MorphImages" in block.group("body") for block in invalid_writes))
+                and any("MorphImages" in block.group("body")
+                        and valgrind_reports_out_of_bounds_address(block.group("body"))
+                        for block in invalid_writes))
     return (not check.get("timedOut", False) and check.get("returncode") == 0
             and check.get("outputFrames") == 3
             and check.get("outputInspectReturncode") == 0
