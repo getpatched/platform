@@ -305,17 +305,24 @@ class ImageMagickMorphRegression(unittest.TestCase):
 
     def test_baseline_requires_invalid_write_stack_to_include_morphimages(self):
         log = ("==1== Invalid write of size 4\n==1==    by 0x123: MorphImages (visual-effects.c:1)\n"
-               "==1== Address 0x100 is 0 bytes after a block of size 16 alloc'd\n"
+               "==1==  Address 0x100 is 0 bytes after a block of size 16 alloc'd\n"
                "==1== ERROR SUMMARY: 1 errors from 1 contexts\n")
         self.assertTrue(imagemagick_morph_check_succeeded(self.check(log, 97), "baseline"))
         unrelated = ("==1== Invalid write of size 4\n==1==    by 0x123: unrelated_function (other.c:1)\n"
                      "==1== ERROR SUMMARY: 1 errors from 1 contexts\n==1== MorphImages was mentioned elsewhere\n")
         self.assertFalse(imagemagick_morph_check_succeeded(self.check(unrelated, 97), "baseline"))
         without_bounds_evidence = log.replace(
-            "==1== Address 0x100 is 0 bytes after a block of size 16 alloc'd\n", ""
+            "==1==  Address 0x100 is 0 bytes after a block of size 16 alloc'd\n", ""
         )
         self.assertFalse(imagemagick_morph_check_succeeded(
             self.check(without_bounds_evidence, 97), "baseline"
+        ))
+        unprefixed_address = log.replace(
+            "==1==  Address 0x100 is 0 bytes after a block of size 16 alloc'd\n",
+            "==1==\nAddress 0x100 is 0 bytes after a block of size 16 alloc'd\n",
+        )
+        self.assertFalse(imagemagick_morph_check_succeeded(
+            self.check(unprefixed_address, 97), "baseline"
         ))
 
     def test_patched_requires_three_frames_and_clean_memcheck(self):

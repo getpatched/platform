@@ -531,7 +531,7 @@ def valgrind_invalid_access_blocks(log):
 
 def valgrind_reports_out_of_bounds_address(body):
     return re.search(
-        r"(?m)^==\d+== Address 0x[0-9a-fA-F]+ is \d+ bytes (?:after|before) a block of size \d+ alloc'd$",
+        r"(?m)^==\d+==[ \t]+Address 0x[0-9a-fA-F]+ is \d+ bytes (?:after|before) a block of size \d+ alloc'd$",
         body,
     ) is not None
 
