@@ -163,8 +163,13 @@ def main():
 
     marker_start = "GETPATCHED:ZIP_HEADER_START" in check["stderr"]
     marker_return = "GETPATCHED:ZIP_HEADER_RETURN" in check["stderr"]
+    overflow_operands = (
+        "9223372036854775807 + 28" in check["stderr"]
+        or "28 + 9223372036854775807" in check["stderr"]
+    )
     overflow = (
-        "runtime error: signed integer overflow: 9223372036854775807 + 28" in check["stderr"]
+        "runtime error: signed integer overflow:" in check["stderr"]
+        and overflow_operands
         and "archive_write_set_format_zip.c:" in check["stderr"]
     )
     reproduced = (
