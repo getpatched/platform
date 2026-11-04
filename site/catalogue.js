@@ -17,7 +17,7 @@ function packageRow(item) {
     ? `<span class="policy-dot policy-sponsor"></span><span class="policy-main">Sponsor first</span><span class="policy-detail">Any active individual GitHub Sponsors tier, no minimum · public ${escapeHtml(item.delayHours)} hours later</span><small>Private and commercial use; no redistribution of official early binaries</small>`
     : `<span class="policy-dot policy-public"></span><span class="policy-main">Public immediately</span><span class="policy-detail">After release checks pass</span>`;
   const checks = item.verification
-    ? `<a class="verification-link" href="${escapeHtml(item.verification)}"><span class="verified-check" aria-hidden="true">✓</span>Hosted verification passed<small>Build, CVE scans, regressions and signed APT client ↗</small></a>`
+    ? `<a class="verification-link" href="${escapeHtml(item.verification)}"><span class="verified-check" aria-hidden="true">✓</span>Development checks passed<small>Hosted build, CVE scans, regressions and signed APT client ↗</small></a>`
     : `<span class="verification-pending">Verification pending<small>Hosted build, CVE scans, installed regressions and signed-client checks required</small></span>`;
   return `<tr data-source="${escapeHtml(item.source)}">
     <th scope="row" class="package-name"><span>${escapeHtml(item.source)}</span><small>${escapeHtml(item.targetName)} source package</small></th>

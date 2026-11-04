@@ -135,7 +135,11 @@ def run_getpatched_scan(image, image_id, phase, output, temp, package, expected,
         raise RuntimeError("GetPatched scan identified an unexpected installed package version")
     target_findings = set(report.get("findingsById", [])) & target_cves
     finding_pairs = {(finding.get("id"), finding.get("package")) for finding in report.get("findings", [])}
-    expected_pairs = {(cve, binary) for cve in target_cves for binary in advisory_packages}
+    advisory_by_cve = expected.get("advisoryPackagesByCve", {
+        cve: expected["advisoryPackages"] for cve in target_cves
+    })
+    expected_pairs = {(cve, binary) for cve in target_cves
+                      for binary in advisory_by_cve[cve]}
     if phase == "before" and (not target_cves.issubset(target_findings) or not expected_pairs.issubset(finding_pairs)):
         raise RuntimeError("GetPatched advisory scan did not detect every target CVE for every vulnerable binary on the baseline")
     if phase == "after" and target_findings:
@@ -166,6 +170,7 @@ def validate_release_policy(policy, config):
     expected = package_target_policy(config, package, policy["targetId"])
     expected = dict(expected, targetId=policy["targetId"], codename=profile["codename"], architecture=profile["architecture"])
     if (policy["baseVersion"] != expected["baselineVersion"] or
+        policy.get("sourceVersion", policy["baseVersion"]) != expected.get("sourceVersion", expected["baselineVersion"]) or
         policy["sponsorDelayHours"] != expected["releaseAccess"]["sponsorDelayHours"] or
         policy["version"] != expected["packageVersion"] or
         policy["releaseSerial"] != expected["releaseSerial"] or
@@ -174,6 +179,7 @@ def validate_release_policy(policy, config):
     if (expected["targetCve"] not in policy["targetCves"]
             or policy["targetCves"] != expected["targetCves"]
             or policy["binaryPackages"] != expected["binaryPackages"]
+            or policy.get("advisoryPackagesByCve", expected["advisoryPackagesByCve"]) != expected["advisoryPackagesByCve"]
             or policy["architecture"] != profile["architecture"]
             or policy["release"] != profile["codename"]
             or policy["distribution"] != profile["distribution"]
@@ -262,6 +268,8 @@ def main():
             "source": package,
             "targetId": recipe["target"]["id"],
             "baseVersion": policy["baseVersion"],
+            "sourceVersion": policy.get("sourceVersion", policy["baseVersion"]),
+            "baselineBinaryVersion": policy["baseVersion"],
             "packageVersion": policy["version"],
             "releaseSerial": policy["releaseSerial"],
             "recipeCommit": commit,
@@ -282,7 +290,7 @@ def main():
                     "sha256": recipe["patchesById"][patch_id]["sha256"],
                     "cves": recipe["patchesById"][patch_id]["cves"],
                     "upstream": recipe["patchesById"][patch_id].get("upstream"),
-                    "sourceVersion": policy["baseVersion"],
+                    "sourceVersion": policy.get("sourceVersion", policy["baseVersion"]),
                 }
                 for patch_id in policy["patches"] + policy.get("buildPatches", [])
             ],
@@ -326,6 +334,7 @@ def main():
                 "releaseSerial": policy["releaseSerial"],
                 "sourceDescriptor": {"name": recipe["descriptor"]["name"], "sha256": recipe["descriptor"]["sha256"]},
                 "downloadedSourceAssets": downloaded_sources,
+                "sourceProvenanceSha256": sha256(provenance_path),
                 "patches": source_provenance["patches"],
                 "recipeManifestSha256": source_provenance["recipeManifestSha256"],
             })
@@ -335,22 +344,40 @@ def main():
             debs.mkdir()
             binary_manifest = json.loads((output / "binary-manifest.json").read_text())
             selected = []
+            builder_selected = []
+            runtime_names = set(expected["binaryPackages"])
+            builder_names = set(expected["builderPackages"])
             for item in binary_manifest["packages"]:
                 binary_name = item["control"].splitlines()[0].split(": ", 1)[1]
-                if binary_name not in expected["binaryPackages"]:
+                if binary_name not in runtime_names | builder_names:
                     continue
                 target = debs / item["name"]
                 run(["docker", "cp", container + ":/build/" + item["name"], str(target)])
                 if sha256(target) != item["sha256"]:
                     raise RuntimeError("Extracted package differs from recorded binary manifest")
-                selected.append(target)
-            if {p.name.split("_", 1)[0] for p in selected} != set(expected["binaryPackages"]):
+                if binary_name in runtime_names:
+                    selected.append(target)
+                elif binary_name in builder_names:
+                    builder_selected.append(target)
+            if {p.name.split("_", 1)[0] for p in selected} != runtime_names:
                 raise RuntimeError("Could not extract every patched runtime package")
+            if {p.name.split("_", 1)[0] for p in builder_selected} != builder_names:
+                raise RuntimeError("Could not extract every patched builder package")
+            for item in binary_manifest["packages"]:
+                binary_name = item["control"].splitlines()[0].split(": ", 1)[1]
+                if binary_name in builder_names:
+                    control = dict(line.split(": ", 1) for line in item["control"].splitlines() if ": " in line)
+                    if control.get("Version") != policy["version"]:
+                        raise RuntimeError("Patched builder package version differs from the candidate version")
             patched_context = temp / "patched-context"
             patched_context.mkdir()
             (patched_context / "getpatched").mkdir()
+            (patched_context / "builder-debs").mkdir()
             for deb in selected:
                 shutil.copyfile(deb, patched_context / "getpatched" / deb.name)
+            for deb in builder_selected:
+                shutil.copyfile(deb, patched_context / "builder-debs" / deb.name)
+            builder_deb_names = sorted({p.name.split("_", 1)[0] for p in builder_selected})
             shutil.copyfile(ROOT / "build/patched-scan.Containerfile", patched_context / "Dockerfile")
             scan_args = [
                 "docker", "build", "--no-cache", "--platform", container_platform, "--tag", scan_patched,
@@ -361,6 +388,8 @@ def main():
                 "--build-arg", "EXPECTED_VERSION=" + policy["version"],
                 "--build-arg", "APT_SOURCES_B64=" + binary_sources,
                 "--build-arg", "BINARY_PACKAGES=" + " ".join(expected["binaryPackages"]),
+                "--build-arg", "BUILDER_PACKAGES=" + " ".join(expected["builderPackages"]),
+                "--build-arg", "BUILDER_DEB_PACKAGES=" + " ".join(builder_deb_names),
                 str(patched_context),
             ]
             run(scan_args)
@@ -374,6 +403,7 @@ def main():
                 "--build-arg", "EXPECTED_VERSION=" + policy["baseVersion"],
                 "--build-arg", "APT_SOURCES_B64=" + binary_sources,
                 "--build-arg", "BINARY_PACKAGES=" + " ".join(expected["binaryPackages"]),
+                "--build-arg", "BUILDER_PACKAGES=" + " ".join(expected["builderPackages"]),
                 str(ROOT),
             ])
             scan_images.append(scan_base)
@@ -427,6 +457,8 @@ def main():
                 "targetCves": policy["targetCves"], "beforeTrivy": str(output / (package + "-trivy-before.json")),
                 "afterTrivy": str(output / (package + "-trivy-after.json")), "beforeOsv": osv_evidence["before"], "afterOsv": osv_evidence["after"],
                 "baselineRegression": str(output / "baseline-regression.json"), "patchedRegression": str(output / "patched-regression.json"),
+                "sourceUbsanBaseline": str(output / "libarchive-source-ubsan-baseline.json") if (output / "libarchive-source-ubsan-baseline.json").exists() else None,
+                "sourceUbsanPatched": str(output / "libarchive-source-ubsan-patched.json") if (output / "libarchive-source-ubsan-patched.json").exists() else None,
                 "buildProvenance": str(output / "build-provenance.json"), "binaryManifest": str(output / "binary-manifest.json"),
                 "packagePolicy": str(output / "package-policy.json"), "databaseSha256": database_hash, "sourceCommit": commit,
                 "beforeScanMetadata": str(output / (package + "-trivy-before-metadata.json")),

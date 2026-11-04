@@ -12,6 +12,7 @@ from unittest.mock import patch
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "scripts"))
+from platform_policy import target_source_branch
 SPEC = importlib.util.spec_from_file_location("package_recipe", ROOT / "scripts/package_recipe.py")
 RECIPE = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(RECIPE)
@@ -26,6 +27,12 @@ def digest(data):
 
 
 class PackageRecipeContract(unittest.TestCase):
+    def test_verified_libxml2_target_uses_its_merged_recipe_branch(self):
+        self.assertEqual(
+            target_source_branch(PLATFORM_CONFIG, "debian-trixie-amd64", "libxml2"),
+            "getpatched/debian-trixie",
+        )
+
     def test_patch_applicability_supports_target_scoped_exact_and_debian_version_ranges(self):
         exact = {"target": "ubuntu-focal-amd64", "sourceVersion": "1.0-2"}
         self.assertTrue(RECIPE.patch_applies_to_version(exact, "ubuntu-focal-amd64", "1.0-2"))
@@ -56,12 +63,28 @@ class PackageRecipeContract(unittest.TestCase):
         with self.assertRaisesRegex(RuntimeError, "approved HTTPS Ubuntu source host"):
             RECIPE.validate_source_asset(asset, "libgit2", version, distribution="Ubuntu", descriptor=True)
 
-    def test_debian_source_descriptor_filename_omits_the_epoch(self):
+    def test_debian_archive_mirror_is_approved_but_suffix_hosts_are_rejected(self):
+        version = "3.7.4-4+deb13u1"
+        asset = {
+            "name": f"libarchive_{version}.dsc",
+            "url": f"https://deb.debian.org/debian/pool/main/liba/libarchive/libarchive_{version}.dsc",
+            "sha256": "a" * 64,
+            "bytes": 2634,
+        }
+        self.assertEqual(
+            RECIPE.validate_source_asset(asset, "libarchive", version, distribution="Debian", descriptor=True),
+            asset,
+        )
+        asset["url"] = asset["url"].replace("deb.debian.org", "deb.debian.org.example")
+        with self.assertRaisesRegex(RuntimeError, "approved HTTPS Debian source host"):
+            RECIPE.validate_source_asset(asset, "libarchive", version, distribution="Debian", descriptor=True)
+
+    def test_debian_imagemagick_security_descriptor_omits_the_epoch(self):
         version = "8:7.1.1.43+dfsg1-1+deb13u13"
         asset = {
             "name": "imagemagick_7.1.1.43+dfsg1-1+deb13u13.dsc",
             "url": "https://snapshot.debian.org/archive/debian-security/20261030T000000Z/pool/updates/main/i/imagemagick/imagemagick_7.1.1.43+dfsg1-1+deb13u13.dsc",
-            "sha256": "a" * 64,
+            "sha256": "bbd83d09b7e11a0c13b0334bb6703abf86359243d5283a0b0edbbe47e187ebca",
             "bytes": 5165,
         }
         self.assertEqual(
@@ -193,6 +216,15 @@ class PackageRecipeContract(unittest.TestCase):
         self.assertEqual(recipe["policy"]["candidateStatus"], recipe["central"]["candidateStatus"])
         self.assertEqual(recipe["policy"]["patches"], ["cve-2026-4111"])
         self.assertEqual(recipe["policy"]["buildPatches"], ["test-zstd-size-tolerance"])
+
+    def test_source_version_can_differ_from_installed_bin_nmu_baseline(self):
+        config = json.loads(json.dumps(PLATFORM_CONFIG))
+        central = config["packages"]["libarchive"]["targets"]["ubuntu-focal-amd64"]
+        central["sourceVersion"] = central["baselineVersion"]
+        central["baselineVersion"] += "+b1"
+        recipe = RECIPE.load_recipe(self.root, config)
+        self.assertEqual(recipe["policy"]["sourceVersion"], "3.4.0-2ubuntu1.5")
+        self.assertEqual(recipe["policy"]["baseVersion"], "3.4.0-2ubuntu1.5+b1")
 
     def test_public_recipe_can_omit_sponsor_binary_terms(self):
         self.manifest["licensing"]["earlyBinaryLicenseId"] = None

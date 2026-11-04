@@ -37,7 +37,7 @@ def digest(path):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--package", required=True, choices=("libxml2", "libarchive", "libpng1.6", "libgit2", "tiff", "poppler", "c-ares", "brotli"))
+    parser.add_argument("--package", required=True, choices=("libxml2", "libarchive", "libpng1.6", "libgit2", "tiff", "poppler", "c-ares", "brotli", "expat", "python-msgpack"))
     parser.add_argument("--target", default="ubuntu-focal-amd64")
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--database-snapshot", type=Path, help="Reuse an earlier scanner-db directory without updating it")
@@ -72,6 +72,7 @@ def main():
                 "--build-arg", "SOURCE_PACKAGE=" + args.package,
                 "--build-arg", "EXPECTED_VERSION=" + package["baselineVersion"],
                 "--build-arg", "BINARY_PACKAGES=" + " ".join(package["binaryPackages"]),
+                "--build-arg", "BUILDER_PACKAGES=" + " ".join(package["builderPackages"]),
                 "--build-arg", "APT_SOURCES_B64=" + apt_source_list_b64(profile, include_sources=False),
                 str(ROOT),
             ])

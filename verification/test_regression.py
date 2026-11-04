@@ -3,16 +3,281 @@ import json
 from pathlib import Path
 import signal
 import sys
+import tempfile
 import unittest
 
-from regression import (LIBPNG_CVE_2025_65018_FIXTURE, libpng_followup_read_is_clean, libpng_output_buffer_result, libpng_overwrite_reproduced, libpng_stride_read_reproduced, memcheck_has_no_errors,
-                        imagemagick_morph_check_succeeded,
+from regression import (imagemagick_morph_check_succeeded, LIBPNG_CVE_2025_65018_FIXTURE, pixarlog_baseline_reproduced, pixarlog_patched_succeeded, libpng_followup_read_is_clean, libpng_output_buffer_result, libpng_overwrite_reproduced, libpng_stride_read_reproduced, memcheck_has_no_errors,
                         libpng_patched_checks_succeeded, tiff_patched_regression_succeeded,
                         brotli_baseline_reproduced, brotli_patched_succeeded,
-                        cares_regression_succeeded, consumer_version_succeeded, poppler_revision6_password_overflow_reproduced, poppler_uaf_reproduced, poppler_revision6_probe_command, schematron_baseline_reproduced,
+                        cares_record_count_regression_succeeded, cares_regression_succeeded,
+                        msgpack_unpacker_reuse_regression_succeeded,
+                        massif_peak_heap_bytes,
+                        consumer_version_succeeded, expat_consumer_succeeded, expat_regression_succeeded,
+                        libxml2_catalog_baseline_reproduced, libxml2_catalog_patched_succeeded,
+                        libxml2_regexp_alloc_failure_baseline_reproduced,
+                        libxml2_regexp_alloc_failure_patched_succeeded,
+                        libxml2_check_cardinality_valid,
+                        libxml2_parameter_entity_baseline_reproduced, libxml2_parameter_entity_patched_succeeded,
+                        libxml2_xinclude_nonet_result, libxml2_xinclude_checks_succeeded,
+                        poppler_uaf_reproduced, schematron_baseline_reproduced,
+                        validate_recipe_regression_fixture_hashes,
+
+cares_regression_succeeded, consumer_version_succeeded, poppler_revision6_password_overflow_reproduced, poppler_uaf_reproduced, poppler_revision6_probe_command, schematron_baseline_reproduced,
                         tiff_baseline_reproduced, tiff_null_output_baseline_reproduced,
                         tiff_null_output_patched_succeeded, parse_callback_url,
-                        libgit2_redirect_reproduced, tiff_cve_required, execute)
+                        libgit2_redirect_reproduced, tiff_cve_required,
+                        tiff_bigstrip_baseline_reproduced, tiff_bigstrip_patched_succeeded,
+                        tiff_subdivision_baseline_reproduced, tiff_subdivision_patched_succeeded, execute)
+
+
+class PythonMsgpackRegression(unittest.TestCase):
+    def test_accepts_only_reproduced_segfault_and_clean_patched_reuse(self):
+        base = {
+            "cve": "CVE-2026-57585",
+            "testId": "python-msgpack-unpacker-error-reuse",
+            "timedOut": False,
+            "command": ["python3", "/recipe/tests/fixtures/cve-2026-57585-unpacker-reuse.py"],
+        }
+        identity = (
+            "module_path=/usr/lib/python3/dist-packages/msgpack/__init__.py\n"
+            "debian_package=python3-msgpack\n"
+            "module_owner=python3-msgpack\n"
+        )
+        baseline = {
+            **base,
+            "returncode": -signal.SIGSEGV,
+            "stdout": identity + "debian_package_version=1.0.3-2+b1\n"
+            "caught expected ValueError\n",
+        }
+        self.assertTrue(msgpack_unpacker_reuse_regression_succeeded(
+            baseline, "debian-bookworm-amd64", "baseline", "1.0.3-2+b1"
+        ))
+        self.assertFalse(msgpack_unpacker_reuse_regression_succeeded(
+            {**baseline, "returncode": 0}, "debian-bookworm-amd64", "baseline", "1.0.3-2+b1"
+        ))
+        patched = {
+            **base,
+            "returncode": 0,
+            "stdout": identity + "debian_package_version=1.0.3-3+getpatched1\n"
+            "caught expected ValueError\nafter-error skip completed without process crash\n",
+        }
+        self.assertTrue(msgpack_unpacker_reuse_regression_succeeded(
+            patched, "debian-trixie-amd64", "patched", "1.0.3-3+getpatched1"
+        ))
+        self.assertFalse(msgpack_unpacker_reuse_regression_succeeded(
+            {**patched, "command": ["python3", "/tmp/other.py"]},
+            "debian-trixie-amd64", "patched", "1.0.3-3+getpatched1"
+        ))
+        self.assertFalse(msgpack_unpacker_reuse_regression_succeeded(
+            patched, "debian-trixie-amd64", "patched", "1.0.3-3+getpatched2"
+        ))
+        self.assertFalse(msgpack_unpacker_reuse_regression_succeeded(
+            {**patched, "stdout": patched["stdout"].replace(
+                "/usr/lib/python3/dist-packages/msgpack/", "/usr/local/lib/python3/dist-packages/msgpack/"
+            )},
+            "debian-trixie-amd64", "patched", "1.0.3-3+getpatched1"
+        ))
+
+
+class Libxml2ParameterEntityRegression(unittest.TestCase):
+    def test_catalog_missing_attribute_regression_classifier(self):
+        log_path = "/tmp/cve-2026-76781.valgrind"
+        base = {
+            "cve": "CVE-2026-76781",
+            "timedOut": False,
+            "memoryLogPath": log_path,
+            "command": [
+                "valgrind", "--tool=memcheck", "--error-exitcode=97", "--leak-check=no",
+                "--read-var-info=yes", "--log-file=" + log_path,
+                "/tmp/libxml2-cve-2026-76781", "/recipe/tests/fixtures/cve-2026-76781-catalog.xml",
+            ],
+        }
+        baseline = {
+            **base,
+            "returncode": -11,
+            "memoryLog": (
+                "==123== Invalid read of size 8\n"
+                "==123==    at 0x123: ??? (in /usr/lib/libxml2.so.2.9.14)\n"
+                "==123==    by 0x456: xmlCatalogResolveSystem (in /usr/lib/libxml2.so.2.9.14)\n"
+                "==123==  Address 0x30 is not stack'd, malloc'd or (recently) free'd\n"
+                "==123== Process terminating with default action of signal 11 (SIGSEGV)\n"
+                "==123== ERROR SUMMARY: 1 errors from 1 contexts\n"
+            ),
+        }
+        patched = {**base, "returncode": 0, "memoryLog": "==123== ERROR SUMMARY: 0 errors from 0 contexts\n"}
+        self.assertTrue(libxml2_catalog_baseline_reproduced(baseline))
+        self.assertFalse(libxml2_catalog_baseline_reproduced({**baseline, "memoryLog": ""}))
+        self.assertFalse(libxml2_catalog_baseline_reproduced({
+            **baseline,
+            "memoryLog": baseline["memoryLog"].replace("Address 0x30", "Address 0x38"),
+        }))
+        self.assertFalse(libxml2_catalog_baseline_reproduced({
+            **baseline,
+            "memoryLog": baseline["memoryLog"].replace("xmlCatalogResolveSystem", "unrelated"),
+        }))
+        self.assertTrue(libxml2_catalog_patched_succeeded(patched))
+        self.assertFalse(libxml2_catalog_patched_succeeded({**patched, "returncode": 97}))
+
+    def test_libxml2_report_cardinality_requires_one_check_per_cve_and_both_xinclude_apis(self):
+        target = ["CVE-2026-6653", "CVE-2026-86144", "CVE-2026-76781", "CVE-2026-86141"]
+        checks = [
+            {"cve": "CVE-2026-6653"},
+            {"cve": "CVE-2026-86144", "testId": "document"},
+            {"cve": "CVE-2026-86144", "testId": "tree"},
+            {"cve": "CVE-2026-76781"},
+            {"cve": "CVE-2026-86141"},
+        ]
+        self.assertTrue(libxml2_check_cardinality_valid(checks, target))
+        self.assertFalse(libxml2_check_cardinality_valid(checks[:-1], target))
+        self.assertFalse(libxml2_check_cardinality_valid(checks + [checks[0]], target))
+
+    def test_regexp_allocation_failure_classifier_requires_crash_or_clean_rejection(self):
+        log_path = "/tmp/cve-2026-86141.valgrind"
+        memory_log = (
+            "==123== Invalid read of size 1\n"
+            "==123==    at 0x123: ??? (in /usr/lib/libxml2.so.2.9.14)\n"
+            "==123==    by 0x456: ??? (in /usr/lib/libxml2.so.2.9.14)\n"
+            "==123==    by 0x789: xmlRegexpCompile (in /usr/lib/libxml2.so.2.9.14)\n"
+            "==123==  Address 0x0 is not stack'd, malloc'd or (recently) free'd\n"
+            "==123== Process terminating with default action of signal 11 (SIGSEGV)\n"
+            "==123== ERROR SUMMARY: 1 errors from 1 contexts\n"
+        )
+        baseline = {
+            "cve": "CVE-2026-86141",
+            "testId": "regexp-allocation-failure-null-check",
+            "timedOut": False,
+            "returncode": 97,
+            "command": [
+                "/usr/bin/valgrind", "--tool=memcheck", "--error-exitcode=97", "--leak-check=no",
+                "--read-var-info=yes", "--log-file=" + log_path,
+                "/tmp/libxml2-cve-2026-86141",
+            ],
+            "injection": "xmlMemSetup:test_malloc:sizeof-regexp",
+            "stderr": "GETPATCHED_REGEXP_COPY_ALLOCATION_FAILURE_INJECTED\n",
+            "memoryLogPath": log_path,
+            "memoryLog": memory_log,
+        }
+        self.assertTrue(libxml2_regexp_alloc_failure_baseline_reproduced(baseline))
+        self.assertTrue(libxml2_regexp_alloc_failure_baseline_reproduced({
+            **baseline, "returncode": -signal.SIGSEGV
+        }))
+        self.assertFalse(libxml2_regexp_alloc_failure_baseline_reproduced({**baseline, "returncode": 0}))
+        self.assertFalse(libxml2_regexp_alloc_failure_baseline_reproduced({
+            **baseline, "stderr": "unrelated crash\n"
+        }))
+        self.assertFalse(libxml2_regexp_alloc_failure_baseline_reproduced({
+            **baseline, "memoryLog": memory_log.replace("xmlRegexpCompile", "unrelated_crash")
+        }))
+        patched = {
+            **baseline,
+            "returncode": 0,
+            "stdout": "XML_REGEXP_COMPILE_REJECTED_ALLOCATION_FAILURE\n",
+            "memoryLog": "==123== ERROR SUMMARY: 0 errors from 0 contexts\n",
+        }
+        self.assertTrue(libxml2_regexp_alloc_failure_patched_succeeded(patched))
+        self.assertFalse(libxml2_regexp_alloc_failure_patched_succeeded({
+            **patched, "stdout": ""
+        }))
+
+    def test_xinclude_scanner_requires_one_passing_result_per_api(self):
+        def check(api, mode, returncode):
+            return {
+                "cve": "CVE-2026-86144",
+                "timedOut": False,
+                "returncode": returncode,
+                "command": ["/tmp/libxml2-cve-2026-86144", "/recipe/tests/fixtures/cve-2026-86144-xinclude.xml", api, mode],
+            }
+
+        baseline = [check("document", "expect-network", 10), check("tree", "expect-network", 10)]
+        patched = [check("document", "expect-blocked", 0), check("tree", "expect-blocked", 0)]
+        self.assertTrue(libxml2_xinclude_checks_succeeded(baseline, "baseline"))
+        self.assertTrue(libxml2_xinclude_checks_succeeded(patched, "patched"))
+        self.assertFalse(libxml2_xinclude_checks_succeeded([check("document", "expect-blocked", 10), patched[1]], "patched"))
+        self.assertFalse(libxml2_xinclude_checks_succeeded(patched[:1], "patched"))
+        self.assertFalse(libxml2_xinclude_checks_succeeded([patched[0], patched[0]], "patched"))
+
+    def test_xinclude_nonet_classifier_requires_expected_behavior(self):
+        baseline = {
+            "timedOut": False,
+            "command": ["/tmp/libxml2-cve-2026-86144", "/recipe/tests/fixtures/cve-2026-86144-xinclude.xml", "document", "expect-network"],
+            "returncode": 10,
+        }
+        self.assertTrue(libxml2_xinclude_nonet_result(baseline, "baseline"))
+        self.assertFalse(libxml2_xinclude_nonet_result({**baseline, "returncode": 0}, "baseline"))
+        patched = {**baseline, "command": [*baseline["command"][:-1], "expect-blocked"], "returncode": 0}
+        self.assertTrue(libxml2_xinclude_nonet_result(patched, "patched"))
+        self.assertFalse(libxml2_xinclude_nonet_result({**patched, "returncode": 10}, "patched"))
+
+    def test_baseline_requires_invalid_read_after_entity_stream_is_freed(self):
+        log_path = "/tmp/cve-2026-6653.valgrind"
+        check = {
+            "cve": "CVE-2026-6653",
+            "returncode": 97,
+            "timedOut": False,
+            "memoryLogPath": log_path,
+            "command": [
+                "valgrind", "--tool=memcheck", "--error-exitcode=97", "--leak-check=no",
+                "--read-var-info=yes", "--log-file=" + log_path,
+                "/tmp/libxml2-cve-2026-6653", "/recipe/tests/fixtures/cve-2026-6653.xml",
+            ],
+            "memoryLog": (
+                "==123== Invalid read of size 8\n"
+                "==123==    at 0x123: ??? (in /usr/lib/libxml2.so.2)\n"
+                "==123==    by 0x456: xmlReadMemory (in /usr/lib/libxml2.so.2)\n"
+                "==123== Address 0x1 is 0 bytes inside a block of size 32 free'd\n"
+                "==123==  Block was alloc'd at\n"
+                "==123==    at 0x789: xmlNewEntityInputStream (in /usr/lib/libxml2.so.2)\n"
+                "==123== ERROR SUMMARY: 1 errors from 1 contexts\n"
+            ),
+        }
+        self.assertTrue(libxml2_parameter_entity_baseline_reproduced(check))
+        self.assertFalse(libxml2_parameter_entity_baseline_reproduced({**check, "returncode": 0}))
+        self.assertFalse(libxml2_parameter_entity_baseline_reproduced({
+            **check, "memoryLog": (
+                check["memoryLog"].replace("xmlNewEntityInputStream", "unrelated")
+                + "==123== Invalid write of size 1\n"
+                + "==123==    at 0xAAA: xmlNewEntityInputStream (in /usr/lib/libxml2.so.2)\n"
+                + "==123== ERROR SUMMARY: 1 errors from 1 contexts\n"
+            )
+        }))
+
+    def test_regression_runner_rejects_modified_hash_declared_fixtures(self):
+        with tempfile.TemporaryDirectory(prefix="getpatched-regression-fixture-hash-") as directory:
+            root = Path(directory)
+            fixture = root / "tests/fixtures/cve.xml"
+            fixture.parent.mkdir(parents=True)
+            fixture.write_text("<root/>")
+            import hashlib
+            digest = hashlib.sha256(fixture.read_bytes()).hexdigest()
+            metadata = root / "patches/metadata.json"
+            metadata.parent.mkdir()
+            metadata.write_text(json.dumps({"patches": [{"referenceFiles": [], "tests": [{
+                "fixtures": [{"path": "tests/fixtures/cve.xml", "sha256": digest}]
+            }]}]}))
+            manifest = {"patchMetadata": "patches/metadata.json"}
+            validate_recipe_regression_fixture_hashes(root, manifest)
+            fixture.write_text("<modified/>")
+            with self.assertRaisesRegex(RuntimeError, "fixture hash does not match"):
+                validate_recipe_regression_fixture_hashes(root, manifest)
+
+    def test_patched_requires_clean_memcheck_for_same_probe(self):
+        log_path = "/tmp/cve-2026-6653.valgrind"
+        check = {
+            "cve": "CVE-2026-6653",
+            "returncode": 0,
+            "timedOut": False,
+            "memoryLogPath": log_path,
+            "command": [
+                "valgrind", "--tool=memcheck", "--error-exitcode=97", "--leak-check=no",
+                "--read-var-info=yes", "--log-file=" + log_path,
+                "/tmp/libxml2-cve-2026-6653", "/recipe/tests/fixtures/cve-2026-6653.xml",
+            ],
+            "memoryLog": "==123== ERROR SUMMARY: 0 errors from 0 contexts\n",
+        }
+        self.assertTrue(libxml2_parameter_entity_patched_succeeded(check))
+        self.assertFalse(libxml2_parameter_entity_patched_succeeded({
+            **check, "memoryLog": "==123== Invalid read of size 8\n==123== ERROR SUMMARY: 1 errors\n"
+        }))
 
 
 class ImageMagickMorphRegression(unittest.TestCase):
@@ -55,12 +320,73 @@ class TiffPolicySelection(unittest.TestCase):
     def test_only_configured_target_cves_require_installed_checks(self):
         policy = {"targetCves": ["CVE-2025-61144"]}
         self.assertTrue(tiff_cve_required(policy, "CVE-2025-61144"))
+        self.assertTrue(tiff_cve_required({"targetCves": ["CVE-2026-52490"]}, "CVE-2026-52490"))
         self.assertFalse(tiff_cve_required(policy, "CVE-2025-61143"))
         self.assertFalse(tiff_cve_required({}, "CVE-2025-61143"))
         self.assertFalse(tiff_cve_required({"targetCves": "CVE-2025-61143"}, "CVE-2025-61143"))
 
 
+class ExpatRegressionEvidence(unittest.TestCase):
+    def test_only_exact_sigsegv_is_accepted_for_vulnerable_baseline(self):
+        check = {"cve": "CVE-2026-117610", "testId": "CVE-2026-117610-empty-nonfinal-subparser",
+                 "returncode": -signal.SIGSEGV, "timedOut": False}
+        self.assertTrue(expat_regression_succeeded(check, "baseline"))
+        self.assertFalse(expat_regression_succeeded({**check, "returncode": 139}, "baseline"))
+        self.assertFalse(expat_regression_succeeded({**check, "returncode": -signal.SIGABRT}, "baseline"))
+        self.assertFalse(expat_regression_succeeded({**check, "timedOut": True}, "baseline"))
+        self.assertFalse(expat_regression_succeeded({**check, "cve": "CVE-2026-999999"}, "baseline"))
+
+    def test_consumer_version_check_accepts_only_the_matching_installed_version(self):
+        consumer = {"testId": "expat-xmlwf-version", "returncode": 0, "timedOut": False,
+                    "stdout": "xmlwf using expat_2.5.0\n"}
+        self.assertTrue(expat_consumer_succeeded(consumer, "2.5.0"))
+        self.assertFalse(expat_consumer_succeeded(consumer, "2.9.0"))
+
+    def test_patched_probe_and_matching_xmlwf_consumer_are_required(self):
+        probe = {"cve": "CVE-2026-117610", "testId": "CVE-2026-117610-empty-nonfinal-subparser",
+                 "returncode": 0, "timedOut": False}
+        self.assertTrue(expat_regression_succeeded(probe, "patched"))
+        consumer = {"testId": "expat-xmlwf-version", "returncode": 0, "timedOut": False,
+                    "stdout": "xmlwf using expat_2.5.0\n"}
+        self.assertTrue(expat_consumer_succeeded(consumer, "2.5.0"))
+        self.assertFalse(expat_consumer_succeeded({**consumer, "timedOut": True}, "2.5.0"))
+
+
+class TiffSubdivisionOverflowRegression(unittest.TestCase):
+    command = ["tiffcrop", "-S", "134217729:32", "-h"]
+
+    def test_exact_baseline_accepts_wrapped_count_and_prints_help(self):
+        check = {
+            "cve": "CVE-2026-52490", "testId": "tiffcrop-subdivision-overflow-check",
+            "command": self.command, "returncode": 0, "timedOut": False,
+            "stdout": "TIFF 4.5.0\\nusage: tiffcrop [options] source1 destination\\n", "stderr": "",
+        }
+        self.assertTrue(tiff_subdivision_baseline_reproduced(check))
+        self.assertFalse(tiff_subdivision_baseline_reproduced({**check, "command": [*self.command, "extra"]}))
+        self.assertFalse(tiff_subdivision_baseline_reproduced({**check, "stdout": "usage missing"}))
+        self.assertFalse(tiff_subdivision_baseline_reproduced({**check, "timedOut": True}))
+
+    def test_patched_package_rejects_wrapped_count_before_help(self):
+        check = {
+            "cve": "CVE-2026-52490", "testId": "tiffcrop-subdivision-overflow-check",
+            "command": self.command, "returncode": 1, "timedOut": False,
+            "stdout": "", "stderr": "Limit for subdivisions, ie rows x columns, exceeded: 32\\n",
+        }
+        self.assertTrue(tiff_subdivision_patched_succeeded(check))
+        self.assertFalse(tiff_subdivision_patched_succeeded({**check, "returncode": 0}))
+        self.assertFalse(tiff_subdivision_patched_succeeded({**check, "stderr": "usage: tiffcrop"}))
+        self.assertFalse(tiff_subdivision_patched_succeeded({**check, "command": ["other"]}))
+
+
 class CaresTargetRegression(unittest.TestCase):
+    def test_massif_peak_parser_returns_largest_heap_snapshot(self):
+        with tempfile.TemporaryDirectory(prefix="getpatched-cares-massif-") as directory:
+            path = Path(directory) / "massif.out"
+            path.write_text("mem_heap_B=128\nmem_heap_B=16777216\nmem_heap_B=4096\n")
+            self.assertEqual(massif_peak_heap_bytes(path), 16 * 1024 * 1024)
+            path.write_text("no heap snapshots\n")
+            self.assertIsNone(massif_peak_heap_bytes(path))
+
     def test_focal_requires_overlong_name_reproduction_and_valid_boundary(self):
         baseline = {
             "cve": "CVE-2026-69184", "testId": "c-ares-overlong-expanded-name-focal",
@@ -84,6 +410,47 @@ class CaresTargetRegression(unittest.TestCase):
         }
         self.assertTrue(cares_regression_succeeded(check, "debian-trixie-amd64", "baseline"))
         self.assertFalse(cares_regression_succeeded(check, "ubuntu-focal-amd64", "baseline"))
+
+    def test_trixie_record_count_requires_large_baseline_heap_and_small_patched_heap(self):
+        base = {
+            "cve": "CVE-2026-69186",
+            "testId": "c-ares-malformed-record-count-allocation",
+            "command": [
+                "valgrind", "--tool=massif", "--time-unit=B", "--stacks=no",
+                "--massif-out-file=/tmp/c-ares-record-count.massif",
+                "/tmp/c-ares-record-count",
+            ],
+            "returncode": 0,
+            "timedOut": False,
+            "stdout": "malformed_rejected=yes\nvalid_status=0 valid_record=present\n",
+        }
+        baseline = {
+            **base,
+            "peakHeapBytes": 16 * 1024 * 1024,
+            "vulnerabilityReproduced": True,
+        }
+        patched = {
+            **base,
+            "peakHeapBytes": 1024 * 1024,
+            "patchedBehavior": True,
+        }
+        self.assertTrue(cares_record_count_regression_succeeded(
+            baseline, "debian-trixie-amd64", "baseline"
+        ))
+        self.assertTrue(cares_record_count_regression_succeeded(
+            patched, "debian-trixie-amd64", "patched"
+        ))
+        self.assertFalse(cares_record_count_regression_succeeded(
+            {**baseline, "peakHeapBytes": 1024 * 1024},
+            "debian-trixie-amd64", "baseline"
+        ))
+        self.assertFalse(cares_record_count_regression_succeeded(
+            {**patched, "peakHeapBytes": 16 * 1024 * 1024},
+            "debian-trixie-amd64", "patched"
+        ))
+        self.assertFalse(cares_record_count_regression_succeeded(
+            baseline, "ubuntu-focal-amd64", "baseline"
+        ))
 
 
 class BrotliRegression(unittest.TestCase):
@@ -115,6 +482,46 @@ class BrotliRegression(unittest.TestCase):
         self.assertFalse(brotli_patched_succeeded({**check, "decoderOutputBytes": 33 * 1024 * 1024}))
         self.assertFalse(brotli_patched_succeeded({**check, "decoderCalls": 8193}))
         self.assertFalse(brotli_patched_succeeded({key: value for key, value in check.items() if key != "decoderOutputBytes"}))
+
+
+class PixarLogCVERegressionClassification(unittest.TestCase):
+    def fixture(self, patched):
+        root = Path("/tmp/pixarlog-probe")
+        log = "==123== ERROR SUMMARY: 0 errors from 0 contexts (suppressed: 0 from 0)\n"
+        result = -1 if patched else 24576
+        return {
+            "command": ["valgrind", "--tool=memcheck", "--error-exitcode=97", "--leak-check=no",
+                        "--read-var-info=yes", f"--log-file={root / 'CVE-2026-12912.valgrind'}",
+                        str(root / "pixarlog-abgr"), "decode", str(root / "pixarlog-abgr.tif")],
+            "cve": "CVE-2026-12912", "testId": "pixarlog-abgr-rgb-multirow-strip-overflow",
+            "returncode": 0 if patched else 97, "timedOut": False,
+            "stdout": f"decode_called=1 result={result} strip_size=24576\n",
+            "stderr": "Output buffer too small for PixarLog ABGR data" if patched else "",
+            "memoryLog": log if patched else (
+                "==123== Invalid write of size 1\n"
+                "==123==    at 0x123: ??? (in /usr/lib/x86_64-linux-gnu/libtiff.so.6.4.0)\n"
+                "==123== ERROR SUMMARY: 8192 errors from 1 contexts\n"),
+        }
+
+    def test_baseline_requires_invalid_write_in_the_exact_multirow_probe(self):
+        result = pixarlog_baseline_reproduced(self.fixture(False))
+        self.assertIs(type(result), bool)
+        self.assertTrue(result)
+        check = self.fixture(False)
+        check["command"][7] = "generate"
+        self.assertFalse(pixarlog_baseline_reproduced(check))
+        check = self.fixture(False)
+        check["memoryLog"] = "==123== ERROR SUMMARY: 0 errors from 0 contexts\n"
+        self.assertFalse(pixarlog_baseline_reproduced(check))
+
+    def test_candidate_must_reject_the_strip_buffer_and_have_zero_memcheck_errors(self):
+        self.assertTrue(pixarlog_patched_succeeded(self.fixture(True)))
+        check = self.fixture(True)
+        check["stderr"] = ""
+        self.assertFalse(pixarlog_patched_succeeded(check))
+        check = self.fixture(True)
+        check["memoryLog"] = "==123== Invalid write of size 1\n==123== ERROR SUMMARY: 1 errors\n"
+        self.assertFalse(pixarlog_patched_succeeded(check))
 
 
 class ExecuteTimeout(unittest.TestCase):
@@ -544,6 +951,88 @@ class TiffPatchedClassification(unittest.TestCase):
         check = self.valid_check()
         check["command"][6] = "tiffinfo"
         self.assertFalse(tiff_patched_regression_succeeded(check))
+
+
+class TiffBigStripRegressionClassification(unittest.TestCase):
+    def baseline_check(self):
+        fixture = "/tmp/CVE-2026-18495-bigstrip.tif"
+        return {
+            "cve": "CVE-2026-18495",
+            "testId": "tiff2pdf-bigtiff-strip-length-truncation",
+            "returncode": 97,
+            "timedOut": False,
+            "fixtureSizeBytes": 304,
+            "declaredStripBytes": 4294967301,
+            "allocationCapEnabled": False,
+            "memoryMappingDisabled": True,
+            "stderr": (
+                "GETPATCHED_TIFF_MMAP_DISABLED\n"
+                "GETPATCHED_TIFF_SCRATCH_ALLOC_BOUNDED requested=4294967311 cap=65536\n"
+                "GETPATCHED_TIFF_SCRATCH_INIT_BOUNDED requested=4294967311 cap=65536\n"
+                "GETPATCHED_TIFF_READ_BOUNDED requested=4294967301 cap=16\n"
+                "GETPATCHED_TIFF_READ_COMPLETED requested=4294967301 bytes=16\n"
+            ),
+            "memoryLog": (
+                "==1== Syscall param read(buf) points to unaddressable byte(s)\n"
+                "==1==    at 0xabc: read (read.c:26)\n"
+                "==1==    by 0xdef: ??? (in /usr/lib/x86_64-linux-gnu/libtiff.so.6.0.0)\n"
+                "==1==    by 0x123: ??? (in /usr/bin/tiff2pdf)\n"
+                "==1==  Address 0x123 is 0 bytes after a block of size 5 alloc'd\n"
+                "==1==    at 0xaaa: malloc\n"
+                "==1==    by 0xbbb: _TIFFmalloc (in /tmp/test-shim.so)\n"
+                "==1==    by 0xccc: ??? (in /usr/bin/tiff2pdf)\n"
+                "==1== ERROR SUMMARY: 59 errors from 1 contexts\n"
+            ),
+            "command": [
+                "valgrind", "--tool=memcheck", "--error-exitcode=97", "--leak-check=no",
+                "--read-var-info=yes", "--log-file=/tmp/CVE-2026-18495.valgrind",
+                "tiff2pdf", "-m", "0", "-o", "/tmp/CVE-2026-18495-output.pdf", fixture,
+            ],
+        }
+
+    def test_baseline_requires_real_short_read_and_five_byte_overflow(self):
+        check = self.baseline_check()
+        self.assertTrue(tiff_bigstrip_baseline_reproduced(check))
+        self.assertFalse(tiff_bigstrip_baseline_reproduced(dict(check, stderr="")))
+        self.assertFalse(tiff_bigstrip_baseline_reproduced(
+            dict(check, stderr=check["stderr"].replace("GETPATCHED_TIFF_SCRATCH_INIT_BOUNDED", "UNEXPECTED"))))
+        self.assertFalse(tiff_bigstrip_baseline_reproduced(
+            dict(check, stderr=check["stderr"].replace("GETPATCHED_TIFF_READ_BOUNDED requested=4294967301 cap=16\n", ""))))
+        self.assertFalse(tiff_bigstrip_baseline_reproduced(
+            dict(check, stderr=check["stderr"].replace("requested=4294967301", "requested=16"))))
+        self.assertFalse(tiff_bigstrip_baseline_reproduced(
+            dict(check, memoryLog=check["memoryLog"].replace("libtiff.so.6.0.0", "unrelated.so"))))
+        self.assertFalse(tiff_bigstrip_baseline_reproduced(
+            dict(check, memoryLog=check["memoryLog"].replace("block of size 5 alloc'd", "block of size 6 alloc'd"))))
+        self.assertFalse(tiff_bigstrip_baseline_reproduced(dict(check, memoryMappingDisabled=False)))
+        self.assertFalse(tiff_bigstrip_baseline_reproduced(
+            dict(check, memoryLog="==1== ERROR SUMMARY: 0 errors from 0 contexts\n")))
+        self.assertFalse(tiff_bigstrip_baseline_reproduced(dict(check, fixtureSizeBytes=4_294_967_301)))
+
+    def test_patched_requires_allocator_cap_and_clean_memcheck(self):
+        check = self.baseline_check()
+        check.update({
+            "returncode": 1,
+            "allocationCapEnabled": True,
+            "stderr": (
+                "GETPATCHED_TIFF_MMAP_DISABLED\n"
+                "GETPATCHED_TIFF_SCRATCH_ALLOC_BOUNDED requested=4294967311 cap=65536\n"
+                "GETPATCHED_TIFF_SCRATCH_INIT_BOUNDED requested=4294967311 cap=65536\n"
+                "GETPATCHED_TIFF_ALLOCATION_REJECTED size=4294967301 cap=67108864\n"
+                "Can't allocate 4294967301 bytes\n"
+                "Can't allocate 4294967301 bytes\n"
+            ),
+            "memoryLog": "==1== ERROR SUMMARY: 0 errors from 0 contexts\n",
+        })
+        self.assertTrue(tiff_bigstrip_patched_succeeded(check))
+        self.assertFalse(tiff_bigstrip_patched_succeeded(
+            dict(check, stderr=check["stderr"].replace("GETPATCHED_TIFF_SCRATCH_INIT_BOUNDED", "UNEXPECTED"))))
+        self.assertFalse(tiff_bigstrip_patched_succeeded(
+            dict(check, stderr=check["stderr"] + "GETPATCHED_TIFF_READ_COMPLETED requested=123 bytes=16\n")))
+        self.assertFalse(tiff_bigstrip_patched_succeeded(
+            dict(check, stderr="Can't allocate 4294967301 bytes\n")))
+        self.assertFalse(tiff_bigstrip_patched_succeeded(
+            dict(check, memoryLog="==1== Invalid write of size 1\n==1== ERROR SUMMARY: 1 errors\n")))
 
 
 class PopplerBaselineClassification(unittest.TestCase):

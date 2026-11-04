@@ -17,6 +17,52 @@ debian_version_compare = _SCAN.debian_version_compare
 
 
 class PublicCatalogueContract(unittest.TestCase):
+    def test_expat_records_match_verified_policy_and_osv_package_scope(self):
+        platform = json.loads((ROOT / "packages.json").read_text())
+        catalogue = json.loads((ROOT / "site/catalogue.json").read_text())
+        feed = json.loads((ROOT / "advisories/getpatched-osv.json").read_text())
+        policy = platform["packages"]["expat"]["targets"]
+        record = next(item for item in catalogue["packages"] if item["source"] == "expat")
+        advisory = next(item for item in feed["vulns"] if item["id"] == "CVE-2026-117610")
+        self.assertEqual(advisory["database_specific"]["verification_status"],
+                         "development-verified-production-release-pending")
+
+        expected_runs = {
+            "debian-bookworm-amd64": "41543751522",
+            "debian-trixie-amd64": "41546270294",
+        }
+        for target_id, target_policy in policy.items():
+            with self.subTest(target=target_id):
+                self.assertEqual(target_policy["candidateStatus"],
+                                 "development-verified-production-release-pending")
+                target_record = record["targets"][target_id]
+                self.assertEqual(target_record["baseVersion"], target_policy["baselineVersion"])
+                self.assertEqual(target_record["version"], target_policy["packageVersion"])
+                self.assertEqual(target_record["cves"], target_policy["targetCves"])
+                self.assertEqual(target_record["status"], target_policy["candidateStatus"])
+                self.assertEqual(target_record["verification"],
+                                 f"https://github.com/getpatched/platform/actions/runs/{expected_runs[target_id]}")
+                self.assertEqual(target_record["access"], "public")
+                self.assertEqual(target_record["delayHours"], 0)
+                self.assertEqual(len(target_record["patches"]), 1)
+                patch = target_record["patches"][0]
+                self.assertEqual(patch["sha256"],
+                                 "365988ba0fb36bf8fde4792a4288e0f5bc466411b50b888de960bb6aa3a6a5a9")
+                self.assertEqual(patch["upstream"]["commit"],
+                                 "bfc28346fa3efeb8ca56c17437d24a7344e5feab")
+                affected = [item for item in advisory["affected"]
+                            if item["ecosystem_specific"].get("target_id") == target_id]
+                self.assertEqual({item["package"]["name"] for item in affected},
+                                 set(target_policy["advisoryPackages"]))
+                for item in affected:
+                    self.assertEqual(item["versions"], [target_policy["baselineVersion"]])
+                    self.assertEqual(item["database_specific"]["candidate_version"],
+                                     target_policy["packageVersion"])
+                    self.assertEqual(item["database_specific"]["getpatched_fixed_version"],
+                                     target_policy["packageVersion"])
+                    self.assertEqual(item["database_specific"]["candidate_status"],
+                                     target_policy["candidateStatus"])
+
     def test_ubuntu_snapshot_source_list_emits_one_suite_per_apt_line(self):
         platform = json.loads((ROOT / "packages.json").read_text())
         profile = target_profile(platform, "ubuntu-focal-amd64")
@@ -107,6 +153,51 @@ class PublicCatalogueContract(unittest.TestCase):
         with self.assertRaises(ValueError):
             target_profile(insecure_ubuntu, "ubuntu-focal-amd64")
 
+    def test_tiff_verified_candidate_uses_declared_source_branch(self):
+        platform = json.loads((ROOT / "packages.json").read_text())
+        self.assertEqual(target_source_branch(platform, "debian-bookworm-amd64", "tiff"),
+                         "getpatched/debian-bookworm")
+        self.assertEqual(target_source_branch(platform, "debian-bookworm-amd64"),
+                         "getpatched/debian-bookworm")
+        self.assertEqual(target_source_branch(platform, "debian-bookworm-amd64", "libxml2"),
+                         "getpatched/debian-bookworm")
+
+    def test_cares_verified_candidate_uses_maintenance_branch_and_advisory_scope(self):
+        platform = json.loads((ROOT / "packages.json").read_text())
+        self.assertEqual(
+            target_source_branch(platform, "debian-trixie-amd64", "c-ares"),
+            "getpatched/debian-trixie",
+        )
+        policy = package_target_policy(platform, "c-ares", "debian-trixie-amd64")
+        self.assertEqual(policy["candidateStatus"], "development-verified-sponsor-flow-pending")
+        self.assertEqual(policy["targetCves"], ["CVE-2026-69184", "CVE-2026-69186"])
+        self.assertEqual(policy["advisoryPackagesByCve"], {
+            "CVE-2026-69184": ["libcares2"],
+            "CVE-2026-69186": ["libcares2"],
+        })
+        self.assertFalse(set(policy["binaryPackages"]) & set(policy["builderPackages"]))
+        self.assertEqual(policy["builderPackages"], ["libc-ares-dev"])
+
+    def test_tiff_verified_candidate_replaces_previous_verified_release(self):
+        platform = json.loads((ROOT / "packages.json").read_text())
+        target = package_target_policy(platform, "tiff", "debian-bookworm-amd64")
+        self.assertEqual(target["candidateStatus"], "development-verified-production-release-pending")
+        self.assertEqual(target["packageVersion"], "4.5.0-6+deb12u4+getpatched5")
+        self.assertEqual(target["advisoryPackagesByCve"], {
+            "CVE-2025-61144": ["libtiff-tools"],
+            "CVE-2026-52490": ["libtiff-tools"],
+            "CVE-2026-12912": ["libtiff6"],
+            "CVE-2026-18495": ["libtiff-tools"],
+        })
+        self.assertEqual(target["verifiedReleases"][-1]["version"], "4.5.0-6+deb12u4+getpatched4")
+        self.assertEqual(target["verifiedReleases"][-1]["targetCves"], [
+            "CVE-2025-61144", "CVE-2026-52490", "CVE-2026-12912",
+        ])
+        invalid = json.loads(json.dumps(platform))
+        invalid["packages"]["tiff"]["targets"]["debian-bookworm-amd64"]["advisoryPackagesByCve"]["CVE-2026-12912"] = ["libtiff-tools"]
+        with self.assertRaisesRegex(ValueError, "per-CVE advisory package scope"):
+            package_target_policy(invalid, "tiff", "debian-bookworm-amd64")
+
     def test_build_and_baseline_images_use_target_scoped_binary_package_names(self):
         platform = json.loads((ROOT / "packages.json").read_text())
         jammy = package_target_policy(platform, "libgit2", "ubuntu-jammy-amd64")
@@ -139,6 +230,22 @@ class PublicCatalogueContract(unittest.TestCase):
         invalid["packages"]["libgit2"]["targets"]["ubuntu-jammy-amd64"]["builderPackages"] = ["bad package"]
         with self.assertRaisesRegex(ValueError, "invalid builder package scope"):
             package_target_policy(invalid, "libgit2", "ubuntu-jammy-amd64")
+
+    def test_patched_scan_uses_candidate_built_headers_when_runtime_version_is_patched(self):
+        build_script = (ROOT / "scripts/build-package.py").read_text()
+        scan_containerfile = (ROOT / "build/patched-scan.Containerfile").read_text()
+        policy = json.loads((ROOT / "packages.json").read_text())
+        tiff = package_target_policy(policy, "tiff", "debian-bookworm-amd64")
+        self.assertEqual(set(tiff["builderPackages"]), {"libtiff-dev", "libtiffxx6"})
+        trixie_tiff = package_target_policy(policy, "tiff", "debian-trixie-amd64")
+        self.assertTrue({"libtiff-dev", "libtiff6", "libtiffxx6"}.issubset(
+            set(trixie_tiff["builderPackages"])))
+        self.assertIn('builder_names = set(expected["builderPackages"])', build_script)
+        self.assertIn('"--build-arg", "BUILDER_DEB_PACKAGES=" + " ".join(builder_deb_names)', build_script)
+        self.assertIn("COPY builder-debs/ /tmp/getpatched-builder/", scan_containerfile)
+        self.assertIn("apt-get install -y --no-install-recommends $builder_debs", scan_containerfile)
+        self.assertIn("for binary in $BUILDER_PACKAGES; do", scan_containerfile)
+        self.assertIn("builder package version differs from the candidate version", build_script)
 
     def test_target_recipe_branch_rejects_untrusted_ref_syntax(self):
         platform = deepcopy(json.loads((ROOT / "packages.json").read_text()))
@@ -188,7 +295,7 @@ class PublicCatalogueContract(unittest.TestCase):
                    for target in record["targets"].values())
         }
         self.assertEqual(set(entries), expected_catalogue)
-        self.assertEqual(expected_catalogue, {"libxml2", "libarchive", "libgit2", "poppler", "c-ares", "brotli"})
+        self.assertEqual(expected_catalogue, {"libxml2", "libarchive", "libgit2", "poppler", "c-ares", "brotli", "expat", "tiff"})
         self.assertIn("libpng1.6", set(platform["packages"]) - set(entries))
         self.assertNotIn("libgit2", set(platform["packages"]) - set(entries))
         self.assertIn("ubuntu-jammy-amd64", entries["libgit2"]["targets"])
@@ -203,7 +310,58 @@ class PublicCatalogueContract(unittest.TestCase):
             {"cve-2026-53584", "cve-2026-53585", "cve-2026-53586"},
         )
         self.assertNotIn("poppler", set(platform["packages"]) - set(entries))
+        self.assertEqual(
+            set(entries["expat"]["targets"]),
+            {"debian-bookworm-amd64", "debian-trixie-amd64"},
+        )
         self.assertEqual(catalogue["schemaVersion"], 3)
+        libxml2_trixie = entries["libxml2"]["targets"]["debian-trixie-amd64"]
+        self.assertEqual(
+            libxml2_trixie["cves"],
+            ["CVE-2026-6653", "CVE-2026-86144", "CVE-2026-76781", "CVE-2026-86141"],
+        )
+        self.assertEqual(libxml2_trixie["version"],
+                         "2.12.7+dfsg+really2.9.14-2.1+deb13u3+getpatched4")
+        self.assertEqual(libxml2_trixie["status"],
+                         "development-verified-production-release-pending")
+        self.assertEqual({item["slug"] for item in libxml2_trixie["vulnerabilities"]},
+                         {"cve-2026-6653", "cve-2026-86144", "cve-2026-76781", "cve-2026-86141"})
+        self.assertEqual({item["slug"] for item in libxml2_trixie["patches"]},
+                         {"cve-2026-6653-debian", "cve-2026-86144-debian-trixie",
+                          "cve-2026-76781-debian-trixie", "cve-2026-86141-debian-trixie"})
+        self.assertEqual(libxml2_trixie["verification"],
+                         "https://github.com/getpatched/platform/actions/runs/41690376263")
+        libarchive_trixie = entries["libarchive"]["targets"]["debian-trixie-amd64"]
+        self.assertEqual(libarchive_trixie["cves"], ["CVE-2026-16517"])
+        self.assertEqual(libarchive_trixie["version"], "3.7.4-4+deb13u1+getpatched1")
+        self.assertEqual({item["slug"] for item in libarchive_trixie["vulnerabilities"]},
+                         {"cve-2026-16517"})
+        self.assertEqual({item["slug"] for item in libarchive_trixie["patches"]},
+                         {"cve-2026-16517-trixie"})
+        cares_trixie = entries["c-ares"]["targets"]["debian-trixie-amd64"]
+        self.assertEqual(cares_trixie["version"], "1.34.5-1+deb13u1+getpatched2")
+        self.assertEqual(cares_trixie["cves"], ["CVE-2026-69184", "CVE-2026-69186"])
+        self.assertEqual(cares_trixie["status"], "development-verified-sponsor-flow-pending")
+        self.assertEqual(cares_trixie["verification"],
+                         "https://github.com/getpatched/platform/actions/runs/41703193562")
+        self.assertIn("cve-2026-69186", {v["slug"] for v in cares_trixie["vulnerabilities"]})
+        self.assertIn("cve-2026-69186-record-count-allocation",
+                      {p["slug"] for p in cares_trixie["patches"]})
+        self.assertEqual(
+            set(entries["tiff"]["targets"]),
+            {"debian-bookworm-amd64", "debian-trixie-amd64"},
+        )
+        expected_tiff_cves = {
+            "debian-bookworm-amd64": ["CVE-2025-61144", "CVE-2026-52490", "CVE-2026-12912", "CVE-2026-18495"],
+            "debian-trixie-amd64": ["CVE-2025-61144", "CVE-2026-52490"],
+        }
+        for target_id, target in entries["tiff"]["targets"].items():
+            self.assertEqual(target["cves"], expected_tiff_cves[target_id])
+            self.assertEqual(
+                {v["slug"] for v in target["vulnerabilities"]},
+                {cve.lower() for cve in expected_tiff_cves[target_id]},
+            )
+            self.assertEqual(target["status"], "development-verified-production-release-pending")
         self.assertEqual(set(catalogue["targets"]), set(platform["targets"]))
         for target_id, target in platform["targets"].items():
             profile = target_profile(platform, target_id)
@@ -213,12 +371,21 @@ class PublicCatalogueContract(unittest.TestCase):
             package = platform["packages"][source]
             expected_targets = {
                 target_id for target_id, policy in package["targets"].items()
-                if policy.get("candidateStatus", "").startswith("development-verified")
+                if (policy.get("candidateStatus", "").startswith("development-verified")
+                    or policy.get("verifiedReleases"))
             }
             self.assertEqual(set(entry_package["targets"]), expected_targets)
             for target_id, entry in entry_package["targets"].items():
                 policy = package["targets"][target_id]
                 access = policy["releaseAccess"]
+                if policy.get("candidateStatus") == "unverified-development-candidate":
+                    history = policy.get("verifiedReleases", [])
+                    self.assertTrue(history)
+                    prior = history[-1]
+                    self.assertEqual(entry["version"], prior["version"])
+                    self.assertEqual(entry["cves"], prior["targetCves"])
+                    self.assertLess(debian_version_compare(entry["version"], policy["packageVersion"]), 0)
+                    continue
                 self.assertEqual(entry["version"], policy["packageVersion"])
                 old_version = policy["baselineVersion"]
                 self.assertLess(debian_version_compare(old_version, entry["version"]), 0)
@@ -240,15 +407,22 @@ class PublicCatalogueContract(unittest.TestCase):
                 self.assertEqual(entry["status"], policy["candidateStatus"])
                 expected_run = {
                     ("libxml2", "ubuntu-focal-amd64"): "40899705050",
+                    ("libxml2", "debian-bookworm-amd64"): "41575270372",
+                    ("libxml2", "debian-trixie-amd64"): "41690376263",
                     ("libarchive", "ubuntu-focal-amd64"): "40899709850",
+                    ("libarchive", "debian-trixie-amd64"): "41756486947",
                     ("libgit2", "ubuntu-focal-amd64"): "41162605227",
                     ("libgit2", "ubuntu-jammy-amd64"): "41167536831",
                     ("poppler", "ubuntu-focal-amd64"): "41149614570",
                     ("poppler", "debian-bookworm-amd64"): "41518910177",
                     ("poppler", "debian-trixie-amd64"): "41531130479",
                     ("c-ares", "ubuntu-focal-amd64"): "41492142682",
-                    ("c-ares", "debian-trixie-amd64"): "41494211851",
+                    ("c-ares", "debian-trixie-amd64"): "41703193562",
                     ("brotli", "ubuntu-focal-amd64"): "41492184315",
+                    ("expat", "debian-bookworm-amd64"): "41543751522",
+                    ("expat", "debian-trixie-amd64"): "41546270294",
+                    ("tiff", "debian-bookworm-amd64"): "41604393283",
+                    ("tiff", "debian-trixie-amd64"): "41554198692",
                 }[(source, target_id)]
                 self.assertEqual(entry["verification"], f"https://github.com/getpatched/platform/actions/runs/{expected_run}")
                 self.assertEqual(
@@ -259,7 +433,13 @@ class PublicCatalogueContract(unittest.TestCase):
                 self.assertTrue(entry["sourceUrl"].startswith(f"https://github.com/getpatched/packaging-{source}/tree/"))
                 self.assertTrue(entry["patchUrl"].startswith(f"https://github.com/getpatched/packaging-{source}/blob/"))
                 branch = target_profile(platform, target_id)["sourceBranch"]
-                self.assertEqual(entry["testsUrl"], f"https://github.com/getpatched/packaging-{source}/tree/{branch}/tests")
+                if source == "tiff" and target_id in {"debian-bookworm-amd64", "debian-trixie-amd64"}:
+                    patch_file = "CVE-2026-18495.patch" if target_id == "debian-bookworm-amd64" else "CVE-2026-52490-trixie.patch"
+                    expected_branch = "getpatched/debian-bookworm" if target_id == "debian-bookworm-amd64" else "getpatched/debian-trixie"
+                    self.assertEqual(entry["patchUrl"], f"https://github.com/getpatched/packaging-tiff/blob/{expected_branch}/patches/{patch_file}")
+                    self.assertEqual(entry["testsUrl"], f"https://github.com/getpatched/packaging-tiff/blob/{expected_branch}/patches/metadata.json")
+                else:
+                    self.assertEqual(entry["testsUrl"], f"https://github.com/getpatched/packaging-{source}/tree/{branch}/tests")
                 self.assertEqual(entry["releasesUrl"], f"https://github.com/getpatched/packaging-{source}/releases")
                 if policy["candidateStatus"] == "development-verified-sponsor-flow-pending":
                     self.assertEqual(entry["releaseStatus"], "No production release; sponsor flow verification pending")
@@ -267,19 +447,18 @@ class PublicCatalogueContract(unittest.TestCase):
                     self.assertEqual(entry["releaseStatus"], "No production release")
 
         page = (ROOT / "site/index.html").read_text()
-        self.assertIn("Hosted verification passed.", page)
-        self.assertIn("Six Focal package candidates, one Debian Trixie c-ares target, two Debian Poppler targets and one Jammy libgit2 target have hosted builds", page)
+        self.assertIn("Hosted development verification passed.", page)
+        self.assertIn("Six Focal candidates, two Debian Expat targets, two Debian libxml2 targets, one Debian Trixie c-ares target, two Debian Poppler targets, one Jammy libgit2 target and two Debian TIFF targets have hosted builds", page)
         self.assertIn("Live package publication and downloads remain disabled", page)
         self.assertIn("no production package release has been published", page)
-        self.assertIn("Live package publication and downloads remain disabled", page)
-        self.assertIn("Hosted verification has passed for all six Focal candidates", page)
+        self.assertIn("Hosted development verification has passed for six Focal candidates, two Debian Expat targets, two Debian libxml2 targets", page)
         self.assertIn("Ubuntu Pro/ESM compatibility is not tested or supported", page)
         self.assertIn("Each row links to its source, patch, regression tests and release history", page)
         self.assertIn("Any sponsor delay starts only after sponsor publication", page)
         self.assertIn("temporary signed APT client smoke test", page)
         app = (ROOT / "site/catalogue.js").read_text()
         self.assertIn("Hosted build, CVE scans, installed regressions and signed-client checks required", app)
-        self.assertIn("Hosted verification passed", app)
+        self.assertIn("Development checks passed", app)
         self.assertNotIn("item.verificationUrl", app)
         for label in ("Source", "Patch", "Tests", "Releases"):
             self.assertIn(f">{label} ↗</a>", app)

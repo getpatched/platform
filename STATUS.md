@@ -1,16 +1,60 @@
-# GetPatched implementation status
+# Active 100-CVE campaign checkpoint — 4 Nov 2026
 
-## Active 100-CVE goal checkpoint — 2 Nov 2026
-
-- **Poppler / Debian Bookworm and Trixie amd64, CVE-2026-107705:** hosted runs [41518910177](https://github.com/getpatched/platform/actions/runs/41518910177) and [41531130479](https://github.com/getpatched/platform/actions/runs/41531130479) passed exact-source builds, installed baseline overflow reproductions, patched regressions, package-aware before/after scans, consumer checks, and isolated signed APT-client verification. Policy and catalogue now mark only these exact Debian targets as development-verified. Raw Trivy 0.70 still reports CVE-2026-107705 in 14 Poppler package records in each image; this is not a Trivy-clean claim. The target repository profiles are disabled, so release eligibility remains false and nothing was published. Independent review and CI for this metadata update remain pending.
-- **Expat / Debian Bookworm and Trixie amd64, CVE-2026-117610:** recipe/platform review passed, and platform quality run [41538049083](https://github.com/getpatched/platform/actions/runs/41538049083) passed on PR #110. Corrected hosted package verification for Bookworm and Trixie is still required; Expat does not count yet.
-- **Completed count:** 0/100. Poppler still awaits review/merge of this evidence reconciliation; Expat awaits both target verification runs; no other candidate has completed every objective gate.
+- **Completed count: 15/100 distinct development-verified CVEs.** The current audited set is Poppler CVE-2026-107705, Expat CVE-2026-117610, libtiff CVE-2026-52490, libxml2 CVE-2026-6653, libtiff CVE-2026-12912, libtiff CVE-2026-18495, libxml2 CVE-2026-86144, libxml2 CVE-2026-76781, Expat CVE-2026-113351, c-ares CVE-2026-69184, c-ares CVE-2026-69186, python-msgpack CVE-2026-57585, Expat CVE-2026-41080, libxml2 CVE-2026-86141, and libarchive CVE-2026-16517.
+- **libarchive / Debian Trixie amd64, CVE-2026-16517:** hosted run [41756486947](https://github.com/getpatched/platform/actions/runs/41756486947) passed exact-source UBSan, full Debian package build/tests, installed regressions, package-aware and OSV scans, advisory audit, consumer checks, and temporary signed APT client verification. The report says `candidateVerified=true`, `verificationChecksPassed=true`, `releaseEligible=false` because publication is disabled. Raw Trivy still reports the CVE; no Trivy-clean claim or production release is made. Evidence: [`evidence/libarchive-cve-2026-16517-trixie-41756486947/`](evidence/libarchive-cve-2026-16517-trixie-41756486947/).
+- Packaging PR [#11](https://github.com/getpatched/packaging-libarchive/pull/11) merged from `getpatched/debian-trixie` into `getpatched/focal`; its description says the Focal target remains unchanged while adding the separate Trixie target. Platform PR [#123](https://github.com/getpatched/platform/pull/123) merged into the nonproduction branch `cve-2026-52490-tiff-verification`. Platform quality run [41758363745](https://github.com/getpatched/platform/actions/runs/41758363745) passed its catalogue check; the snapshot HTTPS job was skipped by the branch workflow condition. No package binaries or production indexes were published.
 
 ### Next actions
 
-1. Obtain fresh independent review and passing CI for the Poppler policy, catalogue, advisory, and evidence update; merge only after findings are resolved.
-2. Dispatch Expat Bookworm hosted verification from recipe commit `ed35d4b85f8cb08c2b252868d366cd6ec34cf463`, then Trixie, and retain/inspect both artifacts.
-3. Continue to the next revalidated leaf-library candidate after the in-progress Poppler and Expat work.
+1. Continue the backlog; maintain publication disabled and keep platform changes off `main`.
+
+---
+
+# libxml2 CVE-2026-86141 — Debian Trixie development verification — 3 Nov 2026
+
+- Hosted run [41692126745](https://github.com/getpatched/platform/actions/runs/41692126745) passed exact-source build, baseline/patched installed regressions, candidate-only package scan, consumer checks, and isolated signed APT client verification. `candidateVerified=true`, `verificationChecksPassed=true`, and `releaseEligible=false` because production publication is disabled.
+- Baseline allocation injection reproduced a NULL invalid read and SIGSEGV; the patched package returned the expected allocation-failure marker with zero Memcheck errors. The package-aware scan cleared the four target libxml2 CVEs; raw Trivy 0.70.0 still reports them. Do not describe this as Trivy-clean. No binary or production index was published.
+- Recipe PR [#18](https://github.com/getpatched/packaging-libxml2/pull/18) merged as `4bc298b634e93486c1b5f54877436b7b1a03b69c`. Detailed hashes and artifacts: [`evidence/libxml2-cve-2026-86141-2026-11-03.md`](evidence/libxml2-cve-2026-86141-2026-11-03.md).
+- Campaign ledger: **6/100 distinct CVEs**. Platform feature PR [#109](https://github.com/getpatched/platform/pull/109) remains unmerged because merging to `main` deploys production.
+
+### Next actions
+
+1. Keep #109 on its feature branch; proceed with the next candidates while production publication remains disabled.
+
+## TIFF CVE-2026-12912 candidate verification — 3 Nov 2026
+
+- Debian Bookworm amd64 policy-matched hosted run [41584790178](https://github.com/getpatched/platform/actions/runs/41584790178) passed exact-source build, installed baseline/patched PixarLog regression, package-aware scan, TIFF consumers, and isolated signed APT client. candidateVerified=true; releaseEligible=false.
+- The TIFF-only package-aware scan changed three target CVEs to zero; the full scan retains unrelated Expat CVE-2026-117610. Raw Trivy 0.70 still reports three TIFF CVEs on candidate package records. This discrepancy remains a production-release blocker; no Trivy-clean claim is made.
+- Catalogue, per-CVE/patch records, and verification tests now reference this run in the open nonproduction PR #109. Public source metadata PR #5 is merged. Hosted quality run 41586475548 passed and fresh independent review found no actionable findings. This CVE is included in the development-verified campaign count of 6/100; it is not a production release. No binaries or signed production indexes were published.
+- Evidence: evidence/tiff-cve-2026-12912-2026-11-03.md.
+
+### Next actions
+
+1. Finish review and merge stacked TIFF catalogue PR #111 into nonproduction feature branch #109; keep #109 unmerged to avoid Worker/site deployment.
+2. Keep CVE-2026-18495 out of the campaign count until the final review and feature-branch merge complete.
+
+# GetPatched implementation status
+
+## Expat CVE-2026-117610 policy-matched development verification — 3 Nov 2026
+
+- CVE-2026-117610 has passed exact-source checks for Debian Bookworm `2.5.0-1+deb12u5` and Trixie `2.9.0-1~deb13u1`. Signed-index source hashes match; both quilt series and the GetPatched patch apply without fuzz.
+- Policy-matched hosted Bookworm [41543751522](https://github.com/getpatched/platform/actions/runs/41543751522) and Trixie [41546270294](https://github.com/getpatched/platform/actions/runs/41546270294) reports both say `candidateVerified=true`, `verificationChecksPassed=true`, and `releaseEligible=false` because production publication is disabled. Both exact package builds reproduced baseline SIGSEGV, passed the installed candidate regression and version-matched `xmlwf -v`, changed the candidate-only package-aware scan from three affected package records to zero, and passed isolated signed APT client checks. Trivy 0.70.0 does not contain this CVE; no Trivy-clean claim is made.
+- No package binary, production signed index, private staging object, or release was published. Reports and source packages are retained in workflow artifacts and `AptTo/evidence/`. Scope is Debian Bookworm/Trixie amd64; Ubuntu and other architectures remain unconfigured and unclaimed.
+- Recipe commit `ed35d4b85f8cb08c2b252868d366cd6ec34cf463` is public on both target branches. Platform PR [#110](https://github.com/getpatched/platform/pull/110) passed its final review and quality checks, then merged into feature PR [#109](https://github.com/getpatched/platform/pull/109) as `5a1e97d340bba7869bf4a89e9b5aed3ed25eb085`. Combined quality runs [41558027065](https://github.com/getpatched/platform/actions/runs/41558027065), [41558465560](https://github.com/getpatched/platform/actions/runs/41558465560), [41558709936](https://github.com/getpatched/platform/actions/runs/41558709936), and [41558861017](https://github.com/getpatched/platform/actions/runs/41558861017) passed; each skipped `snapshot-https` under the branch workflow condition. Final independent review found no actionable findings. This does not merge to `main`; Expat is development-verified and no binaries or signed production indexes were published.
+- Trixie run [41545338753](https://github.com/getpatched/platform/actions/runs/41545338753) was cancelled before it generated reports; replacement run [41546270294](https://github.com/getpatched/platform/actions/runs/41546270294) passed. Earlier old-policy runs are not used for acceptance. Fixture, consumer-classifier, and review history is retained in `EVIDENCE.md`.
+
+## Historical 100-CVE goal checkpoint — 3 Nov 2026 (6/100)
+
+- **Poppler / Debian Bookworm and Trixie amd64, CVE-2026-107705:** hosted runs [41518910177](https://github.com/getpatched/platform/actions/runs/41518910177) and [41531130479](https://github.com/getpatched/platform/actions/runs/41531130479) passed exact-source builds, installed baseline overflow reproductions, patched regressions, package-aware before/after scans, consumer checks, and isolated signed APT-client verification. Package PR #2 and platform PR #108 are merged. Raw Trivy 0.70 still reports CVE-2026-107705 in 14 Poppler package records in each image; this is not a Trivy-clean claim. No binaries or production index were published.
+- **libxml2 / Debian Bookworm and Trixie amd64, CVE-2026-6653:** policy-matched runs [41575270372](https://github.com/getpatched/platform/actions/runs/41575270372) and [41575930432](https://github.com/getpatched/platform/actions/runs/41575930432) passed exact-source builds, installed baseline use-after-free reproductions, patched regressions, candidate-only package-aware scans, `xmllint` consumer checks, and signed temporary APT-client verification. Both reports set `candidateVerified: true`, `verificationChecksPassed: true`, and `releaseEligible: false` because publication is disabled. Candidate scans cleared the target CVE and preserved the unrelated Expat finding. Raw Trivy 0.70 still reports the CVE on all three libxml2 binary packages in both patched images because its Debian records have no GetPatched fixed version; no Trivy-clean claim is made. Source recipe PR [#10](https://github.com/getpatched/packaging-libxml2/pull/10) merged as `b30bbebb30df71108c1e051e678134e929d5244` after independent review. Combined platform PR [#109](https://github.com/getpatched/platform/pull/109) passed fresh review and quality run [41576935802](https://github.com/getpatched/platform/actions/runs/41576935802); keep #109 unmerged because merging to `main` deploys production. Evidence: [`evidence/libxml2-cve-2026-6653-2026-11-03.md`](evidence/libxml2-cve-2026-6653-2026-11-03.md). Counts as one development-verified CVE, not a production release.
+- **TIFF / Debian Bookworm and Trixie amd64, CVE-2026-52490:** hosted runs [41553176585](https://github.com/getpatched/platform/actions/runs/41553176585) and [41554198692](https://github.com/getpatched/platform/actions/runs/41554198692) passed exact installed baseline/patched regressions, package-aware scans, `tiffinfo`, and signed test-client verification. Candidate verification passed; release eligibility remains false. Raw Trivy still reports CVE-2025-61144 and CVE-2026-52490 on candidate packages, so production release remains blocked. Package PR #3 merged; its platform metadata is in reviewed feature PR #109. Evidence: [`evidence/tiff-cve-2026-52490-2026-11-03.md`](evidence/tiff-cve-2026-52490-2026-11-03.md). TIFF counts as a development-verified CVE, not a production release.
+- **Expat / Debian Bookworm and Trixie amd64, CVE-2026-117610:** hosted package verification passed in runs [41543751522](https://github.com/getpatched/platform/actions/runs/41543751522) and [41546270294](https://github.com/getpatched/platform/actions/runs/41546270294). PR #110 merged into feature PR #109; combined quality [41558027065](https://github.com/getpatched/platform/actions/runs/41558027065) passed. Expat counts as one development-verified CVE; PR #109 remains unmerged to avoid production deployment.
+- **Completed count at this checkpoint:** 6/100 (TIFF CVE-2026-52490, TIFF CVE-2026-12912, Poppler CVE-2026-107705, Expat CVE-2026-117610, libxml2 CVE-2026-6653, libxml2 CVE-2026-86141). See the current 15/100 checkpoint at the top of this file.
+
+### Next actions
+
+1. Continue the 100-CVE backlog in small batches, validating current official tracker status, exact sources, upstream fixes, and target-specific regressions before accepting candidates.
+2. Keep platform PR #109 unmerged because merging to `main` deploys the Worker/site; no production binaries or signed indexes may be published in this campaign phase.
 
 ## Latest development checkpoint — 31 Oct 2026
 
@@ -437,3 +481,11 @@ The advisory scanner now treats an exact reviewed vulnerable baseline as affecte
 ### Next actions
 
 1. Obtain a fresh independent review of the current two-repository diff. Address findings, then publish reviewable source and platform branches and run the non-publishing Bookworm and Trixie workflows. Count this CVE only after both target runs pass all gates.
+
+
+## TIFF CVE-2026-18495 policy-matched development verification — 3 Nov 2026
+
+- Final hosted run [41604393283](https://github.com/getpatched/platform/actions/runs/41604393283) passed Debian Bookworm amd64 exact-source build and installed baseline/patched regression for `4.5.0-6+deb12u4+getpatched5`, from packaging commit `8d842d44c49116b8c5d231b4b80246296eb77757`. Report sets `candidateVerified=true`, `verificationChecksPassed=true`, `releaseEligible=false` because repository publication is disabled.
+- The Debian upstream suite passed 99 tests; consumer, advisory comparison, and isolated signed APT client checks passed. The TIFF-only package-aware scan cleared all four configured TIFF CVEs, while the full scan retained unrelated Expat CVE-2026-117610. Raw Trivy 0.70.0 still reports the four TIFF CVEs after patching; this remains a production-release blocker.
+- Package patch, README, metadata, and checksummed evidence are pushed to the canonical `getpatched/debian-bookworm` branch. The platform catalogue/OSV update is in stacked PR [#111](https://github.com/getpatched/platform/pull/111), targeting feature PR #109's nonproduction branch. Final review and stacked merge are pending; this candidate is not yet included in the 5/100 count. No binaries or indexes were published.
+- Full report bundle: [package report bundle](https://github.com/getpatched/packaging-tiff/tree/getpatched/debian-bookworm/evidence/tiff-cve-2026-18495-bookworm-41604393283); package summary: [EVIDENCE.md](https://github.com/getpatched/packaging-tiff/blob/getpatched/debian-bookworm/EVIDENCE.md).
