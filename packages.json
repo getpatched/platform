@@ -396,7 +396,7 @@
           "advisoryPackagesByCve": {
             "CVE-2026-16517": ["libarchive13t64", "libarchive-tools"]
           },
-          "candidateStatus": "unverified-development-candidate",
+          "candidateStatus": "development-verified-production-release-pending",
           "releaseAccess": {
             "policy": "public-after-checks",
             "sponsorDelayHours": 0,

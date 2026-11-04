@@ -40,6 +40,7 @@ SUMMARIES = {
     "CVE-2026-57585": "python-msgpack streaming Unpacker can crash when reused after a caught decoding error",
 }
 SEVERITIES = {
+    "CVE-2026-16517": "LOW",
     "CVE-2026-12912": "HIGH",
     "CVE-2026-76781": "MEDIUM",
     "CVE-2026-69184": "HIGH",
@@ -49,6 +50,7 @@ SEVERITIES = {
 }
 # Refresh the modified timestamp when an existing advisory record changes.
 MODIFIED = {
+    "CVE-2026-16517": "2026-11-04T00:00:00Z",
     "CVE-2026-69186": "2026-11-03T00:00:00Z",
     "CVE-2026-86141": "2026-11-03T18:12:28Z",
     "CVE-2026-12912": "2026-11-03T08:35:10Z",
