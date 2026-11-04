@@ -1,12 +1,12 @@
 # Active 100-CVE campaign checkpoint — 4 Nov 2026
 
-- **Completed count: 15/100 distinct development-verified CVEs.** The current audited set is Poppler CVE-2026-107705, Expat CVE-2026-117610, libtiff CVE-2026-52490, libxml2 CVE-2026-6653, libtiff CVE-2026-12912, libtiff CVE-2026-18495, libxml2 CVE-2026-86144, libxml2 CVE-2026-76781, Expat CVE-2026-113351, c-ares CVE-2026-69184, c-ares CVE-2026-69186, python-msgpack CVE-2026-57585, Expat CVE-2026-41080, libxml2 CVE-2026-86141, and libarchive CVE-2026-16517.
+- **Completed count: 16/100 distinct development-verified CVEs.** The current audited set is Poppler CVE-2026-107705, Expat CVE-2026-117610, libtiff CVE-2026-52490, libxml2 CVE-2026-6653, libtiff CVE-2026-12912, libtiff CVE-2026-18495, libxml2 CVE-2026-86144, libxml2 CVE-2026-76781, Expat CVE-2026-113351, c-ares CVE-2026-69184, c-ares CVE-2026-69186, python-msgpack CVE-2026-57585, Expat CVE-2026-41080, libxml2 CVE-2026-86141, libarchive CVE-2026-16517 (Ubuntu Focal), and libarchive CVE-2026-16517 (Debian Trixie). The ledger counts distinct CVEs only, so libarchive CVE-2026-16517 counts once across both targets.
 - **libarchive / Debian Trixie amd64, CVE-2026-16517:** hosted run [41756486947](https://github.com/getpatched/platform/actions/runs/41756486947) passed exact-source UBSan, full Debian package build/tests, installed regressions, package-aware and OSV scans, advisory audit, consumer checks, and temporary signed APT client verification. The report says `candidateVerified=true`, `verificationChecksPassed=true`, `releaseEligible=false` because publication is disabled. Raw Trivy still reports the CVE; no Trivy-clean claim or production release is made. Evidence: [`evidence/libarchive-cve-2026-16517-trixie-41756486947/`](evidence/libarchive-cve-2026-16517-trixie-41756486947/).
-- Packaging PR [#11](https://github.com/getpatched/packaging-libarchive/pull/11) merged to `getpatched/focal` as `b430d7fd49637ed1854e6419c13dc362465336f1`. Platform PR [#123](https://github.com/getpatched/platform/pull/123) merged as `f91b2853fb52f808d15ba2f3c595e1bf8c7b6a8e` into this nonproduction branch, not `main`. No package binaries or production indexes were published.
+- Packaging PR [#11](https://github.com/getpatched/packaging-libarchive/pull/11) merged as `b430d7fd49637ed1854e6419c13dc362465336f1`. Platform PR [#123](https://github.com/getpatched/platform/pull/123) merged as `f91b2853fb52f808d15ba2f3c595e1bf8c7b6a8e` into this nonproduction branch, not `main`; catalogue check passed, and `snapshot-https` was skipped by the workflow condition. No package binaries or production indexes were published.
 
 ### Next actions
 
-1. Continue the 100-CVE backlog in small, independently reviewed batches.
+1. Continue the 100-CVE backlog in small, independently reviewed batches; the next Expat CVE-2026-115506 lead was deferred because its minimal upstream patch needs target-specific adaptation for the pinned source.
 2. Maintain production publication disabled until separately approved and validated.
 
 ---
