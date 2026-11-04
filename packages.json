@@ -477,10 +477,10 @@
     "imagemagick": {
       "targets": {
         "debian-trixie-amd64": {
-          "baselineVersion": "8:7.1.1.43+dfsg1-1+deb13u12",
-          "sourcePocket": "release",
+          "baselineVersion": "8:7.1.1.43+dfsg1-1+deb13u13",
+          "sourcePocket": "security",
           "packageEcosystem": "Debian:13",
-          "packageVersion": "8:7.1.1.43+dfsg1-1+deb13u12+getpatched1",
+          "packageVersion": "8:7.1.1.43+dfsg1-1+deb13u13+getpatched1",
           "releaseSerial": 1,
           "binaryPackages": ["imagemagick-7.q16", "libmagickcore-7.q16-10", "libmagickwand-7.q16-10"],
           "advisoryPackages": ["libmagickcore-7.q16-10"],

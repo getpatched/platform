@@ -57,12 +57,12 @@ class PackageRecipeContract(unittest.TestCase):
             RECIPE.validate_source_asset(asset, "libgit2", version, distribution="Ubuntu", descriptor=True)
 
     def test_debian_source_descriptor_filename_omits_the_epoch(self):
-        version = "8:7.1.1.43+dfsg1-1+deb13u12"
+        version = "8:7.1.1.43+dfsg1-1+deb13u13"
         asset = {
-            "name": "imagemagick_7.1.1.43+dfsg1-1+deb13u12.dsc",
-            "url": "https://snapshot.debian.org/archive/debian/20261030T000000Z/pool/main/i/imagemagick/imagemagick_7.1.1.43+dfsg1-1+deb13u12.dsc",
+            "name": "imagemagick_7.1.1.43+dfsg1-1+deb13u13.dsc",
+            "url": "https://snapshot.debian.org/archive/debian-security/20261030T000000Z/pool/updates/main/i/imagemagick/imagemagick_7.1.1.43+dfsg1-1+deb13u13.dsc",
             "sha256": "a" * 64,
-            "bytes": 5263,
+            "bytes": 5165,
         }
         self.assertEqual(
             RECIPE.validate_source_asset(asset, "imagemagick", version, distribution="Debian", descriptor=True),

@@ -17,7 +17,7 @@ from regression import (LIBPNG_CVE_2025_65018_FIXTURE, libpng_followup_read_is_c
 
 class ImageMagickMorphRegression(unittest.TestCase):
     def check(self, log, rc, frames=None):
-        version = "8:7.1.1.43+dfsg1-1+deb13u12"
+        version = "8:7.1.1.43+dfsg1-1+deb13u13"
         report = {
             "command": ["valgrind", "--tool=memcheck", "--error-exitcode=97", "--leak-check=no",
                         "--track-origins=yes", "--log-file=/tmp/CVE-2026-119124.valgrind",
