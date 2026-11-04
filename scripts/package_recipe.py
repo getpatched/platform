@@ -86,7 +86,7 @@ def validate_source_asset(asset, package, version, *, distribution, descriptor=F
             "launchpad.net", "www.launchpad.net", "archive.ubuntu.com",
             "security.ubuntu.com", "snapshot.ubuntu.com",
         },
-        "Debian": {"snapshot.debian.org", "snapshot-fastly.debian.org"},
+        "Debian": {"deb.debian.org", "snapshot.debian.org", "snapshot-fastly.debian.org"},
     }.get(distribution, set())
     if parsed.scheme != "https" or parsed.hostname not in approved_hosts:
         raise RuntimeError(f"Source asset must use an approved HTTPS {distribution} source host: {name}")
@@ -177,13 +177,14 @@ def load_recipe(root, platform_config, target_id=None):
     base = target.get("base", {})
     source = target.get("source", {})
     version = source.get("version")
+    configured_source_version = central.get("sourceVersion", central["baselineVersion"])
     supported_versions = target.get("supportedSourceVersions")
     if (base.get("distribution") != profile["distribution"] or base.get("release") != profile["releaseVersion"]
             or base.get("codename") != profile["codename"]
             or base.get("sourcePocket") != central["sourcePocket"]
             or base.get("architecture") != profile["architecture"]
             or source.get("format") != "3.0 (quilt)"
-            or version != central["baselineVersion"]
+            or version != configured_source_version
             or not isinstance(supported_versions, list) or not supported_versions
             or any(not isinstance(item, str) for item in supported_versions)
             or len(set(supported_versions)) != len(supported_versions)
@@ -371,7 +372,8 @@ def load_recipe(root, platform_config, target_id=None):
         "schemaVersion": 1,
         "source": package,
         "targetId": target["id"],
-        "baseVersion": version,
+        "baseVersion": central["baselineVersion"],
+        "sourceVersion": version,
         "version": package_version,
         "releaseSerial": release_serial,
         "candidateStatus": central["candidateStatus"],
@@ -389,6 +391,7 @@ def load_recipe(root, platform_config, target_id=None):
         "earlyBinaryLicenseId": early_license["licenseId"] if delay else None,
         "binaryPackages": target["binaryPackages"],
         "advisoryPackages": advisory_packages,
+        "advisoryPackagesByCve": central["advisoryPackagesByCve"],
         "builderPackages": central["builderPackages"],
         "ubuntuProEsmCompatibility": central.get("ubuntuProEsmCompatibility", "not-applicable"),
         "patches": patch_ids,

@@ -8,7 +8,7 @@ on:
         description: Package to verify
         type: choice
         required: true
-        options: [libxml2, libarchive, libpng1.6, libgit2, tiff, poppler, c-ares, brotli]
+        options: [libxml2, libarchive, libpng1.6, libgit2, tiff, poppler, c-ares, brotli, expat, python-msgpack]
       target_id:
         description: Exact target ID from the package recipe and platform policy
         type: string
@@ -65,6 +65,7 @@ jobs:
         env:
           SOURCE_COMMIT: ${{ inputs.source_commit }}
           TARGET_ID: ${{ inputs.target_id }}
+          PACKAGE: ${{ inputs.package }}
         run: |
           set -euo pipefail
           if [[ ! "$SOURCE_COMMIT" =~ ^[0-9a-fA-F]{40}$ ]]; then
@@ -72,7 +73,7 @@ jobs:
             exit 1
           fi
           test "$(git -C packaging rev-parse HEAD)" = "${SOURCE_COMMIT,,}"
-          source_branch="$(python3 scripts/resolve-target-branch.py --target "$TARGET_ID")"
+          source_branch="$(python3 scripts/resolve-target-branch.py --target "$TARGET_ID" --package "$PACKAGE")"
           git -C packaging fetch --no-tags origin "refs/heads/$source_branch"
           git -C packaging merge-base --is-ancestor "$SOURCE_COMMIT" FETCH_HEAD
       - name: Build and verify without publishing binaries

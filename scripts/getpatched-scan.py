@@ -18,9 +18,17 @@ from package_recipe import load_json, recipe_path
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "verification"))
-from regression import (cares_regression_succeeded, consumer_version_succeeded, libpng_overwrite_reproduced, libpng_stride_read_reproduced,
+from regression import (cares_record_count_regression_succeeded, cares_regression_succeeded,
+                        msgpack_unpacker_reuse_regression_succeeded,
+                        consumer_version_succeeded, libpng_overwrite_reproduced, libpng_stride_read_reproduced,
                         libpng_patched_checks_succeeded, poppler_revision6_password_overflow_reproduced, poppler_revision6_probe_command, poppler_uaf_reproduced,
-                        schematron_baseline_reproduced, tiff_baseline_reproduced,
+                        expat_consumer_succeeded, expat_regression_succeeded,
+                        libxml2_baseline_check_succeeded, libxml2_check_cardinality_valid,
+                        libxml2_patched_check_succeeded,
+                        libxml2_xinclude_checks_succeeded,
+                        pixarlog_baseline_reproduced, pixarlog_patched_succeeded,
+                        tiff_baseline_reproduced,
+                        tiff_subdivision_baseline_reproduced, tiff_subdivision_patched_succeeded,
                         valid_tiff_baseline_stack_signature,
                         tiff_null_output_baseline_reproduced, tiff_null_output_patched_succeeded,
                         tiff_patched_regression_succeeded)
@@ -28,6 +36,11 @@ from regression import (cares_regression_succeeded, consumer_version_succeeded, 
 DEFAULT_FEED = ROOT / "advisories" / "getpatched-osv.json"
 MAX_STATUS_BYTES = 16 * 1024 * 1024
 MAX_FEED_BYTES = 4 * 1024 * 1024
+LIBARCHIVE_TRIXIE_SOURCE_EVIDENCE = (
+    "source-provenance.json",
+    "libarchive-source-ubsan-baseline.json",
+    "libarchive-source-ubsan-patched.json",
+)
 
 
 def parse_status(path):
@@ -35,6 +48,18 @@ def parse_status(path):
     if path.stat().st_size > MAX_STATUS_BYTES:
         raise ValueError("dpkg status inventory exceeds the 16 MiB scanner limit")
     return parse_status_text(path.read_text())
+
+
+def copy_source_regression_evidence(directory, destination, source, target_id):
+    if source != "libarchive" or target_id != "debian-trixie-amd64":
+        return
+    directory = Path(directory)
+    destination = Path(destination)
+    for name in LIBARCHIVE_TRIXIE_SOURCE_EVIDENCE:
+        evidence = directory / name
+        if not evidence.is_file():
+            raise ValueError(f"candidate scan is missing exact-source regression evidence: {name}")
+        shutil.copyfile(evidence, destination / name)
 
 
 def validate_followup_assessment_checks(target, checks, phase):
@@ -101,6 +126,43 @@ def tiff_baseline_stack_signature(recipe_directory, target_id):
     return signature if valid_tiff_baseline_stack_signature(signature) else None
 
 
+def validate_tiff_regression_checks(target, checks, phase, trusted_stack):
+    target_cves = target["targetCves"]
+    cve_checks = {check.get("cve"): check for check in checks if check.get("cve")}
+    null_output_check = cve_checks.get("CVE-2025-61143")
+    sample_bounds_checks = [check for check in checks if check.get("cve") == "CVE-2025-61144"]
+    subdivision_check = cve_checks.get("CVE-2026-52490")
+    pixarlog_check = cve_checks.get("CVE-2026-12912")
+    if phase == "baseline":
+        if (not trusted_stack
+                or not all(tiff_baseline_reproduced(check, trusted_stack)
+                           for check in sample_bounds_checks)
+                or ("CVE-2026-52490" in target_cves
+                    and not tiff_subdivision_baseline_reproduced(subdivision_check or {}))
+                or ("CVE-2025-61143" in target_cves
+                    and not tiff_null_output_baseline_reproduced(null_output_check or {}))
+                or ("CVE-2026-12912" in target_cves
+                    and not pixarlog_baseline_reproduced(pixarlog_check or {}))):
+            raise ValueError("TIFF baseline evidence does not reproduce all configured tiffcrop paths")
+        return
+    if ("CVE-2026-12912" in target_cves
+            and (not pixarlog_check or not pixarlog_patched_succeeded(pixarlog_check))):
+        raise ValueError("TIFF patched evidence lacks the clean CVE-2026-12912 multi-row PixarLog regression")
+    if ("CVE-2025-61143" in target_cves
+            and (not null_output_check or not tiff_null_output_patched_succeeded(null_output_check))):
+        raise ValueError("TIFF patched evidence lacks clean CVE regressions and a tiffinfo consumer check")
+    if (not all(check.get("passed") is True and tiff_patched_regression_succeeded(check)
+                for check in sample_bounds_checks)
+            or ("CVE-2026-52490" in target_cves
+                and (not subdivision_check
+                     or subdivision_check.get("passed") is not True
+                     or not tiff_subdivision_patched_succeeded(subdivision_check)))
+            or not any(check.get("passed") is True and check.get("returncode") == 0
+                       and check.get("command", [None])[0] == "tiffinfo"
+                       and "Image Width" in check.get("stdout", "") for check in checks)):
+        raise ValueError("TIFF patched evidence lacks clean CVE regressions and a tiffinfo consumer check")
+
+
 def poppler_patched_checks_succeeded(cve_check, checks):
     return (
         cve_check.get("returncode") == 0
@@ -109,6 +171,14 @@ def poppler_patched_checks_succeeded(cve_check, checks):
         and any(item.get("passed") is True and item.get("command", [None])[0] == "pdfinfo"
                 and consumer_version_succeeded(item, "pdfinfo version") for item in checks)
     )
+
+
+def expat_candidate_checks_succeeded(cve_check, checks, phase, expected_version):
+    if (sum(item.get("cve") == "CVE-2026-117610" for item in checks) != 1
+            or not expat_regression_succeeded(cve_check, phase)):
+        return False
+    consumers = [item for item in checks if item.get("testId") == "expat-xmlwf-version"]
+    return len(consumers) == 1 and expat_consumer_succeeded(consumers[0], expected_version)
 
 
 def poppler_revision6_patched_succeeded(cve_check, checks):
@@ -240,18 +310,34 @@ def load_feed(path, verified_candidates=frozenset()):
             except (KeyError, ValueError) as error:
                 raise ValueError(f"{advisory_id} names an unconfigured package target: {error}") from error
             vendor_fixed = expected.get("vendorFixedVersions", [])
-            candidate_status = expected.get("candidateStatus", "unverified")
-            if (source, target_id) in verified_candidates and not candidate_status.startswith("development-verified"):
-                candidate_status = "development-verified-production-release-pending"
-            candidate_verified = candidate_status.startswith("development-verified")
-            expected_fixed = [expected["packageVersion"], *vendor_fixed] if candidate_verified else vendor_fixed
+            current_status = expected.get("candidateStatus", "unverified")
+            if (source, target_id) in verified_candidates:
+                current_status = (current_status if current_status.startswith("development-verified")
+                                  else "development-verified-production-release-pending")
+                release = {"version": expected["packageVersion"], "status": current_status,
+                           "targetCves": expected["targetCves"],
+                           "advisoryPackagesByCve": expected["advisoryPackagesByCve"]}
+            elif current_status.startswith("development-verified"):
+                release = {"version": expected["packageVersion"], "status": current_status,
+                           "targetCves": expected["targetCves"],
+                           "advisoryPackagesByCve": expected["advisoryPackagesByCve"]}
+            else:
+                release = next((item for item in expected["verifiedReleases"]
+                                if (advisory_id in item["targetCves"]
+                                    and item["version"] == policy.get("candidate_version"))), None)
+            if (release is None or advisory_id not in release["targetCves"]
+                    or package["name"] not in release["advisoryPackagesByCve"][advisory_id]):
+                raise ValueError(f"{advisory_id} does not apply to the affected package in the reviewed policy")
+            fixed_version = release["version"]
+            release_status = release["status"]
+            expected_fixed = [fixed_version, *vendor_fixed]
             if (package["ecosystem"] != package_ecosystem(config, source, target_id)
                     or scope["distribution"] != profile["distribution"] or scope["release"] != profile["codename"]
                     or scope["architecture"] != profile["architecture"]
                     or policy.get("source_package") != source
-                    or policy.get("candidate_version") != expected["packageVersion"]
-                    or policy.get("candidate_status") != candidate_status
-                    or policy.get("getpatched_fixed_version") != (expected["packageVersion"] if candidate_verified else None)
+                    or policy.get("candidate_version") != fixed_version
+                    or policy.get("candidate_status") != release_status
+                    or policy.get("getpatched_fixed_version") != fixed_version
                     or policy.get("vendor_fixed_versions") != vendor_fixed
                     or fixed != expected_fixed
                     or affected["versions"] != [expected["baselineVersion"]]):
@@ -281,6 +367,7 @@ def regression_verified_candidate(directory, scan_images_path, target_id, recipe
     verification_id = uuid.uuid4().hex
     with tempfile.TemporaryDirectory(prefix="getpatched-verified-candidate-") as temporary:
         temp = Path(temporary)
+        copy_source_regression_evidence(directory, temp, source, target_id)
         for phase, image_key, report_phase, version in (
             ("before", "baselineImageId", "baseline", target["baselineVersion"]),
             ("after", "patchedImageId", "patched", target["packageVersion"]),
@@ -308,7 +395,8 @@ def regression_verified_candidate(directory, scan_images_path, target_id, recipe
             ]
             executed = subprocess.run(command, capture_output=True, text=True, timeout=240, check=False)
             if executed.returncode != 0 or not report_path.is_file():
-                raise ValueError("independent installed regression execution failed for the candidate scan images")
+                detail = (executed.stderr or executed.stdout)[-2000:]
+                raise ValueError("independent installed regression execution failed for the candidate scan images: " + detail)
             report_paths[report_phase] = report_path
         baseline = json.loads(report_paths["baseline"].read_text())
         patched = json.loads(report_paths["patched"].read_text())
@@ -347,40 +435,37 @@ def regression_verified_candidate(directory, scan_images_path, target_id, recipe
         validate_followup_assessment_checks(target, checks, phase)
         if source == "tiff":
             trusted_stack = tiff_baseline_stack_signature(recipe_directory, target_id)
-            target_checks = [cve_checks[cve] for cve in target["targetCves"]]
-            null_output_check = cve_checks.get("CVE-2025-61143")
-            sample_bounds_checks = [check for check in target_checks if check.get("cve") == "CVE-2025-61144"]
-            if phase == "baseline":
-                if (not trusted_stack
-                        or not all(tiff_baseline_reproduced(check, trusted_stack)
-                            for check in sample_bounds_checks)
-                        or ("CVE-2025-61143" in target["targetCves"]
-                            and not tiff_null_output_baseline_reproduced(null_output_check or {}))):
-                    raise ValueError("TIFF baseline evidence does not reproduce all configured tiffcrop paths")
-            elif (("CVE-2025-61143" in target["targetCves"]
-                   and (not null_output_check or not tiff_null_output_patched_succeeded(null_output_check)))
-                  or not all(check.get("passed") is True and tiff_patched_regression_succeeded(check)
-                             for check in sample_bounds_checks)
-                  or not any(check.get("passed") is True and check.get("returncode") == 0
-                             and check.get("command", [None])[0] == "tiffinfo"
-                             and "Image Width" in check.get("stdout", "") for check in checks)):
-                raise ValueError("TIFF patched evidence lacks clean CVE regressions and a tiffinfo consumer check")
+            validate_tiff_regression_checks(target, checks, phase, trusted_stack)
         elif source == "libxml2":
+            if not libxml2_check_cardinality_valid(checks, target["targetCves"]):
+                raise ValueError("libxml2 regression reports must contain one result per CVE and both XInclude APIs")
             target_checks = [cve_checks[cve] for cve in target["targetCves"]]
+            xinclude_ok = (
+                "CVE-2026-86144" not in target["targetCves"]
+                or libxml2_xinclude_checks_succeeded(checks, phase)
+            )
+            target_checks = [check for check in target_checks if check.get("cve") != "CVE-2026-86144"]
             if phase == "baseline":
-                if not all(schematron_baseline_reproduced(check) for check in target_checks):
+                if not xinclude_ok or not all(libxml2_baseline_check_succeeded(check) for check in target_checks):
                     raise ValueError("libxml2 baseline evidence does not reproduce the configured memory fault")
-            elif (not all(check.get("returncode") == 3 and "ERROR SUMMARY: 0 errors" in check.get("memoryLog", "")
-                          for check in target_checks)
+            elif (not xinclude_ok or not all(libxml2_patched_check_succeeded(check) for check in target_checks)
                   or not any(check.get("command", [None])[0] == "xmllint"
                              and check.get("returncode") == 0 for check in checks)):
                 raise ValueError("libxml2 patched evidence lacks clean memory checks and a consumer check")
         elif source == "libarchive":
             check = cve_checks[target["targetCves"][0]]
             if phase == "baseline":
-                if check.get("timedOut") is not True:
+                if target["targetCves"][0] == "CVE-2026-16517":
+                    if (check.get("passed") is not True
+                            or check.get("sourceVulnerabilityReproduced") is not True
+                            or not re.fullmatch(r"[0-9a-f]{64}", str(check.get("sourceRegressionSha256", "")))):
+                        raise ValueError("libarchive baseline evidence lacks the exact-source UBSan overflow reproduction")
+                elif check.get("timedOut") is not True:
                     raise ValueError("libarchive baseline evidence does not reproduce the configured bounded timeout")
             elif (check.get("returncode") != 0 or check.get("timedOut")
+                  or (target["targetCves"][0] == "CVE-2026-16517"
+                      and (check.get("patchedBehavior") is not True or check.get("passed") is not True
+                           or not re.fullmatch(r"[0-9a-f]{64}", str(check.get("sourceRegressionSha256", "")))))
                   or len([item for item in checks if item.get("passed") is True
                           and item.get("command", [None])[0] == "bsdtar"]) < 2):
                 raise ValueError("libarchive patched evidence lacks a clean probe and tar consumer round trip")
@@ -417,6 +502,25 @@ def regression_verified_candidate(directory, scan_images_path, target_id, recipe
             if (check.get("passed") is not True
                     or not cares_regression_succeeded(check, target_id, phase)):
                 raise ValueError(f"c-ares {phase} evidence lacks the expected target-specific vulnerability outcome or valid-name compatibility check")
+            if "CVE-2026-69186" in target["targetCves"]:
+                allocation_check = cve_checks.get("CVE-2026-69186", {})
+                if (allocation_check.get("passed") is not True
+                        or not cares_record_count_regression_succeeded(
+                            allocation_check, target_id, phase
+                        )):
+                    raise ValueError(
+                        f"c-ares {phase} evidence lacks the expected Trixie record-count allocation result or valid-response compatibility check"
+                    )
+        elif source == "python-msgpack":
+            check = cve_checks.get("CVE-2026-57585", {})
+            expected = "vulnerabilityReproduced" if phase == "baseline" else "patchedBehavior"
+            if (sum(item.get("cve") == "CVE-2026-57585" for item in checks) != 1
+                    or check.get("passed") is not True
+                    or check.get(expected) is not True
+                    or not msgpack_unpacker_reuse_regression_succeeded(
+                        check, target_id, phase, version
+                    )):
+                raise ValueError(f"python-msgpack {phase} evidence lacks the expected Unpacker error-reuse outcome")
         elif source == "brotli":
             check = cve_checks.get("CVE-2026-111497", {})
             expected = "vulnerabilityReproduced" if phase == "baseline" else "patchedBehavior"
@@ -424,6 +528,11 @@ def regression_verified_candidate(directory, scan_images_path, target_id, recipe
                     or check.get("returncode") != 0 or check.get("timedOut") is not False
                     or check.get("normalStreamCompatible") is not True):
                 raise ValueError(f"Brotli {phase} evidence lacks the expected invalid-block-switch outcome or valid-stream compatibility check")
+        elif source == "expat":
+            check = cve_checks.get("CVE-2026-117610", {})
+            expected_version = target["baselineVersion"].split("-", 1)[0]
+            if not expat_candidate_checks_succeeded(check, checks, phase, expected_version):
+                raise ValueError(f"Expat {phase} evidence lacks its exact vulnerability or matching xmlwf consumer result")
         else:
             raise ValueError("candidate regression runner has no package-specific evidence classifier")
     directory.mkdir(parents=True, exist_ok=True)

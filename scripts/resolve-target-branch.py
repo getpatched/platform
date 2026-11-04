@@ -12,10 +12,11 @@ from platform_policy import target_source_branch
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--target", required=True, help="configured target ID")
+    parser.add_argument("--package", help="source package, required for candidate-specific verification branches")
     args = parser.parse_args()
     try:
         config = json.loads((ROOT / "packages.json").read_text())
-        print(target_source_branch(config, args.target))
+        print(target_source_branch(config, args.target, args.package))
     except (OSError, json.JSONDecodeError, ValueError) as error:
         parser.error(str(error))
 

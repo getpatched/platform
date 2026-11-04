@@ -91,8 +91,22 @@ def target_profile(config, target_id):
     return profile
 
 
-def target_source_branch(config, target_id):
-    return target_profile(config, target_id)["sourceBranch"]
+def target_source_branch(config, target_id, package=None):
+    """Resolve the declared source branch, with a candidate-only test branch override."""
+    default = target_profile(config, target_id)["sourceBranch"]
+    if package is None:
+        return default
+    policy = package_target_policy(config, package, target_id)
+    verification_branch = policy.get("verificationSourceBranch")
+    if verification_branch is None:
+        return default
+    parts = verification_branch.split("/") if isinstance(verification_branch, str) else []
+    if (policy["candidateStatus"] != "unverified-development-candidate"
+            or not SOURCE_BRANCH_RE.fullmatch(verification_branch)
+            or len(parts) < 2
+            or any(part in ("", ".", "..") or part.endswith(".lock") for part in parts)):
+        raise ValueError("verification source branch is valid only for an unverified candidate")
+    return verification_branch
 
 
 def package_target_policy(config, package, target_id):
@@ -125,8 +139,48 @@ def package_target_policy(config, package, target_id):
                    for name in builder_packages)
             or len(set(builder_packages)) != len(builder_packages)):
         raise ValueError(f"package {package}/{target_id} has an invalid builder package scope")
+    target_cves = policy.get("targetCves")
+    advisory_by_cve = policy.get("advisoryPackagesByCve")
+    if advisory_by_cve is None:
+        advisory_by_cve = {cve: list(advisory_packages) for cve in target_cves} if isinstance(target_cves, list) else {}
+    if (not isinstance(target_cves, list) or not target_cves
+            or not isinstance(advisory_by_cve, dict)
+            or set(advisory_by_cve) != set(target_cves)
+            or any(not isinstance(names, list) or not names
+                   or any(not isinstance(name, str) or not name for name in names)
+                   or len(set(names)) != len(names)
+                   or not set(names).issubset(advisory_packages)
+                   for names in advisory_by_cve.values())
+            or set().union(*(set(names) for names in advisory_by_cve.values())) != set(advisory_packages)):
+        raise ValueError(f"package {package}/{target_id} has invalid per-CVE advisory package scope")
+    verified_releases = policy.get("verifiedReleases", [])
+    if not isinstance(verified_releases, list):
+        raise ValueError(f"package {package}/{target_id} has invalid verified release history")
+    seen_versions = set()
+    for release in verified_releases:
+        release_cves = release.get("targetCves") if isinstance(release, dict) else None
+        release_packages = release.get("advisoryPackagesByCve") if isinstance(release, dict) else None
+        version = release.get("version") if isinstance(release, dict) else None
+        status = release.get("status") if isinstance(release, dict) else None
+        if (not isinstance(version, str) or version == policy.get("packageVersion")
+                or version in seen_versions or not version.endswith("+getpatched" + str(release.get("releaseSerial", "")))
+                or not isinstance(release.get("releaseSerial"), int)
+                or isinstance(release.get("releaseSerial"), bool)
+                or release.get("releaseSerial", 0) >= policy.get("releaseSerial", 0)
+                or status not in ("development-verified-production-release-pending", "development-verified-sponsor-flow-pending")
+                or not isinstance(release_cves, list) or not release_cves
+                or len(set(release_cves)) != len(release_cves) or not set(release_cves).issubset(target_cves)
+                or not isinstance(release_packages, dict) or set(release_packages) != set(release_cves)
+                or any(not isinstance(names, list) or not names
+                       or len(set(names)) != len(names)
+                       or not set(names).issubset(advisory_packages)
+                       for names in release_packages.values())):
+            raise ValueError(f"package {package}/{target_id} has invalid verified release history")
+        seen_versions.add(version)
     policy = dict(policy)
     policy["advisoryPackages"] = advisory_packages
+    policy["advisoryPackagesByCve"] = advisory_by_cve
+    policy["verifiedReleases"] = verified_releases
     policy["builderPackages"] = builder_packages
     access = policy.get("releaseAccess")
     if (not isinstance(access, dict)

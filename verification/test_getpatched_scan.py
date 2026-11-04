@@ -3,6 +3,7 @@ import json
 import hashlib
 from pathlib import Path
 import subprocess
+import signal
 import sys
 import tempfile
 import unittest
@@ -45,6 +46,186 @@ SCANNER_SPEC.loader.exec_module(SCANNER_MODULE)
 
 
 class GetPatchedScannerContract(unittest.TestCase):
+    def test_libarchive_trixie_independent_regression_receives_pinned_source_evidence(self):
+        with tempfile.TemporaryDirectory(prefix="getpatched-libarchive-source-evidence-") as directory:
+            root = Path(directory)
+            source = root / "candidate"
+            proof = root / "proof"
+            source.mkdir()
+            proof.mkdir()
+            for name in SCANNER_MODULE.LIBARCHIVE_TRIXIE_SOURCE_EVIDENCE:
+                (source / name).write_text(name + "\n")
+
+            SCANNER_MODULE.copy_source_regression_evidence(
+                source, proof, "libarchive", "debian-trixie-amd64"
+            )
+
+            for name in SCANNER_MODULE.LIBARCHIVE_TRIXIE_SOURCE_EVIDENCE:
+                self.assertEqual((proof / name).read_text(), name + "\n")
+
+            (source / "libarchive-source-ubsan-patched.json").unlink()
+            with self.assertRaisesRegex(ValueError, "missing exact-source regression evidence"):
+                SCANNER_MODULE.copy_source_regression_evidence(
+                    source, proof, "libarchive", "debian-trixie-amd64"
+                )
+
+    def test_verified_cares_69186_advisory_is_published_and_trixie_scoped(self):
+        config = json.loads((ROOT / "packages.json").read_text())
+        policy = config["packages"]["c-ares"]["targets"]["debian-trixie-amd64"]
+        self.assertEqual(policy["advisory"], policy["advisories"][policy["targetCve"]])
+        canonical = SCANNER_MODULE.load_feed(FEED)
+        canonical_advisory = next(item for item in canonical["vulns"] if item["id"] == "CVE-2026-69186")
+        self.assertEqual(
+            canonical_advisory["affected"][0]["database_specific"]["getpatched_fixed_version"],
+            "1.34.5-1+deb13u1+getpatched2",
+        )
+
+        candidate = SCANNER_MODULE.build_feed(
+            config, {("c-ares", "debian-trixie-amd64")}
+        )
+        advisory = next(item for item in candidate["vulns"] if item["id"] == "CVE-2026-69186")
+        self.assertEqual(
+            [(item["package"]["ecosystem"], item["package"]["name"], item["versions"],
+              item["ecosystem_specific"]["target_id"], item["database_specific"]["candidate_version"])
+             for item in advisory["affected"]],
+            [("Debian:13", "libcares2", ["1.34.5-1+deb13u1"],
+              "debian-trixie-amd64", "1.34.5-1+deb13u1+getpatched2")],
+        )
+        self.assertEqual(
+            advisory["database_specific"]["verification_status"],
+            "development-verified-production-release-pending",
+        )
+
+    def test_tiff_feed_selects_the_exact_verified_release_and_unverified_candidate(self):
+        canonical = SCANNER_MODULE.load_feed(FEED)
+        self.assertTrue(canonical["vulns"])
+
+        candidate = SCANNER_MODULE.load_feed(FEED, {("tiff", "debian-bookworm-amd64")})
+        advisory = next(item for item in candidate["vulns"] if item["id"] == "CVE-2026-18495")
+        self.assertEqual(advisory["summary"],
+                         "libtiff tiff2pdf heap buffer overflow with oversized BigTIFF strip lengths")
+        self.assertEqual({(item["package"]["name"], tuple(item["versions"]),
+                           item["database_specific"]["candidate_version"])
+                          for item in advisory["affected"]}, {
+                              ("libtiff-tools", ("4.5.0-6+deb12u4",),
+                               "4.5.0-6+deb12u4+getpatched5")
+                          })
+
+    def test_libxml2_debian_candidate_advisory_is_exact_and_target_scoped(self):
+        target_id = "debian-bookworm-amd64"
+        feed = SCANNER_MODULE.build_feed(
+            json.loads((ROOT / "packages.json").read_text()),
+            {("libxml2", target_id)},
+        )
+        advisory = next(item for item in feed["vulns"] if item["id"] == "CVE-2026-6653")
+        self.assertEqual(
+            [(item["package"]["ecosystem"], item["package"]["name"], item["versions"],
+              item["ecosystem_specific"]["target_id"],
+              item["database_specific"]["getpatched_fixed_version"])
+             for item in advisory["affected"]],
+            [("Debian:12", "libxml2", ["2.9.14+dfsg-1.3~deb12u6"], "debian-bookworm-amd64",
+              "2.9.14+dfsg-1.3~deb12u6+getpatched1"),
+             ("Debian:13", "libxml2", ["2.12.7+dfsg+really2.9.14-2.1+deb13u3"], "debian-trixie-amd64",
+              "2.12.7+dfsg+really2.9.14-2.1+deb13u3+getpatched4")],
+        )
+
+    def test_libxml2_trixie_candidate_advisory_has_its_exact_target_version(self):
+        target_id = "debian-trixie-amd64"
+        feed = SCANNER_MODULE.build_feed(
+            json.loads((ROOT / "packages.json").read_text()),
+            {("libxml2", target_id)},
+        )
+        advisory = next(item for item in feed["vulns"] if item["id"] == "CVE-2026-6653")
+        self.assertEqual(
+            [(item["package"]["ecosystem"], item["package"]["name"], item["versions"],
+              item["ecosystem_specific"]["target_id"],
+              item["database_specific"]["getpatched_fixed_version"])
+             for item in advisory["affected"]],
+            [("Debian:12", "libxml2", ["2.9.14+dfsg-1.3~deb12u6"], "debian-bookworm-amd64",
+              "2.9.14+dfsg-1.3~deb12u6+getpatched1"),
+             ("Debian:13", "libxml2", ["2.12.7+dfsg+really2.9.14-2.1+deb13u3"], target_id,
+              "2.12.7+dfsg+really2.9.14-2.1+deb13u3+getpatched4")],
+        )
+
+    def test_libxml2_trixie_xinclude_advisory_is_verified_and_target_scoped(self):
+        config = json.loads((ROOT / "packages.json").read_text())
+        target_id = "debian-trixie-amd64"
+        canonical = SCANNER_MODULE.load_feed(FEED)
+        self.assertIn("CVE-2026-86144", {item["id"] for item in canonical["vulns"]})
+        candidate = SCANNER_MODULE.build_feed(config, {("libxml2", target_id)})
+        advisory = next(item for item in candidate["vulns"] if item["id"] == "CVE-2026-86144")
+        self.assertEqual(advisory["database_specific"]["verification_status"],
+                         "development-verified-production-release-pending")
+        self.assertEqual(
+            [(item["package"]["ecosystem"], item["package"]["name"], item["versions"],
+              item["ecosystem_specific"]["target_id"],
+              item["database_specific"]["candidate_version"])
+             for item in advisory["affected"]],
+            [("Debian:13", "libxml2", ["2.12.7+dfsg+really2.9.14-2.1+deb13u3"], target_id,
+              "2.12.7+dfsg+really2.9.14-2.1+deb13u3+getpatched4")],
+        )
+
+    def test_libxml2_trixie_catalog_advisory_is_verified_and_target_scoped(self):
+        target_id = "debian-trixie-amd64"
+        canonical = SCANNER_MODULE.load_feed(FEED)
+        self.assertIn("CVE-2026-76781", {item["id"] for item in canonical["vulns"]})
+        candidate = SCANNER_MODULE.build_feed(
+            json.loads((ROOT / "packages.json").read_text()), {("libxml2", target_id)}
+        )
+        advisory = next(item for item in candidate["vulns"] if item["id"] == "CVE-2026-76781")
+        self.assertEqual(advisory["database_specific"]["verification_status"],
+                         "development-verified-production-release-pending")
+        self.assertEqual(
+            [(item["package"]["ecosystem"], item["package"]["name"], item["versions"],
+              item["ecosystem_specific"]["target_id"],
+              item["database_specific"]["candidate_version"])
+             for item in advisory["affected"]],
+            [("Debian:13", "libxml2", ["2.12.7+dfsg+really2.9.14-2.1+deb13u3"], target_id,
+              "2.12.7+dfsg+really2.9.14-2.1+deb13u3+getpatched4")],
+        )
+
+    def test_libxml2_trixie_allocation_failure_advisory_is_exact_and_candidate_scoped(self):
+        config = json.loads((ROOT / "packages.json").read_text())
+        policy = config["packages"]["libxml2"]["targets"]["debian-trixie-amd64"]
+        self.assertEqual(policy["advisory"], policy["advisories"][policy["targetCve"]])
+        candidate = SCANNER_MODULE.build_feed(config, {("libxml2", "debian-trixie-amd64")})
+        advisory = next(item for item in candidate["vulns"] if item["id"] == "CVE-2026-86141")
+        self.assertEqual(advisory["database_specific"]["verification_status"],
+                         "development-verified-production-release-pending")
+        self.assertEqual(advisory["summary"],
+                         "libxml2 can dereference NULL while creating a regular-expression parser context after allocation failure")
+        self.assertEqual(
+            [(item["package"]["ecosystem"], item["package"]["name"], item["versions"],
+              item["ecosystem_specific"]["target_id"],
+              item["database_specific"]["candidate_version"])
+             for item in advisory["affected"]],
+            [("Debian:13", "libxml2", ["2.12.7+dfsg+really2.9.14-2.1+deb13u3"],
+              "debian-trixie-amd64", "2.12.7+dfsg+really2.9.14-2.1+deb13u3+getpatched4")],
+        )
+
+    def test_expat_candidate_requires_exact_crash_or_patched_consumer(self):
+        baseline = {"cve": "CVE-2026-117610", "testId": "CVE-2026-117610-empty-nonfinal-subparser",
+                    "returncode": -signal.SIGSEGV, "timedOut": False, "passed": True}
+        consumer = {"testId": "expat-xmlwf-version", "returncode": 0, "timedOut": False,
+                    "stdout": "xmlwf using expat_2.5.0\n", "passed": True}
+        self.assertTrue(SCANNER_MODULE.expat_candidate_checks_succeeded(
+            baseline, [baseline, consumer], "baseline", "2.5.0"))
+        self.assertFalse(SCANNER_MODULE.expat_candidate_checks_succeeded(
+            baseline, [baseline], "baseline", "2.5.0"))
+        self.assertFalse(SCANNER_MODULE.expat_candidate_checks_succeeded(
+            baseline, [baseline, {**baseline}, consumer], "baseline", "2.5.0"))
+        wrong_baseline_consumer = {**consumer, "stdout": "xmlwf using expat_2.9.0\n"}
+        self.assertFalse(SCANNER_MODULE.expat_candidate_checks_succeeded(
+            baseline, [baseline, wrong_baseline_consumer], "baseline", "2.5.0"))
+        patched = {**baseline, "returncode": 0}
+        self.assertTrue(SCANNER_MODULE.expat_candidate_checks_succeeded(
+            patched, [patched, consumer], "patched", "2.5.0"))
+        self.assertFalse(SCANNER_MODULE.expat_candidate_checks_succeeded(
+            patched, [patched], "patched", "2.5.0"))
+        wrong_version = {**consumer, "stdout": "xmlwf using expat_2.9.0\n"}
+        self.assertFalse(SCANNER_MODULE.expat_candidate_checks_succeeded(
+            patched, [patched, wrong_version], "patched", "2.5.0"))
+
     def test_poppler_revision6_candidate_requires_clean_regression_and_consumer(self):
         cve_check = {
             "cve": "CVE-2026-107705",
@@ -121,6 +302,47 @@ class GetPatchedScannerContract(unittest.TestCase):
             metadata["patches"].append(json.loads(json.dumps(metadata["patches"][0])))
             metadata_path.write_text(json.dumps(metadata))
             self.assertIsNone(SCANNER_MODULE.tiff_baseline_stack_signature(recipe, "ubuntu-focal-amd64"))
+
+    def test_tiff_candidate_scanner_requires_subdivision_overflow_checks(self):
+        target = {"targetCves": ["CVE-2025-61144", "CVE-2026-52490"]}
+        stack = ["0x114980", "0x116FB2", "0x10AC12"]
+        baseline = [
+            {
+                "cve": "CVE-2025-61144", "passed": True, "returncode": 97, "timedOut": False,
+                "command": TIFF_BASELINE_COMMAND, "memoryLog": TIFF_BASELINE_LOG,
+                "baselineStackFrames": stack,
+            },
+            {
+                "cve": "CVE-2026-52490", "testId": "tiffcrop-subdivision-overflow-check",
+                "passed": True, "command": ["tiffcrop", "-S", "134217729:32", "-h"],
+                "returncode": 0, "timedOut": False,
+                "stdout": "usage: tiffcrop [options] source1 destination\\n", "stderr": "",
+            },
+        ]
+        SCANNER_MODULE.validate_tiff_regression_checks(target, baseline, "baseline", stack)
+        with self.assertRaisesRegex(ValueError, "baseline evidence"):
+            SCANNER_MODULE.validate_tiff_regression_checks(target, baseline[:1], "baseline", stack)
+
+        patched = [
+            {
+                "cve": "CVE-2025-61144", "passed": True, "returncode": 0, "timedOut": False,
+                "command": ["valgrind", "--tool=memcheck", "--error-exitcode=97", "--leak-check=no",
+                            "--read-var-info=yes", "--log-file=/tmp/tiffcrop.log", "tiffcrop", "-D",
+                            "format:txt,level:2,input:/tmp/debug", "multisample.tif", "output.tif"],
+                "memoryLog": TIFF_PATCHED_LOG, "baselineStackFrames": stack,
+            },
+            {
+                "cve": "CVE-2026-52490", "testId": "tiffcrop-subdivision-overflow-check",
+                "passed": True, "command": ["tiffcrop", "-S", "134217729:32", "-h"],
+                "returncode": 1, "timedOut": False, "stdout": "",
+                "stderr": "Limit for subdivisions, ie rows x columns, exceeded: 32\\n",
+            },
+            {"passed": True, "command": ["tiffinfo", "output.tif"], "returncode": 0,
+             "timedOut": False, "stdout": "Image Width: 16\\n"},
+        ]
+        SCANNER_MODULE.validate_tiff_regression_checks(target, patched, "patched", stack)
+        with self.assertRaisesRegex(ValueError, "patched evidence"):
+            SCANNER_MODULE.validate_tiff_regression_checks(target, patched[:1], "patched", stack)
 
     def test_poppler_candidate_accepts_pdfinfo_version_on_stderr(self):
         cve_check = {
@@ -385,7 +607,7 @@ Architecture: i386
         self.assertEqual(records, [])
 
     def test_unverified_candidate_requires_version_match_and_regression_evidence(self):
-        candidate = "4.1.0+git191117-2ubuntu0.20.04.14+getpatched1"
+        candidate = "4.1.0+git191117-2ubuntu0.20.04.14+getpatched2"
 
         with tempfile.TemporaryDirectory(prefix="getpatched-tiff-regression-proof-") as directory:
             proof = Path(directory)
@@ -504,10 +726,10 @@ Architecture: i386
             self.make_tiff_recipe(recipe_directory)
             (Path(directory) / "images.json").write_text(json.dumps({"baselineImageId": "image-baseline", "patchedImageId": "image-patched"}))
             (Path(directory) / "policy.json").write_text(json.dumps({"source": "tiff", "targetId": "ubuntu-focal-amd64"}))
-            (Path(directory) / "status").write_text("Package: libtiff-tools\nStatus: install ok installed\nVersion: 4.1.0+git191117-2ubuntu0.20.04.14+getpatched1\nArchitecture: amd64\n")
+            (Path(directory) / "status").write_text("Package: libtiff-tools\nStatus: install ok installed\nVersion: 4.1.0+git191117-2ubuntu0.20.04.14+getpatched2\nArchitecture: amd64\n")
             for phase, version, code, log in (("baseline", "4.1.0+git191117-2ubuntu0.20.04.14", 97,
                                                TIFF_BASELINE_LOG),
-                                              ("patched", "4.1.0+git191117-2ubuntu0.20.04.14+getpatched1", 0,
+                                              ("patched", "4.1.0+git191117-2ubuntu0.20.04.14+getpatched2", 0,
                                               TIFF_PATCHED_LOG)):
                 is_baseline = phase == "baseline"
                 null_log_path = str(Path(directory) / "null-output.log")
@@ -578,7 +800,7 @@ raise SystemExit(3)
     def test_candidate_generic_passing_reports_without_target_cve_proof_are_rejected(self):
         with tempfile.TemporaryDirectory(prefix="getpatched-tiff-regression-proof-") as directory:
             proof = Path(directory)
-            for phase, version in (("baseline", "4.1.0+git191117-2ubuntu0.20.04.14"), ("patched", "4.1.0+git191117-2ubuntu0.20.04.14+getpatched1")):
+            for phase, version in (("baseline", "4.1.0+git191117-2ubuntu0.20.04.14"), ("patched", "4.1.0+git191117-2ubuntu0.20.04.14+getpatched2")):
                 (proof / f"{phase}-regression.json").write_text(json.dumps({
                     "runner": "getpatched-platform-regression/1",
                     "runnerSha256": hashlib.sha256((ROOT / "verification/regression.py").read_bytes()).hexdigest(),
@@ -594,10 +816,10 @@ raise SystemExit(3)
             policy_file = proof / "package-policy.json"
             policy_file.write_text(json.dumps({"source": "tiff", "targetId": "ubuntu-focal-amd64",
                                                "baseVersion": "4.1.0+git191117-2ubuntu0.20.04.14",
-                                               "version": "4.1.0+git191117-2ubuntu0.20.04.14+getpatched1"}))
+                                               "version": "4.1.0+git191117-2ubuntu0.20.04.14+getpatched2"}))
             docker_stub = self.docker_stub(proof, proof)
             result = self.scan(
-                "Package: libtiff-tools\nStatus: install ok installed\nVersion: 4.1.0+git191117-2ubuntu0.20.04.14+getpatched1\nArchitecture: amd64\n",
+                "Package: libtiff-tools\nStatus: install ok installed\nVersion: 4.1.0+git191117-2ubuntu0.20.04.14+getpatched2\nArchitecture: amd64\n",
                 target_id="ubuntu-focal-amd64", regression_directory=proof, image_id="image-patched",
                 regression_phase="after", scan_images=scan_images, recipe_directory=proof,
                 policy_file=policy_file, docker_stub_dir=docker_stub, docker_report_dir=proof,
@@ -610,7 +832,7 @@ raise SystemExit(3)
             proof = Path(directory)
             recipe_directory = proof / "recipe"
             self.make_tiff_recipe(recipe_directory)
-            for phase, version in (("baseline", "4.1.0+git191117-2ubuntu0.20.04.14"), ("patched", "4.1.0+git191117-2ubuntu0.20.04.14+getpatched1")):
+            for phase, version in (("baseline", "4.1.0+git191117-2ubuntu0.20.04.14"), ("patched", "4.1.0+git191117-2ubuntu0.20.04.14+getpatched2")):
                 checks = [{"cve": "CVE-2025-61144", "passed": True, "returncode": 97 if phase == "baseline" else 0,
                            "timedOut": False, "command": TIFF_BASELINE_COMMAND,
                            "memoryLog": (TIFF_BASELINE_LOG if phase == "baseline" else TIFF_PATCHED_LOG),
@@ -644,8 +866,8 @@ raise SystemExit(3)
             (Path(directory) / "patched-regression.json").write_bytes((proof / "patched-regression.json").read_bytes())
             (proof / "scan-images.json").write_text(json.dumps({"baselineImageId": "image-baseline", "patchedImageId": "image-patched"}))
             (proof / "package-policy.json").write_text(json.dumps({"source": "tiff", "targetId": "ubuntu-focal-amd64",
-                "baseVersion": "4.1.0+git191117-2ubuntu0.20.04.14", "version": "4.1.0+git191117-2ubuntu0.20.04.14+getpatched1"}))
-            (proof / "patched-status.txt").write_text("Package: libtiff-tools\nStatus: install ok installed\nVersion: 4.1.0+git191117-2ubuntu0.20.04.14+getpatched1\nArchitecture: amd64\n")
+                "baseVersion": "4.1.0+git191117-2ubuntu0.20.04.14", "version": "4.1.0+git191117-2ubuntu0.20.04.14+getpatched2"}))
+            (proof / "patched-status.txt").write_text("Package: libtiff-tools\nStatus: install ok installed\nVersion: 4.1.0+git191117-2ubuntu0.20.04.14+getpatched2\nArchitecture: amd64\n")
             stub = proof / "bin"
             stub.mkdir()
             docker = stub / "docker"
@@ -681,7 +903,7 @@ raise SystemExit(3)
 ''')
             docker.chmod(0o755)
             result = self.scan(
-                "Package: libtiff-tools\nStatus: install ok installed\nVersion: 4.1.0+git191117-2ubuntu0.20.04.14+getpatched1\nArchitecture: amd64\n",
+                "Package: libtiff-tools\nStatus: install ok installed\nVersion: 4.1.0+git191117-2ubuntu0.20.04.14+getpatched2\nArchitecture: amd64\n",
                 target_id="ubuntu-focal-amd64", regression_directory=proof, image_id="image-patched",
                 regression_phase="after", scan_images=proof / "scan-images.json", recipe_directory=recipe_directory,
                 policy_file=proof / "package-policy.json", docker_stub_dir=stub, docker_report_dir=proof,
@@ -694,7 +916,7 @@ raise SystemExit(3)
         with tempfile.TemporaryDirectory(prefix="getpatched-forged-regression-proof-") as directory:
             proof = Path(directory)
             for phase, version in (("baseline", "4.1.0+git191117-2ubuntu0.20.04.14"),
-                                   ("patched", "4.1.0+git191117-2ubuntu0.20.04.14+getpatched1")):
+                                   ("patched", "4.1.0+git191117-2ubuntu0.20.04.14+getpatched2")):
                 (proof / f"{phase}-regression.json").write_text(json.dumps({
                     "runner": "getpatched-platform-regression/1",
                     "runnerSha256": hashlib.sha256((ROOT / "verification/regression.py").read_bytes()).hexdigest(),
@@ -713,14 +935,14 @@ raise SystemExit(3)
             policy_file = proof / "package-policy.json"
             policy_file.write_text(json.dumps({"source": "tiff", "targetId": "ubuntu-focal-amd64",
                                                "baseVersion": "4.1.0+git191117-2ubuntu0.20.04.14",
-                                               "version": "4.1.0+git191117-2ubuntu0.20.04.14+getpatched1"}))
+                                               "version": "4.1.0+git191117-2ubuntu0.20.04.14+getpatched2"}))
             stub = proof / "bin"
             stub.mkdir()
             docker = stub / "docker"
             docker.write_text("#!" + sys.executable + "\nraise SystemExit(1)\n")
             docker.chmod(0o755)
             result = self.scan(
-                "Package: libtiff-tools\nStatus: install ok installed\nVersion: 4.1.0+git191117-2ubuntu0.20.04.14+getpatched1\nArchitecture: amd64\n",
+                "Package: libtiff-tools\nStatus: install ok installed\nVersion: 4.1.0+git191117-2ubuntu0.20.04.14+getpatched2\nArchitecture: amd64\n",
                 target_id="ubuntu-focal-amd64", regression_directory=proof, image_id="invented-patched",
                 regression_phase="after", scan_images=scan_images, recipe_directory=proof,
                 policy_file=policy_file, docker_stub_dir=stub,
@@ -765,9 +987,14 @@ raise SystemExit(3)
         committed = json.loads(FEED.read_text())
         self.assertEqual(generated, committed)
         self.assertEqual({item["id"] for item in committed["vulns"]}, {
-            "CVE-2025-49794", "CVE-2025-49796", "CVE-2026-4111",
+            "CVE-2025-49794", "CVE-2025-49796", "CVE-2026-4111", "CVE-2026-6653",
             "CVE-2026-53584", "CVE-2026-53585", "CVE-2026-53586",
-            "CVE-2025-52885", "CVE-2026-107705", "CVE-2026-69184", "CVE-2026-111497",
+            "CVE-2025-52885", "CVE-2026-69184", "CVE-2026-111497",
+            "CVE-2026-117610", "CVE-2026-69186",
+            "CVE-2026-86144", "CVE-2026-76781", "CVE-2026-86141", "CVE-2026-16517",
+
+"CVE-2025-52885", "CVE-2026-107705", "CVE-2026-69184", "CVE-2026-111497",
+            "CVE-2025-61144", "CVE-2026-52490", "CVE-2026-12912", "CVE-2026-18495",
         })
         for advisory in committed["vulns"]:
             self.assertEqual(
@@ -785,8 +1012,14 @@ raise SystemExit(3)
         self.assertEqual(ecosystems[("libxml2", "ubuntu-focal-amd64")], "Ubuntu:Pro:20.04:LTS")
         self.assertEqual(ecosystems[("libarchive", "ubuntu-focal-amd64")], "Ubuntu:Pro:20.04:LTS")
         self.assertEqual(ecosystems[("libgit2", "ubuntu-focal-amd64")], "Ubuntu:20.04:LTS")
-        self.assertFalse(any(affected["ecosystem_specific"]["source_package"] in {"libpng1.6", "tiff"}
+        self.assertFalse(any(affected["ecosystem_specific"]["source_package"] in {"libpng1.6"}
                              for item in committed["vulns"] for affected in item["affected"]))
+        tiff_advisories = {
+            item["id"] for item in committed["vulns"]
+            if any(affected["ecosystem_specific"]["source_package"] == "tiff"
+                   for affected in item["affected"])
+        }
+        self.assertEqual(tiff_advisories, {"CVE-2025-61144", "CVE-2026-52490", "CVE-2026-12912", "CVE-2026-18495"})
         self.assertTrue(all("ranges" not in affected for item in committed["vulns"] for affected in item["affected"]))
 
     def test_scanner_rejects_feed_that_disagrees_with_reviewed_package_policy(self):

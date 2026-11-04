@@ -20,6 +20,7 @@ LIBPNG_CVE_2025_65018_FIXTURE = "cve-2025-65018-advisory-adam7-rgb16.png"
 LIBPNG_CVE_2025_65018_FIXTURE_SHA256 = "9deb34ada9b550df50181e4cd8c947303fd7b2881f61f3f16efa249d845e9905"
 BROTLI_MAX_PROBE_OUTPUT = 32 * 1024 * 1024
 BROTLI_MAX_PROBE_CALLS = 8192
+CARES_RECORD_COUNT_HEAP_LIMIT = 8 * 1024 * 1024
 
 
 def execute(command, timeout=30, env=None):
@@ -43,6 +44,43 @@ def execute(command, timeout=30, env=None):
         }
 
 
+def validate_recipe_regression_fixture_hashes(recipe, manifest):
+    """Verify regression inputs declared by the packaging recipe before use."""
+    root = Path(recipe).resolve()
+    metadata_name = manifest.get("patchMetadata")
+    if not isinstance(metadata_name, str):
+        raise RuntimeError("Recipe patch metadata path is missing")
+    metadata_path = (root / metadata_name).resolve()
+    if not metadata_path.is_relative_to(root) or not metadata_path.is_file():
+        raise RuntimeError("Recipe patch metadata path is invalid")
+    metadata = json.loads(metadata_path.read_text())
+    patches = metadata.get("patches")
+    if not isinstance(patches, list) or not patches:
+        raise RuntimeError("Recipe patch metadata has no patches")
+    for patch in patches:
+        if not isinstance(patch, dict):
+            raise RuntimeError("Recipe patch metadata entry is invalid")
+        declared_files = patch.get("referenceFiles", [])
+        if not isinstance(declared_files, list):
+            raise RuntimeError("Recipe reference file declarations are invalid")
+        declared_files = list(declared_files)
+        tests = patch.get("tests", [])
+        if not isinstance(tests, list):
+            raise RuntimeError("Recipe regression test declarations are invalid")
+        for test in tests:
+            if not isinstance(test, dict) or not isinstance(test.get("fixtures", []), list):
+                raise RuntimeError("Recipe regression test fixture declaration is invalid")
+            declared_files.extend(test.get("fixtures", []))
+        for declared in declared_files:
+            if (not isinstance(declared, dict) or not isinstance(declared.get("path"), str)
+                    or not re.fullmatch(r"[0-9a-f]{64}", str(declared.get("sha256", "")))):
+                raise RuntimeError("Recipe regression files must declare a path and SHA-256")
+            fixture = (root / declared["path"]).resolve()
+            if (not fixture.is_relative_to(root) or not fixture.is_file()
+                    or hashlib.sha256(fixture.read_bytes()).hexdigest() != declared["sha256"]):
+                raise RuntimeError("Recipe regression fixture hash does not match patch metadata")
+
+
 def schematron_baseline_reproduced(check):
     log = check.get("memoryLog", "")
     return (
@@ -51,6 +89,186 @@ def schematron_baseline_reproduced(check):
         and "Invalid read" in log
         and "xmlSchematronValidateDoc" in log
         and "libxml2.so." in log
+    )
+
+
+def libxml2_parameter_entity_command(check):
+    command = check.get("command", [])
+    return (
+        len(command) == 8
+        and Path(command[0]).name == "valgrind"
+        and command[1:5] == ["--tool=memcheck", "--error-exitcode=97", "--leak-check=no", "--read-var-info=yes"]
+        and memcheck_log_path_matches(check, command)
+        and Path(command[6]).name == "libxml2-cve-2026-6653"
+        and Path(command[7]).name == "cve-2026-6653.xml"
+    )
+
+
+def libxml2_parameter_entity_baseline_reproduced(check):
+    log = check.get("memoryLog", "")
+    return bool(
+        not check.get("timedOut", False)
+        and check.get("returncode") == 97
+        and libxml2_parameter_entity_command(check)
+        and any(
+            block.group("kind").startswith("Invalid read")
+            and "xmlReadMemory" in block.group("body")
+            and "free'd" in block.group("body")
+            and "libxml2.so." in block.group("body")
+            and "xmlNewEntityInputStream" in block.group("body").partition("Block was alloc'd at")[2]
+            for block in valgrind_invalid_access_blocks(log)
+        )
+        and re.search(r"(?m)^==\d+== ERROR SUMMARY: [1-9]\d* errors?", log) is not None
+    )
+
+
+def libxml2_parameter_entity_patched_succeeded(check):
+    log = check.get("memoryLog", "")
+    return bool(
+        not check.get("timedOut", False)
+        and check.get("returncode") == 0
+        and libxml2_parameter_entity_command(check)
+        and not valgrind_invalid_access_blocks(log)
+        and re.search(r"(?m)^==\d+== ERROR SUMMARY: 0 errors?", log)
+    )
+
+
+def libxml2_catalog_command(check):
+    command = check.get("command", [])
+    return bool(
+        len(command) == 8
+        and Path(command[0]).name == "valgrind"
+        and command[1:5] == ["--tool=memcheck", "--error-exitcode=97", "--leak-check=no", "--read-var-info=yes"]
+        and memcheck_log_path_matches(check, command)
+        and Path(command[6]).name == "libxml2-cve-2026-76781"
+        and Path(command[7]).name == "cve-2026-76781-catalog.xml"
+    )
+
+
+def libxml2_catalog_baseline_reproduced(check):
+    log = check.get("memoryLog", "")
+    return bool(
+        not check.get("timedOut", False)
+        and check.get("returncode") in (97, -signal.SIGSEGV)
+        and libxml2_catalog_command(check)
+        and any(
+            block.group("kind").startswith("Invalid read")
+            and "xmlCatalogResolveSystem" in block.group("body")
+            and "libxml2.so." in block.group("body")
+            and re.search(r"(?m)^==\d+==\s+(?:Address|at) 0x30\b", block.group("body")) is not None
+            for block in valgrind_invalid_access_blocks(log)
+        )
+        and "Process terminating with default action of signal 11 (SIGSEGV)" in log
+        and re.search(r"(?m)^==\d+== ERROR SUMMARY: [1-9]\d* errors?", log) is not None
+    )
+
+
+def libxml2_catalog_patched_succeeded(check):
+    log = check.get("memoryLog", "")
+    return bool(
+        not check.get("timedOut", False)
+        and check.get("returncode") == 0
+        and libxml2_catalog_command(check)
+        and not valgrind_invalid_access_blocks(log)
+        and re.search(r"(?m)^==\d+== ERROR SUMMARY: 0 errors?", log)
+    )
+
+
+def libxml2_regexp_alloc_failure_command(check):
+    command = check.get("command", [])
+    return bool(
+        len(command) == 7
+        and Path(command[0]).name == "valgrind"
+        and command[1:5] == ["--tool=memcheck", "--error-exitcode=97", "--leak-check=no", "--read-var-info=yes"]
+        and memcheck_log_path_matches(check, command)
+        and Path(command[6]).name == "libxml2-cve-2026-86141"
+        and check.get("testId") == "regexp-allocation-failure-null-check"
+        and check.get("injection") == "xmlMemSetup:test_malloc:sizeof-regexp"
+    )
+
+
+def libxml2_regexp_alloc_failure_baseline_reproduced(check):
+    return bool(
+        not check.get("timedOut", False)
+        and check.get("returncode") in (97, -signal.SIGSEGV)
+        and libxml2_regexp_alloc_failure_command(check)
+        and "GETPATCHED_REGEXP_COPY_ALLOCATION_FAILURE_INJECTED" in check.get("stderr", "")
+        and any(
+            block.group("kind") == "Invalid read of size 1"
+            and re.search(r"(?m)^==\d+==\s+at .*\(in .*/libxml2\.so\.", block.group("body"))
+            and "xmlRegexpCompile" in block.group("body")
+            and "libxml2.so." in block.group("body")
+            and re.search(r"(?m)^==\d+==\s+Address 0x0\b", block.group("body"))
+            for block in valgrind_invalid_access_blocks(check.get("memoryLog", ""))
+        )
+        and "Process terminating with default action of signal 11 (SIGSEGV)" in check.get("memoryLog", "")
+        and re.search(r"(?m)^==\d+== ERROR SUMMARY: [1-9]\d* errors?", check.get("memoryLog", ""))
+    )
+
+
+def libxml2_regexp_alloc_failure_patched_succeeded(check):
+    return bool(
+        not check.get("timedOut", False)
+        and check.get("returncode") == 0
+        and libxml2_regexp_alloc_failure_command(check)
+        and "GETPATCHED_REGEXP_COPY_ALLOCATION_FAILURE_INJECTED" in check.get("stderr", "")
+        and "XML_REGEXP_COMPILE_REJECTED_ALLOCATION_FAILURE" in check.get("stdout", "")
+        and not valgrind_invalid_access_blocks(check.get("memoryLog", ""))
+        and re.search(r"(?m)^==\d+== ERROR SUMMARY: 0 errors?", check.get("memoryLog", ""))
+    )
+
+
+def libxml2_xinclude_nonet_result(check, phase):
+    command = check.get("command", [])
+    expected_mode = "expect-network" if phase == "baseline" else "expect-blocked"
+    expected_code = 10 if phase == "baseline" else 0
+    return bool(
+        not check.get("timedOut", False)
+        and len(command) == 4
+        and Path(command[0]).name == "libxml2-cve-2026-86144"
+        and Path(command[1]).name == "cve-2026-86144-xinclude.xml"
+        and command[2] in ("document", "tree")
+        and command[3] == expected_mode
+        and check.get("returncode") == expected_code
+    )
+
+
+def libxml2_xinclude_checks_succeeded(checks, phase):
+    candidates = [check for check in checks if check.get("cve") == "CVE-2026-86144"]
+    apis = [check.get("command", [None, None, None])[2] for check in candidates]
+    return bool(
+        len(candidates) == 2
+        and sorted(apis) == ["document", "tree"]
+        and all(libxml2_xinclude_nonet_result(check, phase) for check in candidates)
+    )
+
+
+def libxml2_baseline_check_succeeded(check):
+    cve = check.get("cve")
+    if cve == "CVE-2026-6653":
+        return libxml2_parameter_entity_baseline_reproduced(check)
+    if cve == "CVE-2026-76781":
+        return libxml2_catalog_baseline_reproduced(check)
+    if cve == "CVE-2026-86141":
+        return libxml2_regexp_alloc_failure_baseline_reproduced(check)
+    return schematron_baseline_reproduced(check)
+
+
+def libxml2_patched_check_succeeded(check):
+    cve = check.get("cve")
+    if cve == "CVE-2026-6653":
+        return libxml2_parameter_entity_patched_succeeded(check)
+    if cve == "CVE-2026-76781":
+        return libxml2_catalog_patched_succeeded(check)
+    if cve == "CVE-2026-86141":
+        return libxml2_regexp_alloc_failure_patched_succeeded(check)
+    return check.get("returncode") == 3 and "ERROR SUMMARY: 0 errors" in check.get("memoryLog", "")
+
+
+def libxml2_check_cardinality_valid(checks, target_cves):
+    return all(
+        sum(check.get("cve") == cve for check in checks) == (2 if cve == "CVE-2026-86144" else 1)
+        for cve in target_cves
     )
 
 
@@ -143,9 +361,164 @@ def tiff_patched_regression_succeeded(check):
     )
 
 
+def pixarlog_probe_command_matches(check):
+    command = check.get("command")
+    if (check.get("cve") != "CVE-2026-12912"
+            or check.get("testId") != "pixarlog-abgr-rgb-multirow-strip-overflow"
+            or not isinstance(command, list) or len(command) != 9
+            or command[:5] != ["valgrind", "--tool=memcheck", "--error-exitcode=97",
+                               "--leak-check=no", "--read-var-info=yes"]
+            or not command[5].startswith("--log-file=")
+            or command[7] != "decode"):
+        return False
+    binary = Path(command[6])
+    fixture = Path(command[8])
+    log = Path(command[5].split("=", 1)[1])
+    return (binary.name == "pixarlog-abgr" and fixture.name == "pixarlog-abgr.tif"
+            and binary.parent == fixture.parent == log.parent)
+
+
+def pixarlog_baseline_reproduced(check):
+    log = check.get("memoryLog", "")
+    return (
+        not check.get("timedOut", False)
+        and check.get("returncode") == 97
+        and pixarlog_probe_command_matches(check)
+        and re.fullmatch(r"decode_called=1 result=[1-9][0-9]* strip_size=24576\n",
+                         check.get("stdout", "")) is not None
+        and any(block.group("kind").startswith("Invalid write")
+                and "libtiff.so" in block.group("body")
+                for block in valgrind_invalid_access_blocks(log))
+        and re.search(r"(?m)^==\d+== ERROR SUMMARY: [1-9]\d* errors?", log) is not None
+    )
+
+
+def pixarlog_patched_succeeded(check):
+    return (
+        not check.get("timedOut", False)
+        and check.get("returncode") == 0
+        and pixarlog_probe_command_matches(check)
+        and check.get("stdout") == "decode_called=1 result=-1 strip_size=24576\n"
+        and "Output buffer too small for PixarLog ABGR data" in check.get("stderr", "")
+        and not valgrind_invalid_access_blocks(check.get("memoryLog", ""))
+        and memcheck_has_no_errors(check.get("memoryLog", ""))
+    )
+
+
 def tiff_cve_required(policy, cve):
     configured = policy.get("targetCves") if isinstance(policy, dict) else None
     return isinstance(configured, list) and cve in configured
+
+
+def _tiff_bigstrip_probe_command_matches(check):
+    command = check.get("command", [])
+    if (not isinstance(command, list) or len(command) != 12
+            or command[:5] != [
+                "valgrind", "--tool=memcheck", "--error-exitcode=97",
+                "--leak-check=no", "--read-var-info=yes",
+            ]):
+        return False
+    if not command[5].startswith("--log-file=") or command[6:10] != ["tiff2pdf", "-m", "0", "-o"]:
+        return False
+    output = Path(command[10])
+    fixture = Path(command[11])
+    log = Path(command[5].split("=", 1)[1])
+    return (
+        output.name == "CVE-2026-18495-output.pdf"
+        and fixture.name == "CVE-2026-18495-bigstrip.tif"
+        and output.parent == fixture.parent == log.parent
+        and log.name == "CVE-2026-18495.valgrind"
+    )
+
+
+def tiff_bigstrip_baseline_reproduced(check):
+    log = check.get("memoryLog", "")
+    stderr = check.get("stderr", "")
+    bounded_read = re.search(r"GETPATCHED_TIFF_READ_BOUNDED requested=(\d+) cap=16", stderr)
+    completed_read = re.search(r"GETPATCHED_TIFF_READ_COMPLETED requested=(\d+) bytes=16", stderr)
+    vulnerable_read_blocks = re.finditer(
+        r"(?ms)^==\d+== Syscall param read\(buf\) points to unaddressable byte\(s\)\n"
+        r"(?P<body>.*?)(?=^==\d+== (?:Invalid |Use of |Conditional |Syscall param |ERROR SUMMARY)|\Z)",
+        log,
+    )
+    read_overrun_reproduced = any(
+        "block of size 5 alloc'd" in block.group("body")
+        and "libtiff.so." in block.group("body")
+        and "/usr/bin/tiff2pdf" in block.group("body")
+        for block in vulnerable_read_blocks
+    )
+    return (
+        check.get("cve") == "CVE-2026-18495"
+        and check.get("testId") == "tiff2pdf-bigtiff-strip-length-truncation"
+        and check.get("timedOut") is False
+        and check.get("returncode") == 97
+        and check.get("fixtureSizeBytes") == 304
+        and check.get("declaredStripBytes") == 4294967301
+        and check.get("allocationCapEnabled") is False
+        and check.get("memoryMappingDisabled") is True
+        and _tiff_bigstrip_probe_command_matches(check)
+        and "GETPATCHED_TIFF_MMAP_DISABLED" in stderr
+        and "GETPATCHED_TIFF_SCRATCH_ALLOC_BOUNDED requested=4294967311 cap=65536" in stderr
+        and "GETPATCHED_TIFF_SCRATCH_INIT_BOUNDED requested=4294967311 cap=65536" in stderr
+        and bounded_read is not None
+        and int(bounded_read.group(1)) > 64 * 1024 * 1024
+        and completed_read is not None
+        and bounded_read.group(1) == completed_read.group(1)
+        and read_overrun_reproduced
+        and re.search(r"(?m)^==\d+== ERROR SUMMARY: [1-9]\d* errors?", log) is not None
+    )
+
+
+def tiff_bigstrip_patched_succeeded(check):
+    stderr = check.get("stderr", "")
+    return (
+        check.get("cve") == "CVE-2026-18495"
+        and check.get("testId") == "tiff2pdf-bigtiff-strip-length-truncation"
+        and check.get("timedOut") is False
+        and check.get("returncode") == 1
+        and check.get("fixtureSizeBytes") == 304
+        and check.get("declaredStripBytes") == 4294967301
+        and check.get("allocationCapEnabled") is True
+        and check.get("memoryMappingDisabled") is True
+        and _tiff_bigstrip_probe_command_matches(check)
+        and "GETPATCHED_TIFF_MMAP_DISABLED" in stderr
+        and "GETPATCHED_TIFF_SCRATCH_ALLOC_BOUNDED requested=4294967311 cap=65536" in stderr
+        and "GETPATCHED_TIFF_SCRATCH_INIT_BOUNDED requested=4294967311 cap=65536" in stderr
+        and "GETPATCHED_TIFF_READ_BOUNDED" not in stderr
+        and "GETPATCHED_TIFF_READ_COMPLETED" not in stderr
+        and "GETPATCHED_TIFF_ALLOCATION_REJECTED size=4294967301 cap=67108864" in stderr
+        and "got 64 bytes, expected 4294967301" not in stderr
+        and memcheck_has_no_errors(check.get("memoryLog", ""))
+    )
+
+
+TIFF_SUBDIVISION_OVERFLOW_COMMAND = ["tiffcrop", "-S", "134217729:32", "-h"]
+
+
+def tiff_subdivision_baseline_reproduced(check):
+    output = check.get("stdout", "") + check.get("stderr", "")
+    return (
+        check.get("cve") == "CVE-2026-52490"
+        and check.get("testId") == "tiffcrop-subdivision-overflow-check"
+        and check.get("command") == TIFF_SUBDIVISION_OVERFLOW_COMMAND
+        and not check.get("timedOut", False)
+        and check.get("returncode") == 0
+        and "usage: tiffcrop" in output.lower()
+        and "Limit for subdivisions" not in output
+    )
+
+
+def tiff_subdivision_patched_succeeded(check):
+    output = check.get("stdout", "") + check.get("stderr", "")
+    return (
+        check.get("cve") == "CVE-2026-52490"
+        and check.get("testId") == "tiffcrop-subdivision-overflow-check"
+        and check.get("command") == TIFF_SUBDIVISION_OVERFLOW_COMMAND
+        and not check.get("timedOut", False)
+        and check.get("returncode") == 1
+        and "Limit for subdivisions" in output
+        and "usage: tiffcrop" not in output.lower()
+    )
 
 
 def valgrind_invalid_access_blocks(log):
@@ -240,6 +613,23 @@ def consumer_version_succeeded(check, expected_banner):
     return not check.get("timedOut", False) and check.get("returncode") == 0 and expected_banner in output
 
 
+def expat_regression_succeeded(check, phase):
+    if (check.get("cve") != "CVE-2026-117610"
+            or check.get("testId") != "CVE-2026-117610-empty-nonfinal-subparser"
+            or check.get("timedOut") is not False):
+        return False
+    if phase == "baseline":
+        return check.get("returncode") == -signal.SIGSEGV
+    return phase == "patched" and check.get("returncode") == 0
+
+
+def expat_consumer_succeeded(check, expected_version):
+    output = check.get("stdout", "") + check.get("stderr", "")
+    return (not check.get("timedOut", False)
+            and check.get("returncode") == 0
+            and f"xmlwf using expat_{expected_version}" in output)
+
+
 def brotli_baseline_reproduced(check):
     return (
         check.get("cve") == "CVE-2026-111497"
@@ -300,6 +690,66 @@ def cares_regression_succeeded(check, target_id, phase):
         and outcome in output
         and "valid_status=0 valid_record=present" in output
     )
+
+
+def massif_peak_heap_bytes(path):
+    try:
+        content = Path(path).read_text()
+    except OSError:
+        return None
+    values = [int(value) for value in re.findall(r"(?m)^mem_heap_B=(\d+)$", content)]
+    return max(values) if values else None
+
+
+def cares_record_count_regression_succeeded(check, target_id, phase):
+    command = check.get("command", [])
+    peak = check.get("peakHeapBytes")
+    if (target_id != "debian-trixie-amd64" or phase not in ("baseline", "patched")
+            or check.get("cve") != "CVE-2026-69186"
+            or check.get("testId") != "c-ares-malformed-record-count-allocation"
+            or check.get("timedOut") is not False or check.get("returncode") != 0
+            or not isinstance(peak, int) or not command or Path(command[0]).name != "valgrind"
+            or "--tool=massif" not in command or "--time-unit=B" not in command
+            or "--stacks=no" not in command
+            or not any(item.startswith("--massif-out-file=") for item in command)
+            or Path(command[-1]).name != "c-ares-record-count"):
+        return False
+    output = check.get("stdout", "")
+    if "malformed_rejected=yes" not in output or "valid_status=0 valid_record=present" not in output:
+        return False
+    if phase == "baseline":
+        return check.get("vulnerabilityReproduced") is True and peak > CARES_RECORD_COUNT_HEAP_LIMIT
+    return check.get("patchedBehavior") is True and peak < CARES_RECORD_COUNT_HEAP_LIMIT
+
+
+def msgpack_unpacker_reuse_regression_succeeded(check, target_id, phase, expected_package_version):
+    command = check.get("command", [])
+    expected_target = target_id in ("debian-bookworm-amd64", "debian-trixie-amd64")
+    if (not expected_target or phase not in ("baseline", "patched")
+            or check.get("cve") != "CVE-2026-57585"
+            or check.get("testId") != "python-msgpack-unpacker-error-reuse"
+            or check.get("timedOut") is not False
+            or not isinstance(expected_package_version, str)
+            or not expected_package_version
+            or len(command) != 2 or Path(command[0]).name != "python3"
+            or Path(command[1]).name != "cve-2026-57585-unpacker-reuse.py"):
+        return False
+    output = check.get("stdout", "")
+    required_identity = (
+        "module_path=/usr/lib/python3/dist-packages/msgpack/"
+        in output
+        and "debian_package=python3-msgpack" in output
+        and "module_owner=python3-msgpack" in output
+        and f"debian_package_version={expected_package_version}" in output
+    )
+    if not required_identity:
+        return False
+    if phase == "baseline":
+        return (check.get("returncode") == -signal.SIGSEGV
+                and "caught expected ValueError" in output)
+    return (check.get("returncode") == 0
+            and "caught expected ValueError" in output
+            and "after-error skip completed without process crash" in output)
 
 
 def libpng_probe_command_matches(check, test_id, executable, arguments):
@@ -599,6 +1049,7 @@ def main():
     parser.add_argument("--output", type=Path, required=True)
     args = parser.parse_args()
     manifest = json.loads((args.recipe / "package-manifest.json").read_text())
+    validate_recipe_regression_fixture_hashes(args.recipe, manifest)
     policy = json.loads(args.policy.read_text())
     package = policy["source"]
     tiff_baseline_stack_frames = None
@@ -623,23 +1074,130 @@ def main():
     with tempfile.TemporaryDirectory(prefix="getpatched-regression-") as directory:
         temp = Path(directory)
         if package == "libxml2":
-            for cve in ("CVE-2025-49794", "CVE-2025-49796"):
-                stem = cve.lower()
-                log = temp / (stem + ".valgrind")
-                check = execute([
-                    "valgrind", "--tool=memcheck", "--error-exitcode=97", "--leak-check=no",
-                    "--read-var-info=yes",
-                    "--log-file=" + str(log), "xmllint", "--nonet", "--schematron",
-                    str(fixtures / (stem + ".sct")), str(fixtures / (stem + "_0.xml")),
-                ])
-                check["cve"] = cve
-                check["memoryLog"] = log.read_text() if log.exists() else ""
-                check["passed"] = not check["timedOut"] and (
-                    schematron_baseline_reproduced(check)
-                    if args.phase == "baseline" else
-                    check["returncode"] == 3 and "ERROR SUMMARY: 0 errors" in check["memoryLog"]
-                )
-                checks.append(check)
+            for cve in policy["targetCves"]:
+                if cve in ("CVE-2025-49794", "CVE-2025-49796"):
+                    stem = cve.lower()
+                    log = temp / (stem + ".valgrind")
+                    check = execute([
+                        "valgrind", "--tool=memcheck", "--error-exitcode=97", "--leak-check=no",
+                        "--read-var-info=yes",
+                        "--log-file=" + str(log), "xmllint", "--nonet", "--schematron",
+                        str(fixtures / (stem + ".sct")), str(fixtures / (stem + "_0.xml")),
+                    ])
+                    check["cve"] = cve
+                    check["memoryLog"] = log.read_text() if log.exists() else ""
+                    check["passed"] = not check["timedOut"] and (
+                        schematron_baseline_reproduced(check)
+                        if args.phase == "baseline" else
+                        check["returncode"] == 3 and "ERROR SUMMARY: 0 errors" in check["memoryLog"]
+                    )
+                    checks.append(check)
+                elif cve == "CVE-2026-6653":
+                    probe = temp / "libxml2-cve-2026-6653"
+                    flags = shlex.split(subprocess.check_output(
+                        ["pkg-config", "--cflags", "--libs", "libxml-2.0"], text=True, timeout=15
+                    ))
+                    compiled = subprocess.run(
+                        ["c++", "-std=c++11", "-O1", "-g", str(fixtures / "cve-2026-6653-harness.cc"),
+                         "-o", str(probe), *flags],
+                        capture_output=True, text=True, timeout=30, check=False,
+                    )
+                    if compiled.returncode != 0:
+                        raise RuntimeError("could not compile the libxml2 CVE-2026-6653 regression harness: " + compiled.stderr[-2000:])
+                    log = temp / "cve-2026-6653.valgrind"
+                    check = execute([
+                        "valgrind", "--tool=memcheck", "--error-exitcode=97", "--leak-check=no",
+                        "--read-var-info=yes", "--log-file=" + str(log), str(probe),
+                        str(fixtures / "cve-2026-6653.xml"),
+                    ])
+                    check["cve"] = cve
+                    check["testId"] = "parameter-entity-eof-use-after-free"
+                    check["memoryLogPath"] = str(log)
+                    check["memoryLog"] = log.read_text() if log.exists() else ""
+                    check["passed"] = (
+                        libxml2_parameter_entity_baseline_reproduced(check)
+                        if args.phase == "baseline" else libxml2_parameter_entity_patched_succeeded(check)
+                    )
+                    checks.append(check)
+                elif cve == "CVE-2026-86144":
+                    probe = temp / "libxml2-cve-2026-86144"
+                    flags = shlex.split(subprocess.check_output(
+                        ["pkg-config", "--cflags", "--libs", "libxml-2.0"], text=True, timeout=15
+                    ))
+                    compiled = subprocess.run(
+                        ["c++", "-std=c++11", "-O1", "-g", str(fixtures / "cve-2026-86144-xinclude-harness.cc"),
+                         "-pthread", "-o", str(probe), *flags],
+                        capture_output=True, text=True, timeout=30, check=False,
+                    )
+                    if compiled.returncode != 0:
+                        raise RuntimeError("could not compile the libxml2 CVE-2026-86144 regression harness: " + compiled.stderr[-2000:])
+                    for api in ("document", "tree"):
+                        mode = "expect-network" if args.phase == "baseline" else "expect-blocked"
+                        check = execute([
+                            str(probe), str(fixtures / "cve-2026-86144-xinclude.xml"), api, mode,
+                        ], timeout=10)
+                        check["cve"] = cve
+                        check["testId"] = "xinclude-nonet-" + api
+                        check["phase"] = args.phase
+                        check["passed"] = libxml2_xinclude_nonet_result(check, args.phase)
+                        checks.append(check)
+                elif cve == "CVE-2026-76781":
+                    probe = temp / "libxml2-cve-2026-76781"
+                    flags = shlex.split(subprocess.check_output(
+                        ["pkg-config", "--cflags", "--libs", "libxml-2.0"], text=True, timeout=15
+                    ))
+                    compiled = subprocess.run(
+                        ["cc", "-std=c11", "-O1", "-g", str(fixtures / "cve-2026-76781-catalog-harness.c"),
+                         "-o", str(probe), *flags],
+                        capture_output=True, text=True, timeout=30, check=False,
+                    )
+                    if compiled.returncode != 0:
+                        raise RuntimeError("could not compile the libxml2 CVE-2026-76781 regression harness: " + compiled.stderr[-2000:])
+                    log = temp / "cve-2026-76781.valgrind"
+                    check = execute([
+                        "valgrind", "--tool=memcheck", "--error-exitcode=97", "--leak-check=no",
+                        "--read-var-info=yes", "--log-file=" + str(log), str(probe),
+                        str(fixtures / "cve-2026-76781-catalog.xml"),
+                    ], timeout=20)
+                    check["cve"] = cve
+                    check["testId"] = "catalog-next-catalog-missing-attribute"
+                    check["memoryLogPath"] = str(log)
+                    check["memoryLog"] = log.read_text() if log.exists() else ""
+                    check["passed"] = (
+                        libxml2_catalog_baseline_reproduced(check)
+                        if args.phase == "baseline" else libxml2_catalog_patched_succeeded(check)
+                    )
+                    checks.append(check)
+                elif cve == "CVE-2026-86141":
+                    probe = temp / "libxml2-cve-2026-86141"
+                    flags = shlex.split(subprocess.check_output(
+                        ["pkg-config", "--cflags", "--libs", "libxml-2.0"], text=True, timeout=15
+                    ))
+                    compiled = subprocess.run(
+                        ["cc", "-std=c11", "-O1", "-g", str(fixtures / "cve-2026-86141-regexp-alloc-failure.c"),
+                         "-o", str(probe), *flags],
+                        capture_output=True, text=True, timeout=30, check=False,
+                    )
+                    if compiled.returncode != 0:
+                        raise RuntimeError("could not compile the libxml2 CVE-2026-86141 regression harness: " + compiled.stderr[-2000:])
+                    log = temp / "cve-2026-86141.valgrind"
+                    check = execute([
+                        "valgrind", "--tool=memcheck", "--error-exitcode=97", "--leak-check=no",
+                        "--read-var-info=yes", "--log-file=" + str(log), str(probe),
+                    ], timeout=15)
+                    check["cve"] = cve
+                    check["testId"] = "regexp-allocation-failure-null-check"
+                    check["injection"] = "xmlMemSetup:test_malloc:sizeof-regexp"
+                    check["memoryLogPath"] = str(log)
+                    check["memoryLog"] = log.read_text() if log.exists() else ""
+                    check["phase"] = args.phase
+                    check["passed"] = (
+                        libxml2_regexp_alloc_failure_baseline_reproduced(check)
+                        if args.phase == "baseline" else libxml2_regexp_alloc_failure_patched_succeeded(check)
+                    )
+                    checks.append(check)
+                else:
+                    raise RuntimeError("no libxml2 regression is configured for " + cve)
             if args.phase == "patched":
                 normal = temp / "normal.xml"
                 normal.write_text("<document><item>compatible</item></document>\n")
@@ -647,31 +1205,96 @@ def main():
                 check["passed"] = check["returncode"] == 0 and check["stdout"] == "compatible\n"
                 checks.append(check)
         elif package == "libarchive":
-            lines = (fixtures / "test_read_format_rar5_loop_bug.rar.uu").read_bytes().splitlines()
-            start = next(i for i, line in enumerate(lines) if line.startswith(b"begin "))
-            data = bytearray()
-            for line in lines[start + 1:]:
-                if line == b"end": break
-                data.extend(binascii.a2b_uu(line))
-            if not 0 < len(data) < 1024 * 1024:
-                raise RuntimeError("Fixture exceeds regression resource bound")
-            fixture = temp / "loop.rar"
-            fixture.write_bytes(data)
-            probe = temp / "archive-probe"
-            subprocess.run(["cc", "-std=c99", "-Wall", "-Wextra", "-Werror", str(Path(__file__).with_name("archive-probe.c")), "-larchive", "-o", str(probe)], check=True, timeout=30)
-            check = execute([str(probe), str(fixture)], timeout=5)
-            check["cve"] = "CVE-2026-4111"
-            check["passed"] = check["timedOut"] if args.phase == "baseline" else not check["timedOut"] and check["returncode"] == 0
-            checks.append(check)
-            if args.phase == "patched":
-                item = temp / "consumer.txt"
-                item.write_text("consumer round trip\n")
-                archive = temp / "consumer.tar.gz"
-                create = execute(["bsdtar", "-czf", str(archive), "-C", str(temp), item.name])
-                extract = execute(["bsdtar", "-xOf", str(archive), item.name])
-                create["passed"] = create["returncode"] == 0
-                extract["passed"] = extract["returncode"] == 0 and extract["stdout"] == item.read_text()
-                checks.extend([create, extract])
+            if policy["targetId"] == "debian-trixie-amd64":
+                source_report_path = args.output.parent / f"libarchive-source-ubsan-{args.phase}.json"
+                source_report = json.loads(source_report_path.read_text())
+                source_provenance_path = args.output.parent / "source-provenance.json"
+                if (not source_provenance_path.is_file()
+                        or hashlib.sha256(source_provenance_path.read_bytes()).hexdigest()
+                        != source_report.get("sourceProvenanceSha256")):
+                    raise RuntimeError("exact-source UBSan report is not bound to this build's pinned source provenance")
+                recipe_manifest = json.loads((args.recipe / "package-manifest.json").read_text())
+                recipe_target_ref = next(item for item in recipe_manifest["targets"] if item["id"] == policy["targetId"])
+                recipe_target = json.loads((args.recipe / recipe_target_ref["file"]).read_text())
+                recipe_patch_metadata = json.loads((args.recipe / recipe_manifest["patchMetadata"]).read_text())
+                recipe_patches = [
+                    item for item in recipe_patch_metadata["patches"]
+                    if item.get("id") in recipe_target["patches"] and "CVE-2026-16517" in item.get("cves", [])
+                ]
+                if len(recipe_patches) != 1:
+                    raise RuntimeError("recipe does not identify one exact CVE-2026-16517 patch")
+                expected_patch = recipe_patches[0]
+                if (source_report.get("runner") != "getpatched-libarchive-source-ubsan/1"
+                        or source_report.get("phase") != args.phase
+                        or source_report.get("cryptoBackend") != "nettle"
+                        or source_report.get("evidenceType") != "exact-source-ubsan; installed package behavior is reported separately"
+                        or source_report.get("targetId") != policy["targetId"]
+                        or source_report.get("sourceVersion") != policy["baseVersion"]
+                        or source_report.get("sourceDescriptorSha256") != recipe_target["source"]["descriptor"]["sha256"]
+                        or source_report.get("patchId") != expected_patch["id"]
+                        or source_report.get("patchSha256") != expected_patch["sha256"]
+                        or source_report.get("changelogVersion") != (policy["baseVersion"] if args.phase == "baseline" else policy["version"])
+                        or not re.fullmatch(r"[0-9a-f]{64}", str(source_report.get("sourceProvenanceSha256", "")))
+                        or not re.fullmatch(r"[0-9a-f]{64}", str(source_report.get("sourceTreeSha256", "")))
+                        or not re.fullmatch(r"[0-9a-f]{64}", str(source_report.get("vulnerableFileSha256", "")))
+                        or source_report.get("patchApplied") is not (args.phase == "patched")
+                        or source_report.get("passed") is not True):
+                    raise RuntimeError("exact-source UBSan regression is missing or failed")
+                if args.phase == "baseline" and source_report.get("sourceVulnerabilityReproduced") is not True:
+                    raise RuntimeError("exact-source UBSan baseline did not reproduce the signed overflow")
+                if args.phase == "patched" and source_report.get("patchedBehavior") is not True:
+                    raise RuntimeError("exact-source patched UBSan test did not complete cleanly")
+                probe = compile_pkg_config_probe(
+                    fixtures / "zip-encrypted-size-overflow.c", temp / "zip-encrypted-size-overflow", ["libarchive"]
+                )
+                check = execute([str(probe)], timeout=5)
+                check["cve"] = "CVE-2026-16517"
+                check["headerGenerationSucceeded"] = (
+                    not check["timedOut"] and check["returncode"] == 0
+                    and "GETPATCHED:ZIP_HEADER_START" in check["stderr"]
+                    and "GETPATCHED:ZIP_HEADER_RETURN" in check["stderr"]
+                )
+                check["sourceRegressionSha256"] = hashlib.sha256(source_report_path.read_bytes()).hexdigest()
+                check["sourceProvenanceSha256"] = source_report["sourceProvenanceSha256"]
+                check["sourceVulnerabilityReproduced"] = source_report.get("sourceVulnerabilityReproduced") is True
+                check["patchedBehavior"] = source_report.get("patchedBehavior") is True
+                check["passed"] = check["headerGenerationSucceeded"] and source_report["passed"] is True
+                checks.append(check)
+                if args.phase == "patched":
+                    item = temp / "consumer.txt"
+                    item.write_text("consumer round trip\n")
+                    archive = temp / "consumer.tar.gz"
+                    create = execute(["bsdtar", "-czf", str(archive), "-C", str(temp), item.name])
+                    extract = execute(["bsdtar", "-xOf", str(archive), item.name])
+                    create["passed"] = create["returncode"] == 0
+                    extract["passed"] = extract["returncode"] == 0 and extract["stdout"] == item.read_text()
+                    checks.extend([create, extract])
+            else:
+                lines = (fixtures / "test_read_format_rar5_loop_bug.rar.uu").read_bytes().splitlines()
+                start = next(i for i, line in enumerate(lines) if line.startswith(b"begin "))
+                data = bytearray()
+                for line in lines[start + 1:]:
+                    if line == b"end": break
+                    data.extend(binascii.a2b_uu(line))
+                if not 0 < len(data) < 1024 * 1024:
+                    raise RuntimeError("Fixture exceeds regression resource bound")
+                fixture = temp / "loop.rar"
+                fixture.write_bytes(data)
+                probe = temp / "archive-probe"
+                subprocess.run(["cc", "-std=c99", "-Wall", "-Wextra", "-Werror", str(Path(__file__).with_name("archive-probe.c")), "-larchive", "-o", str(probe)], check=True, timeout=30)
+                check = execute([str(probe), str(fixture)], timeout=5)
+                check["cve"] = "CVE-2026-4111"
+                check["passed"] = check["timedOut"] if args.phase == "baseline" else not check["timedOut"] and check["returncode"] == 0
+                checks.append(check)
+                if args.phase == "patched":
+                    item = temp / "consumer.txt"
+                    item.write_text("consumer round trip\n")
+                    archive = temp / "consumer.tar.gz"
+                    create = execute(["bsdtar", "-czf", str(archive), "-C", str(temp), item.name])
+                    extract = execute(["bsdtar", "-xOf", str(archive), item.name])
+                    create["passed"] = create["returncode"] == 0
+                    extract["passed"] = extract["returncode"] == 0 and extract["stdout"] == item.read_text()
+                    checks.extend([create, extract])
         elif package == "c-ares":
             if policy["targetId"] == "ubuntu-focal-amd64":
                 probe = compile_pkg_config_probe(
@@ -705,6 +1328,63 @@ def main():
                 )
             check["cve"] = "CVE-2026-69184"
             check["passed"] = cares_regression_succeeded(check, policy["targetId"], args.phase)
+            checks.append(check)
+            if "CVE-2026-69186" in policy.get("targetCves", []):
+                if policy["targetId"] != "debian-trixie-amd64":
+                    raise RuntimeError("CVE-2026-69186 regression is only defined for Debian Trixie amd64")
+                probe = compile_pkg_config_probe(
+                    fixtures / "c-ares-record-count.c", temp / "c-ares-record-count", ["libcares"]
+                )
+                massif_file = temp / "c-ares-record-count.massif"
+                check = execute([
+                    "valgrind", "--tool=massif", "--time-unit=B", "--stacks=no",
+                    "--massif-out-file=" + str(massif_file), str(probe),
+                ], timeout=20)
+                check["testId"] = "c-ares-malformed-record-count-allocation"
+                check["cve"] = "CVE-2026-69186"
+                check["massifFile"] = massif_file.name
+                check["peakHeapBytes"] = massif_peak_heap_bytes(massif_file)
+                check["vulnerabilityReproduced"] = (
+                    check["peakHeapBytes"] is not None
+                    and check["peakHeapBytes"] > CARES_RECORD_COUNT_HEAP_LIMIT
+                )
+                check["patchedBehavior"] = (
+                    check["peakHeapBytes"] is not None
+                    and check["peakHeapBytes"] < CARES_RECORD_COUNT_HEAP_LIMIT
+                )
+                check["passed"] = cares_record_count_regression_succeeded(
+                    check, policy["targetId"], args.phase
+                )
+                checks.append(check)
+        elif package == "python-msgpack":
+            if policy["targetId"] not in ("debian-bookworm-amd64", "debian-trixie-amd64"):
+                raise RuntimeError("CVE-2026-57585 regression is only defined for Debian Bookworm and Trixie amd64")
+            fixture = fixtures / "cve-2026-57585-unpacker-reuse.py"
+            check = execute(["python3", str(fixture)], timeout=5)
+            check["testId"] = "python-msgpack-unpacker-error-reuse"
+            check["cve"] = "CVE-2026-57585"
+            expected_package_version = (
+                policy["baseVersion"] if args.phase == "baseline" else policy["version"]
+            )
+            check["installedPackage"] = "python3-msgpack"
+            package_version_match = re.search(
+                r"(?m)^debian_package_version=(\S+)$", check["stdout"]
+            )
+            check["installedPackageVersion"] = (
+                package_version_match.group(1) if package_version_match else None
+            )
+            check["vulnerabilityReproduced"] = (
+                check["returncode"] == -signal.SIGSEGV
+                and "caught expected ValueError" in check["stdout"]
+            )
+            check["patchedBehavior"] = (
+                check["returncode"] == 0
+                and "caught expected ValueError" in check["stdout"]
+                and "after-error skip completed without process crash" in check["stdout"]
+            )
+            check["passed"] = msgpack_unpacker_reuse_regression_succeeded(
+                check, policy["targetId"], args.phase, expected_package_version
+            )
             checks.append(check)
         elif package == "brotli":
             probe = compile_pkg_config_probe(
@@ -744,8 +1424,101 @@ def main():
                      else check["patchedBehavior"])
             )
             checks.append(check)
+        elif package == "expat":
+            probe = compile_pkg_config_probe(
+                fixtures / "CVE-2026-117610-empty-subparser.c", temp / "expat-empty-subparser", ["expat"]
+            )
+            check = execute([str(probe)])
+            check["cve"] = "CVE-2026-117610"
+            check["testId"] = "CVE-2026-117610-empty-nonfinal-subparser"
+            check["passed"] = expat_regression_succeeded(check, args.phase)
+            checks.append(check)
+            source_version = policy["baseVersion"].split("-", 1)[0]
+            consumer = execute(["xmlwf", "-v"])
+            consumer["testId"] = "expat-xmlwf-version"
+            consumer["passed"] = expat_consumer_succeeded(consumer, source_version)
+            checks.append(consumer)
         elif package == "tiff":
             fixture = fixtures / "multisample.tif"
+            if tiff_cve_required(policy, "CVE-2026-18495"):
+                fixture_source = fixtures / "CVE-2026-18495-bigstrip.c"
+                shim_source = fixtures / "CVE-2026-18495-bounded-read-shim.c"
+                fixture_generator = temp / "CVE-2026-18495-fixture"
+                generated = temp / "CVE-2026-18495-bigstrip.tif"
+                shim = temp / "CVE-2026-18495-bounded-read-shim.so"
+                subprocess.run(
+                    ["cc", "-std=c99", "-Wall", "-Wextra", "-Werror",
+                     str(fixture_source), "-o", str(fixture_generator)],
+                    check=True, timeout=30,
+                )
+                subprocess.run(
+                    ["cc", "-std=c99", "-Wall", "-Wextra", "-Werror", "-fPIC", "-shared",
+                     str(shim_source), "-ldl", "-o", str(shim)],
+                    check=True, timeout=30,
+                )
+                generated_check = execute([str(fixture_generator), str(generated)])
+                if (generated_check.get("timedOut") or generated_check.get("returncode") != 0
+                        or not generated.is_file() or generated.stat().st_size != 304):
+                    raise RuntimeError("Could not generate the bounded CVE-2026-18495 BigTIFF fixture")
+                inspected = execute(["tiffinfo", "-s", str(generated)])
+                if (inspected.get("timedOut") or inspected.get("returncode") != 0
+                        or "4294967301" not in inspected.get("stdout", "")):
+                    raise RuntimeError("CVE-2026-18495 fixture has the wrong BigTIFF strip byte count")
+                memory_log = temp / "CVE-2026-18495.valgrind"
+                command = [
+                    "valgrind", "--tool=memcheck", "--error-exitcode=97", "--leak-check=no",
+                    "--read-var-info=yes", "--log-file=" + str(memory_log),
+                    "tiff2pdf", "-m", "0", "-o", str(temp / "CVE-2026-18495-output.pdf"),
+                    str(generated),
+                ]
+                environment = os.environ.copy()
+                environment.pop("LD_PRELOAD", None)
+                allocation_cap_enabled = args.phase == "patched"
+                environment["LD_PRELOAD"] = str(shim)
+                environment.pop("GETPATCHED_TIFF_ALLOC_CAP_ENABLED", None)
+                if allocation_cap_enabled:
+                    environment["GETPATCHED_TIFF_ALLOC_CAP_ENABLED"] = "1"
+                else:
+                    environment["GETPATCHED_TIFF_STOP_AFTER_BOUNDED_READ"] = "1"
+                check = execute(command, timeout=20, env=environment)
+                check["memoryLog"] = memory_log.read_text() if memory_log.exists() else ""
+                check["memoryLogPath"] = str(memory_log)
+                check["fixtureSizeBytes"] = generated.stat().st_size
+                check["declaredStripBytes"] = 4294967301
+                check["allocationCapEnabled"] = allocation_cap_enabled
+                check["memoryMappingDisabled"] = "GETPATCHED_TIFF_MMAP_DISABLED" in check.get("stderr", "")
+                check["cve"] = "CVE-2026-18495"
+                check["testId"] = "tiff2pdf-bigtiff-strip-length-truncation"
+                check["passed"] = (
+                    tiff_bigstrip_baseline_reproduced(check)
+                    if args.phase == "baseline" else tiff_bigstrip_patched_succeeded(check)
+                )
+                checks.append(check)
+            if tiff_cve_required(policy, "CVE-2026-12912"):
+                source = fixtures / "pixarlog-abgr.c"
+                probe = temp / "pixarlog-abgr"
+                generated = temp / "pixarlog-abgr.tif"
+                subprocess.run(["cc", "-std=c99", "-Wall", "-Wextra", "-Werror",
+                                str(source), "-ltiff", "-o", str(probe)],
+                               check=True, timeout=30)
+                create = execute([str(probe), "generate", str(generated)])
+                if (create.get("timedOut") or create.get("returncode") != 0
+                        or not generated.is_file()
+                        or not 0 < generated.stat().st_size < 1024 * 1024):
+                    raise RuntimeError("Could not generate bounded PixarLog CVE regression input")
+                memory_log = temp / "CVE-2026-12912.valgrind"
+                check = execute([
+                    "valgrind", "--tool=memcheck", "--error-exitcode=97", "--leak-check=no",
+                    "--read-var-info=yes", "--log-file=" + str(memory_log),
+                    str(probe), "decode", str(generated),
+                ])
+                check["memoryLog"] = memory_log.read_text() if memory_log.exists() else ""
+                check["memoryLogPath"] = str(memory_log)
+                check["cve"] = "CVE-2026-12912"
+                check["testId"] = "pixarlog-abgr-rgb-multirow-strip-overflow"
+                check["passed"] = (pixarlog_baseline_reproduced(check) if args.phase == "baseline"
+                                   else pixarlog_patched_succeeded(check))
+                checks.append(check)
             if not fixture.is_file() or not 0 < fixture.stat().st_size < 1024 * 1024:
                 raise RuntimeError("TIFF regression fixture is missing or exceeds its size bound")
             output = temp / "tiffcrop-output.tif"
@@ -796,6 +1569,17 @@ def main():
                     if args.phase == "baseline"
                     else tiff_patched_regression_succeeded(check)
                     and output.is_file() and output.stat().st_size > 0
+                )
+                checks.append(check)
+
+            if tiff_cve_required(policy, "CVE-2026-52490"):
+                check = execute(TIFF_SUBDIVISION_OVERFLOW_COMMAND, timeout=10)
+                check["cve"] = "CVE-2026-52490"
+                check["testId"] = "tiffcrop-subdivision-overflow-check"
+                check["passed"] = (
+                    tiff_subdivision_baseline_reproduced(check)
+                    if args.phase == "baseline"
+                    else tiff_subdivision_patched_succeeded(check)
                 )
                 checks.append(check)
 

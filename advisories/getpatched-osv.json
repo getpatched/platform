@@ -480,6 +480,79 @@
         {
           "database_specific": {
             "candidate_status": "development-verified-production-release-pending",
+            "candidate_version": "4.5.0-6+deb12u4+getpatched5",
+            "fixed_versions": [
+              "4.5.0-6+deb12u4+getpatched5"
+            ],
+            "getpatched_fixed_version": "4.5.0-6+deb12u4+getpatched5",
+            "source_package": "tiff",
+            "target_id": "debian-bookworm-amd64",
+            "vendor_fixed_versions": []
+          },
+          "ecosystem_specific": {
+            "architecture": "amd64",
+            "distribution": "Debian",
+            "release": "bookworm",
+            "source_package": "tiff",
+            "target_id": "debian-bookworm-amd64"
+          },
+          "package": {
+            "ecosystem": "Debian:12",
+            "name": "libtiff-tools"
+          },
+          "versions": [
+            "4.5.0-6+deb12u4"
+          ]
+        },
+        {
+          "database_specific": {
+            "candidate_status": "development-verified-production-release-pending",
+            "candidate_version": "4.7.0-3+deb13u3+getpatched3",
+            "fixed_versions": [
+              "4.7.0-3+deb13u3+getpatched3"
+            ],
+            "getpatched_fixed_version": "4.7.0-3+deb13u3+getpatched3",
+            "source_package": "tiff",
+            "target_id": "debian-trixie-amd64",
+            "vendor_fixed_versions": []
+          },
+          "ecosystem_specific": {
+            "architecture": "amd64",
+            "distribution": "Debian",
+            "release": "trixie",
+            "source_package": "tiff",
+            "target_id": "debian-trixie-amd64"
+          },
+          "package": {
+            "ecosystem": "Debian:13",
+            "name": "libtiff-tools"
+          },
+          "versions": [
+            "4.7.0-3+deb13u3"
+          ]
+        }
+      ],
+      "database_specific": {
+        "severity": "MEDIUM",
+        "verification_status": "development-verified-production-release-pending"
+      },
+      "details": "GetPatched records exact affected package versions and exact reviewed fixes per distribution, release, and architecture. A new target or fixed package version is accepted only after its own build and regression evidence.",
+      "id": "CVE-2025-61144",
+      "modified": "2026-11-03T08:35:10Z",
+      "references": [
+        {
+          "type": "ADVISORY",
+          "url": "https://security-tracker.debian.org/tracker/CVE-2025-61144"
+        }
+      ],
+      "schema_version": "1.6.0",
+      "summary": "tiffcrop out-of-bounds read while producing level-2 debug output"
+    },
+    {
+      "affected": [
+        {
+          "database_specific": {
+            "candidate_status": "development-verified-production-release-pending",
             "candidate_version": "22.12.0-2+deb12u3+getpatched1",
             "fixed_versions": [
               "22.12.0-2+deb12u3+getpatched1"
@@ -653,6 +726,352 @@
         {
           "database_specific": {
             "candidate_status": "development-verified-production-release-pending",
+            "candidate_version": "2.5.0-1+deb12u5+getpatched1",
+            "fixed_versions": [
+              "2.5.0-1+deb12u5+getpatched1"
+            ],
+            "getpatched_fixed_version": "2.5.0-1+deb12u5+getpatched1",
+            "source_package": "expat",
+            "target_id": "debian-bookworm-amd64",
+            "vendor_fixed_versions": []
+          },
+          "ecosystem_specific": {
+            "architecture": "amd64",
+            "distribution": "Debian",
+            "release": "bookworm",
+            "source_package": "expat",
+            "target_id": "debian-bookworm-amd64"
+          },
+          "package": {
+            "ecosystem": "Debian:12",
+            "name": "expat"
+          },
+          "versions": [
+            "2.5.0-1+deb12u5"
+          ]
+        },
+        {
+          "database_specific": {
+            "candidate_status": "development-verified-production-release-pending",
+            "candidate_version": "2.5.0-1+deb12u5+getpatched1",
+            "fixed_versions": [
+              "2.5.0-1+deb12u5+getpatched1"
+            ],
+            "getpatched_fixed_version": "2.5.0-1+deb12u5+getpatched1",
+            "source_package": "expat",
+            "target_id": "debian-bookworm-amd64",
+            "vendor_fixed_versions": []
+          },
+          "ecosystem_specific": {
+            "architecture": "amd64",
+            "distribution": "Debian",
+            "release": "bookworm",
+            "source_package": "expat",
+            "target_id": "debian-bookworm-amd64"
+          },
+          "package": {
+            "ecosystem": "Debian:12",
+            "name": "libexpat1"
+          },
+          "versions": [
+            "2.5.0-1+deb12u5"
+          ]
+        },
+        {
+          "database_specific": {
+            "candidate_status": "development-verified-production-release-pending",
+            "candidate_version": "2.5.0-1+deb12u5+getpatched1",
+            "fixed_versions": [
+              "2.5.0-1+deb12u5+getpatched1"
+            ],
+            "getpatched_fixed_version": "2.5.0-1+deb12u5+getpatched1",
+            "source_package": "expat",
+            "target_id": "debian-bookworm-amd64",
+            "vendor_fixed_versions": []
+          },
+          "ecosystem_specific": {
+            "architecture": "amd64",
+            "distribution": "Debian",
+            "release": "bookworm",
+            "source_package": "expat",
+            "target_id": "debian-bookworm-amd64"
+          },
+          "package": {
+            "ecosystem": "Debian:12",
+            "name": "libexpat1-dev"
+          },
+          "versions": [
+            "2.5.0-1+deb12u5"
+          ]
+        },
+        {
+          "database_specific": {
+            "candidate_status": "development-verified-production-release-pending",
+            "candidate_version": "2.9.0-1~deb13u1+getpatched1",
+            "fixed_versions": [
+              "2.9.0-1~deb13u1+getpatched1"
+            ],
+            "getpatched_fixed_version": "2.9.0-1~deb13u1+getpatched1",
+            "source_package": "expat",
+            "target_id": "debian-trixie-amd64",
+            "vendor_fixed_versions": []
+          },
+          "ecosystem_specific": {
+            "architecture": "amd64",
+            "distribution": "Debian",
+            "release": "trixie",
+            "source_package": "expat",
+            "target_id": "debian-trixie-amd64"
+          },
+          "package": {
+            "ecosystem": "Debian:13",
+            "name": "expat"
+          },
+          "versions": [
+            "2.9.0-1~deb13u1"
+          ]
+        },
+        {
+          "database_specific": {
+            "candidate_status": "development-verified-production-release-pending",
+            "candidate_version": "2.9.0-1~deb13u1+getpatched1",
+            "fixed_versions": [
+              "2.9.0-1~deb13u1+getpatched1"
+            ],
+            "getpatched_fixed_version": "2.9.0-1~deb13u1+getpatched1",
+            "source_package": "expat",
+            "target_id": "debian-trixie-amd64",
+            "vendor_fixed_versions": []
+          },
+          "ecosystem_specific": {
+            "architecture": "amd64",
+            "distribution": "Debian",
+            "release": "trixie",
+            "source_package": "expat",
+            "target_id": "debian-trixie-amd64"
+          },
+          "package": {
+            "ecosystem": "Debian:13",
+            "name": "libexpat1"
+          },
+          "versions": [
+            "2.9.0-1~deb13u1"
+          ]
+        },
+        {
+          "database_specific": {
+            "candidate_status": "development-verified-production-release-pending",
+            "candidate_version": "2.9.0-1~deb13u1+getpatched1",
+            "fixed_versions": [
+              "2.9.0-1~deb13u1+getpatched1"
+            ],
+            "getpatched_fixed_version": "2.9.0-1~deb13u1+getpatched1",
+            "source_package": "expat",
+            "target_id": "debian-trixie-amd64",
+            "vendor_fixed_versions": []
+          },
+          "ecosystem_specific": {
+            "architecture": "amd64",
+            "distribution": "Debian",
+            "release": "trixie",
+            "source_package": "expat",
+            "target_id": "debian-trixie-amd64"
+          },
+          "package": {
+            "ecosystem": "Debian:13",
+            "name": "libexpat1-dev"
+          },
+          "versions": [
+            "2.9.0-1~deb13u1"
+          ]
+        }
+      ],
+      "database_specific": {
+        "severity": "MEDIUM",
+        "verification_status": "development-verified-production-release-pending"
+      },
+      "details": "GetPatched records exact affected package versions and exact reviewed fixes per distribution, release, and architecture. A new target or fixed package version is accepted only after its own build and regression evidence.",
+      "id": "CVE-2026-117610",
+      "modified": "2026-10-30T05:38:23Z",
+      "references": [
+        {
+          "type": "ADVISORY",
+          "url": "https://security-tracker.debian.org/tracker/CVE-2026-117610"
+        }
+      ],
+      "schema_version": "1.6.0",
+      "summary": "Expat NULL dereference when an external-entity subparser starts with empty non-final input"
+    },
+    {
+      "affected": [
+        {
+          "database_specific": {
+            "candidate_status": "development-verified-production-release-pending",
+            "candidate_version": "4.5.0-6+deb12u4+getpatched5",
+            "fixed_versions": [
+              "4.5.0-6+deb12u4+getpatched5"
+            ],
+            "getpatched_fixed_version": "4.5.0-6+deb12u4+getpatched5",
+            "source_package": "tiff",
+            "target_id": "debian-bookworm-amd64",
+            "vendor_fixed_versions": []
+          },
+          "ecosystem_specific": {
+            "architecture": "amd64",
+            "distribution": "Debian",
+            "release": "bookworm",
+            "source_package": "tiff",
+            "target_id": "debian-bookworm-amd64"
+          },
+          "package": {
+            "ecosystem": "Debian:12",
+            "name": "libtiff6"
+          },
+          "versions": [
+            "4.5.0-6+deb12u4"
+          ]
+        }
+      ],
+      "database_specific": {
+        "severity": "HIGH",
+        "verification_status": "development-verified-production-release-pending"
+      },
+      "details": "GetPatched records exact affected package versions and exact reviewed fixes per distribution, release, and architecture. A new target or fixed package version is accepted only after its own build and regression evidence.",
+      "id": "CVE-2026-12912",
+      "modified": "2026-11-03T08:35:10Z",
+      "references": [
+        {
+          "type": "ADVISORY",
+          "url": "https://security-tracker.debian.org/tracker/CVE-2026-12912"
+        }
+      ],
+      "schema_version": "1.6.0",
+      "summary": "Heap buffer overflow in libtiff PixarLog decoding when an application opts into 8BITABGR RGB output"
+    },
+    {
+      "affected": [
+        {
+          "database_specific": {
+            "candidate_status": "development-verified-production-release-pending",
+            "candidate_version": "3.7.4-4+deb13u1+getpatched1",
+            "fixed_versions": [
+              "3.7.4-4+deb13u1+getpatched1"
+            ],
+            "getpatched_fixed_version": "3.7.4-4+deb13u1+getpatched1",
+            "source_package": "libarchive",
+            "target_id": "debian-trixie-amd64",
+            "vendor_fixed_versions": []
+          },
+          "ecosystem_specific": {
+            "architecture": "amd64",
+            "distribution": "Debian",
+            "release": "trixie",
+            "source_package": "libarchive",
+            "target_id": "debian-trixie-amd64"
+          },
+          "package": {
+            "ecosystem": "Debian:13",
+            "name": "libarchive-tools"
+          },
+          "versions": [
+            "3.7.4-4+deb13u1"
+          ]
+        },
+        {
+          "database_specific": {
+            "candidate_status": "development-verified-production-release-pending",
+            "candidate_version": "3.7.4-4+deb13u1+getpatched1",
+            "fixed_versions": [
+              "3.7.4-4+deb13u1+getpatched1"
+            ],
+            "getpatched_fixed_version": "3.7.4-4+deb13u1+getpatched1",
+            "source_package": "libarchive",
+            "target_id": "debian-trixie-amd64",
+            "vendor_fixed_versions": []
+          },
+          "ecosystem_specific": {
+            "architecture": "amd64",
+            "distribution": "Debian",
+            "release": "trixie",
+            "source_package": "libarchive",
+            "target_id": "debian-trixie-amd64"
+          },
+          "package": {
+            "ecosystem": "Debian:13",
+            "name": "libarchive13t64"
+          },
+          "versions": [
+            "3.7.4-4+deb13u1"
+          ]
+        }
+      ],
+      "database_specific": {
+        "severity": "LOW",
+        "verification_status": "development-verified-production-release-pending"
+      },
+      "details": "GetPatched records exact affected package versions and exact reviewed fixes per distribution, release, and architecture. A new target or fixed package version is accepted only after its own build and regression evidence.",
+      "id": "CVE-2026-16517",
+      "modified": "2026-11-04T00:00:00Z",
+      "references": [
+        {
+          "type": "ADVISORY",
+          "url": "https://security-tracker.debian.org/tracker/CVE-2026-16517"
+        }
+      ],
+      "schema_version": "1.6.0",
+      "summary": "libarchive ZIP writer signed integer overflow in Debian Trixie packages"
+    },
+    {
+      "affected": [
+        {
+          "database_specific": {
+            "candidate_status": "development-verified-production-release-pending",
+            "candidate_version": "4.5.0-6+deb12u4+getpatched5",
+            "fixed_versions": [
+              "4.5.0-6+deb12u4+getpatched5"
+            ],
+            "getpatched_fixed_version": "4.5.0-6+deb12u4+getpatched5",
+            "source_package": "tiff",
+            "target_id": "debian-bookworm-amd64",
+            "vendor_fixed_versions": []
+          },
+          "ecosystem_specific": {
+            "architecture": "amd64",
+            "distribution": "Debian",
+            "release": "bookworm",
+            "source_package": "tiff",
+            "target_id": "debian-bookworm-amd64"
+          },
+          "package": {
+            "ecosystem": "Debian:12",
+            "name": "libtiff-tools"
+          },
+          "versions": [
+            "4.5.0-6+deb12u4"
+          ]
+        }
+      ],
+      "database_specific": {
+        "severity": "MEDIUM",
+        "verification_status": "development-verified-production-release-pending"
+      },
+      "details": "GetPatched records exact affected package versions and exact reviewed fixes per distribution, release, and architecture. A new target or fixed package version is accepted only after its own build and regression evidence.",
+      "id": "CVE-2026-18495",
+      "modified": "2026-11-03T08:45:03Z",
+      "references": [
+        {
+          "type": "ADVISORY",
+          "url": "https://security-tracker.debian.org/tracker/CVE-2026-18495"
+        }
+      ],
+      "schema_version": "1.6.0",
+      "summary": "libtiff tiff2pdf heap buffer overflow with oversized BigTIFF strip lengths"
+    },
+    {
+      "affected": [
+        {
+          "database_specific": {
+            "candidate_status": "development-verified-production-release-pending",
             "candidate_version": "3.4.0-2ubuntu1.5+getpatched1",
             "fixed_versions": [
               "3.4.0-2ubuntu1.5+getpatched1",
@@ -726,6 +1145,79 @@
       ],
       "schema_version": "1.6.0",
       "summary": "libarchive RAR5 decompression infinite loop in Ubuntu Focal packages"
+    },
+    {
+      "affected": [
+        {
+          "database_specific": {
+            "candidate_status": "development-verified-production-release-pending",
+            "candidate_version": "4.5.0-6+deb12u4+getpatched5",
+            "fixed_versions": [
+              "4.5.0-6+deb12u4+getpatched5"
+            ],
+            "getpatched_fixed_version": "4.5.0-6+deb12u4+getpatched5",
+            "source_package": "tiff",
+            "target_id": "debian-bookworm-amd64",
+            "vendor_fixed_versions": []
+          },
+          "ecosystem_specific": {
+            "architecture": "amd64",
+            "distribution": "Debian",
+            "release": "bookworm",
+            "source_package": "tiff",
+            "target_id": "debian-bookworm-amd64"
+          },
+          "package": {
+            "ecosystem": "Debian:12",
+            "name": "libtiff-tools"
+          },
+          "versions": [
+            "4.5.0-6+deb12u4"
+          ]
+        },
+        {
+          "database_specific": {
+            "candidate_status": "development-verified-production-release-pending",
+            "candidate_version": "4.7.0-3+deb13u3+getpatched3",
+            "fixed_versions": [
+              "4.7.0-3+deb13u3+getpatched3"
+            ],
+            "getpatched_fixed_version": "4.7.0-3+deb13u3+getpatched3",
+            "source_package": "tiff",
+            "target_id": "debian-trixie-amd64",
+            "vendor_fixed_versions": []
+          },
+          "ecosystem_specific": {
+            "architecture": "amd64",
+            "distribution": "Debian",
+            "release": "trixie",
+            "source_package": "tiff",
+            "target_id": "debian-trixie-amd64"
+          },
+          "package": {
+            "ecosystem": "Debian:13",
+            "name": "libtiff-tools"
+          },
+          "versions": [
+            "4.7.0-3+deb13u3"
+          ]
+        }
+      ],
+      "database_specific": {
+        "severity": "MEDIUM",
+        "verification_status": "development-verified-production-release-pending"
+      },
+      "details": "GetPatched records exact affected package versions and exact reviewed fixes per distribution, release, and architecture. A new target or fixed package version is accepted only after its own build and regression evidence.",
+      "id": "CVE-2026-52490",
+      "modified": "2026-11-03T08:35:10Z",
+      "references": [
+        {
+          "type": "ADVISORY",
+          "url": "https://security-tracker.debian.org/tracker/CVE-2026-52490"
+        }
+      ],
+      "schema_version": "1.6.0",
+      "summary": "tiffcrop subdivision integer overflow bypasses the section limit"
     },
     {
       "affected": [
@@ -1112,12 +1604,85 @@
       "affected": [
         {
           "database_specific": {
-            "candidate_status": "development-verified-sponsor-flow-pending",
-            "candidate_version": "1.34.5-1+deb13u1+getpatched1",
+            "candidate_status": "development-verified-production-release-pending",
+            "candidate_version": "2.9.14+dfsg-1.3~deb12u6+getpatched1",
             "fixed_versions": [
-              "1.34.5-1+deb13u1+getpatched1"
+              "2.9.14+dfsg-1.3~deb12u6+getpatched1"
             ],
-            "getpatched_fixed_version": "1.34.5-1+deb13u1+getpatched1",
+            "getpatched_fixed_version": "2.9.14+dfsg-1.3~deb12u6+getpatched1",
+            "source_package": "libxml2",
+            "target_id": "debian-bookworm-amd64",
+            "vendor_fixed_versions": []
+          },
+          "ecosystem_specific": {
+            "architecture": "amd64",
+            "distribution": "Debian",
+            "release": "bookworm",
+            "source_package": "libxml2",
+            "target_id": "debian-bookworm-amd64"
+          },
+          "package": {
+            "ecosystem": "Debian:12",
+            "name": "libxml2"
+          },
+          "versions": [
+            "2.9.14+dfsg-1.3~deb12u6"
+          ]
+        },
+        {
+          "database_specific": {
+            "candidate_status": "development-verified-production-release-pending",
+            "candidate_version": "2.12.7+dfsg+really2.9.14-2.1+deb13u3+getpatched4",
+            "fixed_versions": [
+              "2.12.7+dfsg+really2.9.14-2.1+deb13u3+getpatched4"
+            ],
+            "getpatched_fixed_version": "2.12.7+dfsg+really2.9.14-2.1+deb13u3+getpatched4",
+            "source_package": "libxml2",
+            "target_id": "debian-trixie-amd64",
+            "vendor_fixed_versions": []
+          },
+          "ecosystem_specific": {
+            "architecture": "amd64",
+            "distribution": "Debian",
+            "release": "trixie",
+            "source_package": "libxml2",
+            "target_id": "debian-trixie-amd64"
+          },
+          "package": {
+            "ecosystem": "Debian:13",
+            "name": "libxml2"
+          },
+          "versions": [
+            "2.12.7+dfsg+really2.9.14-2.1+deb13u3"
+          ]
+        }
+      ],
+      "database_specific": {
+        "severity": "MEDIUM",
+        "verification_status": "development-verified-production-release-pending"
+      },
+      "details": "GetPatched records exact affected package versions and exact reviewed fixes per distribution, release, and architecture. A new target or fixed package version is accepted only after its own build and regression evidence.",
+      "id": "CVE-2026-6653",
+      "modified": "2026-10-30T05:38:23Z",
+      "references": [
+        {
+          "type": "ADVISORY",
+          "url": "https://security-tracker.debian.org/tracker/CVE-2026-6653"
+        }
+      ],
+      "schema_version": "1.6.0",
+      "summary": "libxml2 parameter-entity parsing use-after-free in Debian Bookworm and Trixie"
+    },
+    {
+      "affected": [
+        {
+          "database_specific": {
+            "candidate_status": "development-verified-sponsor-flow-pending",
+            "candidate_version": "1.34.5-1+deb13u1+getpatched2",
+            "fixed_versions": [
+              "1.34.5-1+deb13u1+getpatched2"
+            ],
+            "getpatched_fixed_version": "1.34.5-1+deb13u1+getpatched2",
             "source_package": "c-ares",
             "target_id": "debian-trixie-amd64",
             "vendor_fixed_versions": []
@@ -1184,6 +1749,190 @@
       ],
       "schema_version": "1.6.0",
       "summary": "c-ares CPU exhaustion from unbounded DNS compression-pointer chains"
+    },
+    {
+      "affected": [
+        {
+          "database_specific": {
+            "candidate_status": "development-verified-sponsor-flow-pending",
+            "candidate_version": "1.34.5-1+deb13u1+getpatched2",
+            "fixed_versions": [
+              "1.34.5-1+deb13u1+getpatched2"
+            ],
+            "getpatched_fixed_version": "1.34.5-1+deb13u1+getpatched2",
+            "source_package": "c-ares",
+            "target_id": "debian-trixie-amd64",
+            "vendor_fixed_versions": []
+          },
+          "ecosystem_specific": {
+            "architecture": "amd64",
+            "distribution": "Debian",
+            "release": "trixie",
+            "source_package": "c-ares",
+            "target_id": "debian-trixie-amd64"
+          },
+          "package": {
+            "ecosystem": "Debian:13",
+            "name": "libcares2"
+          },
+          "versions": [
+            "1.34.5-1+deb13u1"
+          ]
+        }
+      ],
+      "database_specific": {
+        "severity": "MODERATE",
+        "verification_status": "development-verified-production-release-pending"
+      },
+      "details": "GetPatched records exact affected package versions and exact reviewed fixes per distribution, release, and architecture. A new target or fixed package version is accepted only after its own build and regression evidence.",
+      "id": "CVE-2026-69186",
+      "modified": "2026-11-03T00:00:00Z",
+      "references": [
+        {
+          "type": "ADVISORY",
+          "url": "https://security-tracker.debian.org/tracker/CVE-2026-69186"
+        }
+      ],
+      "schema_version": "1.6.0",
+      "summary": "c-ares disproportionate heap allocation from unvalidated DNS record counts"
+    },
+    {
+      "affected": [
+        {
+          "database_specific": {
+            "candidate_status": "development-verified-production-release-pending",
+            "candidate_version": "2.12.7+dfsg+really2.9.14-2.1+deb13u3+getpatched4",
+            "fixed_versions": [
+              "2.12.7+dfsg+really2.9.14-2.1+deb13u3+getpatched4"
+            ],
+            "getpatched_fixed_version": "2.12.7+dfsg+really2.9.14-2.1+deb13u3+getpatched4",
+            "source_package": "libxml2",
+            "target_id": "debian-trixie-amd64",
+            "vendor_fixed_versions": []
+          },
+          "ecosystem_specific": {
+            "architecture": "amd64",
+            "distribution": "Debian",
+            "release": "trixie",
+            "source_package": "libxml2",
+            "target_id": "debian-trixie-amd64"
+          },
+          "package": {
+            "ecosystem": "Debian:13",
+            "name": "libxml2"
+          },
+          "versions": [
+            "2.12.7+dfsg+really2.9.14-2.1+deb13u3"
+          ]
+        }
+      ],
+      "database_specific": {
+        "severity": "MEDIUM",
+        "verification_status": "development-verified-production-release-pending"
+      },
+      "details": "GetPatched records exact affected package versions and exact reviewed fixes per distribution, release, and architecture. A new target or fixed package version is accepted only after its own build and regression evidence.",
+      "id": "CVE-2026-76781",
+      "modified": "2026-10-30T05:38:23Z",
+      "references": [
+        {
+          "type": "ADVISORY",
+          "url": "https://security-tracker.debian.org/tracker/CVE-2026-76781"
+        }
+      ],
+      "schema_version": "1.6.0",
+      "summary": "libxml2 can crash while parsing an XML catalog nextCatalog entry without its required catalog attribute"
+    },
+    {
+      "affected": [
+        {
+          "database_specific": {
+            "candidate_status": "development-verified-production-release-pending",
+            "candidate_version": "2.12.7+dfsg+really2.9.14-2.1+deb13u3+getpatched4",
+            "fixed_versions": [
+              "2.12.7+dfsg+really2.9.14-2.1+deb13u3+getpatched4"
+            ],
+            "getpatched_fixed_version": "2.12.7+dfsg+really2.9.14-2.1+deb13u3+getpatched4",
+            "source_package": "libxml2",
+            "target_id": "debian-trixie-amd64",
+            "vendor_fixed_versions": []
+          },
+          "ecosystem_specific": {
+            "architecture": "amd64",
+            "distribution": "Debian",
+            "release": "trixie",
+            "source_package": "libxml2",
+            "target_id": "debian-trixie-amd64"
+          },
+          "package": {
+            "ecosystem": "Debian:13",
+            "name": "libxml2"
+          },
+          "versions": [
+            "2.12.7+dfsg+really2.9.14-2.1+deb13u3"
+          ]
+        }
+      ],
+      "database_specific": {
+        "severity": "MEDIUM",
+        "verification_status": "development-verified-production-release-pending"
+      },
+      "details": "GetPatched records exact affected package versions and exact reviewed fixes per distribution, release, and architecture. A new target or fixed package version is accepted only after its own build and regression evidence.",
+      "id": "CVE-2026-86141",
+      "modified": "2026-11-03T18:12:28Z",
+      "references": [
+        {
+          "type": "ADVISORY",
+          "url": "https://security-tracker.debian.org/tracker/CVE-2026-86141"
+        }
+      ],
+      "schema_version": "1.6.0",
+      "summary": "libxml2 can dereference NULL while creating a regular-expression parser context after allocation failure"
+    },
+    {
+      "affected": [
+        {
+          "database_specific": {
+            "candidate_status": "development-verified-production-release-pending",
+            "candidate_version": "2.12.7+dfsg+really2.9.14-2.1+deb13u3+getpatched4",
+            "fixed_versions": [
+              "2.12.7+dfsg+really2.9.14-2.1+deb13u3+getpatched4"
+            ],
+            "getpatched_fixed_version": "2.12.7+dfsg+really2.9.14-2.1+deb13u3+getpatched4",
+            "source_package": "libxml2",
+            "target_id": "debian-trixie-amd64",
+            "vendor_fixed_versions": []
+          },
+          "ecosystem_specific": {
+            "architecture": "amd64",
+            "distribution": "Debian",
+            "release": "trixie",
+            "source_package": "libxml2",
+            "target_id": "debian-trixie-amd64"
+          },
+          "package": {
+            "ecosystem": "Debian:13",
+            "name": "libxml2"
+          },
+          "versions": [
+            "2.12.7+dfsg+really2.9.14-2.1+deb13u3"
+          ]
+        }
+      ],
+      "database_specific": {
+        "severity": "MEDIUM",
+        "verification_status": "development-verified-production-release-pending"
+      },
+      "details": "GetPatched records exact affected package versions and exact reviewed fixes per distribution, release, and architecture. A new target or fixed package version is accepted only after its own build and regression evidence.",
+      "id": "CVE-2026-86144",
+      "modified": "2026-10-30T05:38:23Z",
+      "references": [
+        {
+          "type": "ADVISORY",
+          "url": "https://security-tracker.debian.org/tracker/CVE-2026-86144"
+        }
+      ],
+      "schema_version": "1.6.0",
+      "summary": "libxml2 XInclude processing ignores XML_PARSE_NONET and can trigger network access"
     }
   ]
 }
