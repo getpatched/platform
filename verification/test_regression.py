@@ -394,6 +394,18 @@ class ImageMagickCdlRegression(unittest.TestCase):
         )
         self.assertFalse(imagemagick_cdl_check_succeeded(unrelated_leak, "baseline"))
 
+    def test_caller_frame_symbol_must_match_exactly(self):
+        for test_index, expected, lookalike in (
+            (0, "CLIOption", "CLIOptionWrapper"),
+            (1, "MogrifyImage", "MogrifyImageWrapper"),
+        ):
+            check = self.check("baseline")
+            log = check["subchecks"][test_index]["memoryLog"]
+            check["subchecks"][test_index]["memoryLog"] = log.replace(
+                f"by 0x20: {expected} (", f"by 0x20: {lookalike} ("
+            )
+            self.assertFalse(imagemagick_cdl_check_succeeded(check, "baseline"))
+
     def test_requires_both_patched_entry_points_to_be_memcheck_clean(self):
         self.assertTrue(imagemagick_cdl_check_succeeded(self.check("patched"), "patched"))
         regressed = self.check("patched")

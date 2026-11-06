@@ -641,7 +641,8 @@ def imagemagick_cdl_check_succeeded(check, phase):
             }[test_id]
             leak_blocks = valgrind_definite_leak_blocks(log)
             if (item.get("returncode") != 97 or not leaked
-                    or not any("FileToString" in block and allocation_caller in block
+                    or not any(valgrind_log_has_frame(block, "FileToString")
+                               and valgrind_log_has_frame(block, allocation_caller)
                                for block in leak_blocks)):
                 return False
         elif (item.get("returncode") != 0 or leaked or not memcheck_has_no_errors(log)):
@@ -657,6 +658,14 @@ def valgrind_definite_leak_blocks(log):
         r"|^==\d+==[ \t]+(?:LEAK SUMMARY:|HEAP SUMMARY:|ERROR SUMMARY:)|\Z)"
     )
     return [match.group("body") for match in pattern.finditer(log)]
+
+
+def valgrind_log_has_frame(log, function):
+    """Match an exact Valgrind frame symbol, not a substring of another name."""
+    return re.search(
+        rf"(?m)^==\d+==[ \t]+(?:at|by) 0x[0-9A-Fa-f]+: {re.escape(function)}(?=[ \t(]|$)",
+        log,
+    ) is not None
 
 
 def memcheck_log_path_matches(check, command):
