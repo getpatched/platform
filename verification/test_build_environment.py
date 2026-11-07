@@ -1,6 +1,7 @@
 import hashlib
 import os
 from pathlib import Path
+import subprocess
 import tempfile
 import unittest
 from unittest.mock import patch
@@ -94,3 +95,32 @@ class PinnedAptSourceTests(unittest.TestCase):
         expiry_option = containerfile.index("check-valid-until=no")
         self.assertLess(source_list, expiry_option)
         self.assertLess(expiry_option, containerfile.index("apt-get update"))
+
+    def test_patched_scan_disables_expiry_only_on_pinned_snapshot_source_lines(self):
+        containerfile = (ROOT / "build/patched-scan.Containerfile").read_text()
+        snapshot_option = (
+            "sed -i -E '/^deb(-src)? \\[arch=[^]]+\\] "
+            "https?:\\/\\/snapshot(-fastly)?[.]debian[.]org\\// "
+            "s/\\]/ check-valid-until=no]/' /etc/apt/sources.list"
+        )
+        self.assertIn(snapshot_option, containerfile)
+        self.assertNotIn("Acquire::Check-Valid-Until=false", containerfile)
+        source_list = containerfile.index("> /etc/apt/sources.list")
+        expiry_option = containerfile.index("check-valid-until=no")
+        self.assertLess(source_list, expiry_option)
+        self.assertLess(expiry_option, containerfile.index("apt-get update"))
+        command = containerfile.split("sed -i -E '", 1)[1].split("' /etc/apt/sources.list", 1)[0]
+        sources = (
+            "deb [arch=amd64] https://snapshot-fastly.debian.org/archive/debian/20261030T000000Z/ trixie main\n"
+            "deb [arch=amd64] https://deb.debian.org/debian/ trixie main\n"
+            "deb-src [arch=amd64] https://snapshot.debian.org/archive/debian-security/20261030T000000Z/ trixie-security main\n"
+        )
+        transformed = subprocess.run(
+            ["sed", "-E", command], input=sources, text=True, capture_output=True, check=True
+        ).stdout
+        self.assertEqual(
+            transformed,
+            "deb [arch=amd64 check-valid-until=no] https://snapshot-fastly.debian.org/archive/debian/20261030T000000Z/ trixie main\n"
+            "deb [arch=amd64] https://deb.debian.org/debian/ trixie main\n"
+            "deb-src [arch=amd64 check-valid-until=no] https://snapshot.debian.org/archive/debian-security/20261030T000000Z/ trixie-security main\n",
+        )
