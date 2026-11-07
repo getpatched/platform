@@ -1014,7 +1014,7 @@
             "CVE-2026-116159": ["libmagickwand-7.q16-10"],
             "CVE-2026-119124": ["libmagickcore-7.q16-10"]
           },
-          "candidateStatus": "unverified-development-candidate",
+          "candidateStatus": "development-verified-production-release-pending",
           "verificationSourceBranch": "getpatched/imagemagick-cve-2026-116159",
           "verifiedReleases": [
             {
