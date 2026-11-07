@@ -80,3 +80,17 @@ class PinnedAptSourceTests(unittest.TestCase):
         self.assertIn("Acquire::AllowInsecureRepositories=false", containerfile)
         self.assertIn("Acquire::AllowDowngradeToInsecureRepositories=false", containerfile)
         self.assertLess(containerfile.index("> /etc/apt/sources.list"), containerfile.index("snapshot_sources=false"))
+
+    def test_baseline_disables_expiry_only_on_pinned_snapshot_source_lines(self):
+        containerfile = (ROOT / "build/baseline.Containerfile").read_text()
+        snapshot_option = (
+            "sed -i -E '/^deb(-src)? \\[arch=[^]]+\\] "
+            "https?:\\/\\/snapshot(-fastly)?[.]debian[.]org\\// "
+            "s/\\]/ check-valid-until=no]/' /etc/apt/sources.list"
+        )
+        self.assertIn(snapshot_option, containerfile)
+        self.assertNotIn("Acquire::Check-Valid-Until=false", containerfile)
+        source_list = containerfile.index("> /etc/apt/sources.list")
+        expiry_option = containerfile.index("check-valid-until=no")
+        self.assertLess(source_list, expiry_option)
+        self.assertLess(expiry_option, containerfile.index("apt-get update"))
