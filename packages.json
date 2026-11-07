@@ -1015,7 +1015,6 @@
             "CVE-2026-119124": ["libmagickcore-7.q16-10"]
           },
           "candidateStatus": "development-verified-production-release-pending",
-          "verificationSourceBranch": "getpatched/imagemagick-cve-2026-116159",
           "verifiedReleases": [
             {
               "version": "8:7.1.1.43+dfsg1-1+deb13u13+getpatched1",
