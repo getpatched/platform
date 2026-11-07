@@ -86,7 +86,7 @@ class PinnedAptSourceTests(unittest.TestCase):
         containerfile = (ROOT / "build/baseline.Containerfile").read_text()
         snapshot_option = (
             "sed -i -E '/^deb(-src)? \\[arch=[^]]+\\] "
-            "https?:\\/\\/snapshot(-fastly)?[.]debian[.]org\\// "
+            "https?:\\/\\/snapshot(-fastly)?[.]debian[.]org\\/.*\\/[0-9]{8}T[0-9]{6}Z\\// "
             "s/\\]/ check-valid-until=no]/' /etc/apt/sources.list"
         )
         self.assertIn(snapshot_option, containerfile)
@@ -100,7 +100,7 @@ class PinnedAptSourceTests(unittest.TestCase):
         containerfile = (ROOT / "build/patched-scan.Containerfile").read_text()
         snapshot_option = (
             "sed -i -E '/^deb(-src)? \\[arch=[^]]+\\] "
-            "https?:\\/\\/snapshot(-fastly)?[.]debian[.]org\\// "
+            "https?:\\/\\/snapshot(-fastly)?[.]debian[.]org\\/.*\\/[0-9]{8}T[0-9]{6}Z\\// "
             "s/\\]/ check-valid-until=no]/' /etc/apt/sources.list"
         )
         self.assertIn(snapshot_option, containerfile)
@@ -114,6 +114,7 @@ class PinnedAptSourceTests(unittest.TestCase):
             "deb [arch=amd64] https://snapshot-fastly.debian.org/archive/debian/20261030T000000Z/ trixie main\n"
             "deb [arch=amd64] https://deb.debian.org/debian/ trixie main\n"
             "deb-src [arch=amd64] https://snapshot.debian.org/archive/debian-security/20261030T000000Z/ trixie-security main\n"
+            "deb [arch=amd64] https://snapshot.debian.org/archive/debian/trixie main\n"
         )
         transformed = subprocess.run(
             ["sed", "-E", command], input=sources, text=True, capture_output=True, check=True
@@ -122,5 +123,6 @@ class PinnedAptSourceTests(unittest.TestCase):
             transformed,
             "deb [arch=amd64 check-valid-until=no] https://snapshot-fastly.debian.org/archive/debian/20261030T000000Z/ trixie main\n"
             "deb [arch=amd64] https://deb.debian.org/debian/ trixie main\n"
-            "deb-src [arch=amd64 check-valid-until=no] https://snapshot.debian.org/archive/debian-security/20261030T000000Z/ trixie-security main\n",
+            "deb-src [arch=amd64 check-valid-until=no] https://snapshot.debian.org/archive/debian-security/20261030T000000Z/ trixie-security main\n"
+            "deb [arch=amd64] https://snapshot.debian.org/archive/debian/trixie main\n",
         )
