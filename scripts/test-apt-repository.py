@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Build an isolated signed APT archive and test it with a fresh target client."""
 import argparse
+import base64
 import json
 import os
 from pathlib import Path
@@ -19,6 +20,32 @@ from platform_policy import package_target_policy, target_profile
 
 def run(command, **kwargs):
     return subprocess.run(command, check=True, **kwargs)
+
+
+def scope_immutable_snapshot_expiry(sources):
+    """Disable Valid-Until only for pinned Debian snapshot source entries."""
+    updated = []
+    entry = re.compile(r"^(\s*deb(?:-src)?\s+)(?:\[([^]]*)\]\s+)?(\S+)(.*)$")
+    snapshot = re.compile(r"^https://snapshot(?:-fastly)?\.debian\.org/")
+    for line in sources.splitlines():
+        match = entry.match(line)
+        if not match or not snapshot.match(match.group(3)):
+            updated.append(line)
+            continue
+        options = match.group(2)
+        if options is None:
+            options = "check-valid-until=no"
+        elif re.search(r"(?:^|\s)check-valid-until=", options, re.IGNORECASE):
+            options = re.sub(
+                r"((?:^|\s)check-valid-until=)[^\s]+",
+                r"\1no",
+                options,
+                flags=re.IGNORECASE,
+            )
+        else:
+            options += " check-valid-until=no"
+        updated.append(match.group(1) + "[" + options + "] " + match.group(3) + match.group(4))
+    return "\n".join(updated) + ("\n" if sources.endswith("\n") else "")
 
 
 def fingerprint_from_colons(output):
@@ -122,6 +149,9 @@ python3 /generate-apt-index.py --repo /repo --suite {codename} --architecture {a
     shutil.copytree(repo, client_context / "repo")
     shutil.copyfile(public_key, client_context / "getpatched-test-archive.gpg")
     client_script = client_context / "apt-client.sh"
+    pinned_sources = base64.b64decode(args.apt_sources_b64, validate=True).decode("utf-8")
+    pinned_sources = scope_immutable_snapshot_expiry(pinned_sources)
+    client_apt_sources_b64 = base64.b64encode(pinned_sources.encode("utf-8")).decode("ascii")
     client_script.write_text("""#!/bin/bash
 set -euo pipefail
 export DEBIAN_FRONTEND=noninteractive
@@ -168,7 +198,7 @@ RUN --mount=type=secret,id=runner-ca,target=/tmp/getpatched-runner-ca.crt,requir
         ca_secret_args, ca_bundle_sha256, ca_bundle_source = runner_ca_bundle()
         run(["docker", "build", "--no-cache", "--platform", container_platform, "--tag", client_image,
              "--build-arg", "BASE_IMAGE=" + args.base_image, *ca_secret_args,
-             "--build-arg", "APT_SOURCES_B64=" + args.apt_sources_b64,
+             "--build-arg", "APT_SOURCES_B64=" + client_apt_sources_b64,
              "--build-arg", "ARCHITECTURE=" + architecture, "--build-arg", "SUITE=" + codename,
          "--build-arg", "BINARY_PACKAGES=" + " ".join(binary_packages),
              "--build-arg", "EXPECTED_VERSION=" + policy["version"],
