@@ -67,3 +67,16 @@ class PinnedAptSourceTests(unittest.TestCase):
                 configure_sources = containerfile.index("> /etc/apt/sources.list")
                 self.assertLess(clear_sources, configure_sources)
 
+    def test_packaging_disables_valid_until_only_for_immutable_debian_snapshots(self):
+        containerfile = (ROOT / "build/packaging.Containerfile").read_text()
+        snapshot_detection = "grep -Eq 'https?://snapshot(-fastly)?[.]debian[.]org/' /etc/apt/sources.list"
+        self.assertIn(snapshot_detection, containerfile)
+        apt_get = containerfile.split("    apt_get() {", 1)[1].split("    apt_retry()", 1)[0]
+        snapshot_branch, live_branch = apt_get.split("      else \
+", 1)
+        self.assertIn('if [ "$snapshot_sources" = true ]; then', apt_get)
+        self.assertIn("Acquire::Check-Valid-Until=false", snapshot_branch)
+        self.assertNotIn("Acquire::Check-Valid-Until=false", live_branch)
+        self.assertIn("Acquire::AllowInsecureRepositories=false", containerfile)
+        self.assertIn("Acquire::AllowDowngradeToInsecureRepositories=false", containerfile)
+        self.assertLess(containerfile.index("> /etc/apt/sources.list"), containerfile.index("snapshot_sources=false"))

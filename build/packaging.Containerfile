@@ -17,9 +17,17 @@ RUN --mount=type=secret,id=runner-ca,target=/tmp/getpatched-runner-ca.crt,requir
     test -n "$BINARY_PACKAGES"; \
     install_packages="$BINARY_PACKAGES $BUILDER_PACKAGES"; \
     rm -f /etc/apt/sources.list.d/*; \
-    apt_get() { apt-get -o Acquire::Retries=3 -o Acquire::AllowInsecureRepositories=false -o Acquire::AllowDowngradeToInsecureRepositories=false "$@"; }; \
-    apt_retry() { attempt=0; until apt_get "$@"; do attempt=$((attempt + 1)); if [ "$attempt" -ge 3 ]; then return 1; fi; sleep $((attempt * 10)); done; }; \
     printf '%s' "$APT_SOURCES_B64" | base64 -d > /etc/apt/sources.list; \
+    snapshot_sources=false; \
+    if grep -Eq 'https?://snapshot(-fastly)?[.]debian[.]org/' /etc/apt/sources.list; then snapshot_sources=true; fi; \
+    apt_get() { \
+      if [ "$snapshot_sources" = true ]; then \
+        apt-get -o Acquire::Check-Valid-Until=false -o Acquire::Retries=3 -o Acquire::AllowInsecureRepositories=false -o Acquire::AllowDowngradeToInsecureRepositories=false "$@"; \
+      else \
+        apt-get -o Acquire::Retries=3 -o Acquire::AllowInsecureRepositories=false -o Acquire::AllowDowngradeToInsecureRepositories=false "$@"; \
+      fi; \
+    }; \
+    apt_retry() { attempt=0; until apt_get "$@"; do attempt=$((attempt + 1)); if [ "$attempt" -ge 3 ]; then return 1; fi; sleep $((attempt * 10)); done; }; \
     attempt=0; \
     until { apt_get update > /tmp/apt-update.log 2>&1 && ! grep -Eq '^(Err:|W: Failed to fetch|E: Some index files failed to download)' /tmp/apt-update.log; }; do \
       cat /tmp/apt-update.log; \
