@@ -17,6 +17,16 @@ SMOKE_SPEC.loader.exec_module(SMOKE)
 
 
 class AptRepositorySmokeEvidence(unittest.TestCase):
+    def test_apt_client_disables_base_image_sources_before_fixture_update(self):
+        script = SMOKE.apt_client_script()
+        remove_sources = script.index("find /etc/apt/sources.list.d -mindepth 1 -maxdepth 1")
+        self.assertIn("-type f -o -type l", script)
+        write_fixture_sources = script.index("> /etc/apt/sources.list")
+        update = script.index("apt-get update")
+        self.assertLess(remove_sources, write_fixture_sources)
+        self.assertLess(write_fixture_sources, update)
+        self.assertIn("file:/repo", script)
+
     def test_expired_immutable_snapshot_check_is_scoped_to_snapshot_lines(self):
         sources = (
             "deb [arch=amd64] https://snapshot-fastly.debian.org/archive/debian/20261030T000000Z/ trixie main\n"
