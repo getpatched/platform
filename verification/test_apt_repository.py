@@ -46,6 +46,13 @@ class AptRepositorySmokeEvidence(unittest.TestCase):
         line = "deb [arch=amd64 check-valid-until=yes] https://snapshot.debian.org/archive/debian/20261030T000000Z/ trixie main\n"
         self.assertEqual(SMOKE.scope_immutable_snapshot_expiry(line), line.replace("check-valid-until=yes", "check-valid-until=no"))
 
+    def test_untimestamped_or_non_archive_snapshot_urls_keep_default_expiry(self):
+        sources = (
+            "deb https://snapshot.debian.org/archive/debian/ trixie main\n"
+            "deb https://snapshot-fastly.debian.org/debian/20261030T000000Z/ trixie main\n"
+        )
+        self.assertEqual(SMOKE.scope_immutable_snapshot_expiry(sources), sources)
+
     def test_signing_fingerprint_is_parsed_from_exported_public_key(self):
         fingerprint = "0123456789ABCDEF0123456789ABCDEF01234567"
         listing = "pub:u:2048:1:ABCD:20261029::::::sc::::::\nfpr:::::::::" + fingerprint.lower() + ":\n"

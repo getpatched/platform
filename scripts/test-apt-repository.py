@@ -26,7 +26,7 @@ def scope_immutable_snapshot_expiry(sources):
     """Disable Valid-Until only for pinned Debian snapshot source entries."""
     updated = []
     entry = re.compile(r"^(\s*deb(?:-src)?\s+)(?:\[([^]]*)\]\s+)?(\S+)(.*)$")
-    snapshot = re.compile(r"^https://snapshot(?:-fastly)?\.debian\.org/")
+    snapshot = re.compile(r"^https://snapshot(?:-fastly)?\.debian\.org/archive/[^/\s]+/\d{8}T\d{6}Z/")
     for line in sources.splitlines():
         match = entry.match(line)
         if not match or not snapshot.match(match.group(3)):
