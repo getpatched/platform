@@ -11,6 +11,7 @@ from pathlib import Path
 import re
 import shlex
 import signal
+import shutil
 import subprocess
 import threading
 import tempfile
@@ -571,6 +572,100 @@ def imagemagick_morph_check_succeeded(check, phase):
             and check.get("outputFrames") == 3
             and check.get("outputInspectReturncode") == 0
             and not valgrind_invalid_access_blocks(log) and memcheck_has_no_errors(log))
+
+
+def imagemagick_cdl_check_succeeded(check, phase):
+    """Require both -cdl entry points to leak on baseline and be clean after backport."""
+    expected_version = check.get("expectedPackageVersion")
+    versions = check.get("installedPackageVersions")
+    if (check.get("cve") != "CVE-2026-116159"
+            or check.get("testId") != "imagemagick-cdl-memory-release"
+            or not isinstance(expected_version, str)
+            or not isinstance(versions, dict)
+            or set(versions) != {"imagemagick-7.q16", "libmagickcore-7.q16-10", "libmagickwand-7.q16-10"}
+            or any(value != expected_version for value in versions.values())
+            or check.get("magickBinaryOwner") != "imagemagick-7.q16"
+            or not isinstance(check.get("subchecks"), list)
+            or len(check["subchecks"]) != 2
+            or any(not isinstance(item, dict) for item in check["subchecks"])
+            or any(not isinstance(item.get("testId"), str) for item in check["subchecks"])
+            or sorted(item["testId"] for item in check["subchecks"])
+            != ["imagemagick-cdl-cli", "imagemagick-cdl-mogrify"]):
+        return False
+    for item in check["subchecks"]:
+        if item.get("timedOut") or item.get("outputInspectReturncode") != 0:
+            return False
+        command = item.get("command")
+        test_id = item["testId"]
+        expected_binary = {
+            "imagemagick-cdl-cli": "/usr/bin/magick",
+            "imagemagick-cdl-mogrify": "/usr/bin/mogrify",
+        }.get(test_id)
+        if expected_binary is None:
+            return False
+        input_fixture = "/recipe/tests/fixtures/cve-2026-116159-input.ppm"
+        cdl_fixture = "/recipe/tests/fixtures/cve-2026-116159.cdl.xml"
+        output_path = item.get("outputPath")
+        if (not isinstance(command, list) or len(command) < 9 or command[7] != expected_binary
+                or command[0] != "valgrind"
+                or command[1:4] != ["--tool=memcheck", "--error-exitcode=97", "--leak-check=full"]
+                or "--errors-for-leak-kinds=definite" not in command
+                or "--show-leak-kinds=definite" not in command
+                or len(command) <= 6 or command[6] != "--log-file=" + str(item.get("memoryLogPath", ""))
+                or not isinstance(item.get("memoryLogPath"), str)
+                or not Path(item["memoryLogPath"]).is_absolute()
+                or not isinstance(output_path, str) or not Path(output_path).is_absolute()
+                or Path(output_path).parent != Path(item["memoryLogPath"]).parent
+                or item.get("inputSourcePath") != input_fixture
+                or item.get("outputInspectCommand") != ["/usr/bin/magick", "identify", output_path]
+                or (test_id == "imagemagick-cdl-cli" and (
+                    command[8:] != [input_fixture, "-cdl", cdl_fixture, output_path]
+                    or item.get("inputPath") != input_fixture
+                    or Path(output_path).name != "cdl.miff"))
+                or (test_id == "imagemagick-cdl-mogrify" and (
+                    command[8:] != ["-cdl", cdl_fixture, output_path]
+                    or item.get("inputPath") != output_path
+                    or Path(output_path).name != "mogrify-input.ppm"))):
+            return False
+        log = item.get("memoryLog", "")
+        lost_summary = re.search(
+            r"(?m)^==\d+==[ \t]+definitely lost: ([\d,]+) bytes in ([\d,]+) blocks", log
+        )
+        leaked = (lost_summary is not None
+                  and int(lost_summary.group(1).replace(",", "")) > 0
+                  and int(lost_summary.group(2).replace(",", "")) > 0)
+        if phase == "baseline":
+            allocation_caller = {
+                "imagemagick-cdl-cli": "CLIOption",
+                "imagemagick-cdl-mogrify": "MogrifyImage",
+            }[test_id]
+            leak_blocks = valgrind_definite_leak_blocks(log)
+            if (item.get("returncode") != 97 or not leaked
+                    or not any(valgrind_log_has_frame(block, "FileToString")
+                               and valgrind_log_has_frame(block, allocation_caller)
+                               for block in leak_blocks)):
+                return False
+        elif (item.get("returncode") != 0 or leaked or not memcheck_has_no_errors(log)):
+            return False
+    return True
+
+
+def valgrind_definite_leak_blocks(log):
+    """Return individual definite-leak allocation records, excluding summary text."""
+    pattern = re.compile(
+        r"(?ms)^==\d+==[ \t]+[\d,]+ bytes in [\d,]+ blocks are definitely lost in loss record \d+ of \d+\n"
+        r"(?P<body>.*?)(?=^==\d+==[ \t]+[\d,]+ bytes in [\d,]+ blocks are definitely lost in loss record "
+        r"|^==\d+==[ \t]+(?:LEAK SUMMARY:|HEAP SUMMARY:|ERROR SUMMARY:)|\Z)"
+    )
+    return [match.group("body") for match in pattern.finditer(log)]
+
+
+def valgrind_log_has_frame(log, function):
+    """Match an exact Valgrind frame symbol, not a substring of another name."""
+    return re.search(
+        rf"(?m)^==\d+==[ \t]+(?:at|by) 0x[0-9A-Fa-f]+: {re.escape(function)}(?=[ \t(]|$)",
+        log,
+    ) is not None
 
 
 def memcheck_log_path_matches(check, command):
@@ -1805,6 +1900,46 @@ def main():
                 check["outputInspectReturncode"] = frames.returncode
             check["passed"] = imagemagick_morph_check_succeeded(check, args.phase)
             checks.append(check)
+            if "CVE-2026-116159" in policy["targetCves"]:
+                cdl_xml = fixtures / "cve-2026-116159.cdl.xml"
+                cdl_input = fixtures / "cve-2026-116159-input.ppm"
+                cdl_output = temp / "cdl.miff"
+                mogrify_input = temp / "mogrify-input.ppm"
+                shutil.copyfile(cdl_input, mogrify_input)
+                cdl_subchecks = []
+                for test_id, binary, operands, inspected in (
+                    ("imagemagick-cdl-cli", "/usr/bin/magick",
+                     [str(cdl_input), "-cdl", str(cdl_xml), str(cdl_output)], cdl_output),
+                    ("imagemagick-cdl-mogrify", "/usr/bin/mogrify",
+                     ["-cdl", str(cdl_xml), str(mogrify_input)], mogrify_input),
+                ):
+                    cdl_log = temp / (test_id + ".valgrind")
+                    command = [
+                        "valgrind", "--tool=memcheck", "--error-exitcode=97", "--leak-check=full",
+                        "--show-leak-kinds=definite", "--errors-for-leak-kinds=definite",
+                        "--log-file=" + str(cdl_log), binary, *operands,
+                    ]
+                    subcheck = execute(command, timeout=120)
+                    subcheck["testId"] = test_id
+                    subcheck["memoryLogPath"] = str(cdl_log)
+                    subcheck["memoryLog"] = cdl_log.read_text(errors="replace") if cdl_log.exists() else ""
+                    subcheck["inputSourcePath"] = str(cdl_input)
+                    subcheck["inputPath"] = str(cdl_input if test_id == "imagemagick-cdl-cli" else mogrify_input)
+                    subcheck["outputPath"] = str(inspected)
+                    inspection = execute(["/usr/bin/magick", "identify", str(inspected)])
+                    subcheck["outputInspectReturncode"] = inspection["returncode"]
+                    subcheck["outputInspectCommand"] = inspection["command"]
+                    cdl_subchecks.append(subcheck)
+                cdl_check = {
+                    "cve": "CVE-2026-116159",
+                    "testId": "imagemagick-cdl-memory-release",
+                    "expectedPackageVersion": expected_version,
+                    "installedPackageVersions": installed_versions,
+                    "magickBinaryOwner": binary_owner,
+                    "subchecks": cdl_subchecks,
+                }
+                cdl_check["passed"] = imagemagick_cdl_check_succeeded(cdl_check, args.phase)
+                checks.append(cdl_check)
         elif package == "libgit2":
             patched = args.phase == "patched"
             pack_probe = compile_libgit2_probe(
@@ -1892,6 +2027,23 @@ def main():
     args.output.write_text(json.dumps(report, indent=2) + "\n")
     print(package, args.phase, "PASS" if report["passed"] else "FAIL")
     if not report["passed"]:
+        for check in checks:
+            if check.get("testId") == "imagemagick-cdl-memory-release":
+                for subcheck in check.get("subchecks", []):
+                    log = subcheck.get("memoryLog", "")
+                    lost = re.search(r"(?m)^==\d+==\s+definitely lost:.*", log)
+                    callers = [line.strip() for line in log.splitlines()
+                               if "FileToString" in line or "CLIOption" in line
+                               or "MogrifyImage" in line]
+                    print("ImageMagick CDL diagnostic:", json.dumps({
+                        "phase": args.phase,
+                        "testId": subcheck.get("testId"),
+                        "returncode": subcheck.get("returncode"),
+                        "timedOut": subcheck.get("timedOut"),
+                        "outputInspectReturncode": subcheck.get("outputInspectReturncode"),
+                        "definitelyLost": lost.group(0) if lost else None,
+                        "allocationCallers": callers[:12],
+                    }, sort_keys=True))
         raise SystemExit(1)
 
 

@@ -39,6 +39,7 @@ SUMMARIES = {
     "CVE-2026-117610": "Expat NULL dereference when an external-entity subparser starts with empty non-final input",
     "CVE-2026-57585": "python-msgpack streaming Unpacker can crash when reused after a caught decoding error",
     "CVE-2026-119124": "ImageMagick MorphImages can write one pixel past the allocated image row",
+    "CVE-2026-116159": "ImageMagick retains memory allocated for a color decision list after applying -cdl",
 }
 SEVERITIES = {
     "CVE-2026-16517": "LOW",
@@ -51,8 +52,9 @@ SEVERITIES = {
 }
 # Refresh the modified timestamp when an existing advisory record changes.
 MODIFIED = {
+    "CVE-2026-116159": "2026-11-07T11:37:00Z",
     "CVE-2026-16517": "2026-11-04T00:00:00Z",
-    "CVE-2026-119124": "2026-11-04T08:00:00Z",
+    "CVE-2026-119124": "2026-11-07T11:37:00Z",
     "CVE-2026-69186": "2026-11-03T00:00:00Z",
     "CVE-2026-86141": "2026-11-03T18:12:28Z",
     "CVE-2026-12912": "2026-11-03T08:35:10Z",

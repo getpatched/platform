@@ -19,6 +19,7 @@ from package_recipe import load_json, recipe_path
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "verification"))
 from regression import (cares_record_count_regression_succeeded, cares_regression_succeeded,
+                        imagemagick_cdl_check_succeeded,
                         msgpack_unpacker_reuse_regression_succeeded,
                         consumer_version_succeeded, libpng_overwrite_reproduced, libpng_stride_read_reproduced,
                         libpng_patched_checks_succeeded, poppler_revision6_password_overflow_reproduced, poppler_revision6_probe_command, poppler_uaf_reproduced,
@@ -76,18 +77,21 @@ def validate_followup_assessment_checks(target, checks, phase):
 
 
 def imagemagick_candidate_regression_succeeded(checks, target_cves, phase, expected_version):
-    cve = "CVE-2026-119124"
-    if target_cves != [cve]:
+    if set(target_cves) != {"CVE-2026-119124", "CVE-2026-116159"}:
         return False
-    matches = [check for check in checks if check.get("cve") == cve]
-    return (
-        len(matches) == 1
-        and matches[0].get("passed") is True
-        and matches[0].get("expectedPackageVersion") == expected_version
-        and all(version == expected_version
-                for version in matches[0].get("installedPackageVersions", {}).values())
-        and imagemagick_morph_check_succeeded(matches[0], phase)
-    )
+    for cve, test_id, classifier in (
+        ("CVE-2026-119124", "imagemagick-morph-channel-bounds", imagemagick_morph_check_succeeded),
+        ("CVE-2026-116159", "imagemagick-cdl-memory-release", imagemagick_cdl_check_succeeded),
+    ):
+        matches = [check for check in checks if check.get("cve") == cve]
+        if (len(matches) != 1 or matches[0].get("testId") != test_id
+                or matches[0].get("passed") is not True
+                or matches[0].get("expectedPackageVersion") != expected_version
+                or not all(version == expected_version
+                           for version in matches[0].get("installedPackageVersions", {}).values())
+                or not classifier(matches[0], phase)):
+            return False
+    return True
 
 
 def tiff_baseline_stack_signature(recipe_directory, target_id):

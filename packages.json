@@ -998,16 +998,34 @@
           "baselineVersion": "8:7.1.1.43+dfsg1-1+deb13u13",
           "sourcePocket": "security",
           "packageEcosystem": "Debian:13",
-          "packageVersion": "8:7.1.1.43+dfsg1-1+deb13u13+getpatched1",
-          "releaseSerial": 1,
+          "packageVersion": "8:7.1.1.43+dfsg1-1+deb13u13+getpatched2",
+          "releaseSerial": 2,
           "binaryPackages": ["imagemagick-7.q16", "libmagickcore-7.q16-10", "libmagickwand-7.q16-10"],
-          "advisoryPackages": ["libmagickcore-7.q16-10"],
+          "advisoryPackages": ["libmagickcore-7.q16-10", "libmagickwand-7.q16-10"],
           "builderPackages": [],
           "targetCve": "CVE-2026-119124",
-          "targetCves": ["CVE-2026-119124"],
+          "targetCves": ["CVE-2026-116159", "CVE-2026-119124"],
           "advisory": "https://security-tracker.debian.org/tracker/CVE-2026-119124",
-          "advisories": {"CVE-2026-119124": "https://security-tracker.debian.org/tracker/CVE-2026-119124"},
+          "advisories": {
+            "CVE-2026-116159": "https://security-tracker.debian.org/tracker/CVE-2026-116159",
+            "CVE-2026-119124": "https://security-tracker.debian.org/tracker/CVE-2026-119124"
+          },
+          "advisoryPackagesByCve": {
+            "CVE-2026-116159": ["libmagickwand-7.q16-10"],
+            "CVE-2026-119124": ["libmagickcore-7.q16-10"]
+          },
           "candidateStatus": "development-verified-production-release-pending",
+          "verifiedReleases": [
+            {
+              "version": "8:7.1.1.43+dfsg1-1+deb13u13+getpatched1",
+              "releaseSerial": 1,
+              "status": "development-verified-production-release-pending",
+              "targetCves": ["CVE-2026-119124"],
+              "advisoryPackagesByCve": {
+                "CVE-2026-119124": ["libmagickcore-7.q16-10"]
+              }
+            }
+          ],
           "releaseAccess": {
             "policy": "public-after-checks", "sponsorDelayHours": 0,
             "sponsorEligibility": null, "earlyBinaryLicenseId": null,

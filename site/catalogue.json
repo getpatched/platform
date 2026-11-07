@@ -1637,11 +1637,20 @@
     "targets": {
       "debian-trixie-amd64": {
         "baseVersion": "8:7.1.1.43+dfsg1-1+deb13u13",
-        "version": "8:7.1.1.43+dfsg1-1+deb13u13+getpatched1",
+        "version": "8:7.1.1.43+dfsg1-1+deb13u13+getpatched2",
         "cves": [
+          "CVE-2026-116159",
           "CVE-2026-119124"
         ],
         "vulnerabilities": [
+          {
+            "id": "CVE-2026-116159",
+            "slug": "cve-2026-116159",
+            "summary": "ImageMagick retains memory allocated for a color decision list after applying -cdl.",
+            "advisoryUrl": "https://security-tracker.debian.org/tracker/CVE-2026-116159",
+            "patchSlugs": ["cve-2026-116159-trixie"],
+            "patched": true
+          },
           {
             "id": "CVE-2026-119124",
             "slug": "cve-2026-119124",
@@ -1654,6 +1663,28 @@
           }
         ],
         "patches": [
+          {
+            "id": "cve-2026-116159-trixie",
+            "slug": "cve-2026-116159-trixie",
+            "kind": "security",
+            "title": "Release color decision list buffers after use",
+            "description": "Frees the file contents allocated for -cdl after both the modern magick CLI and legacy mogrify processing paths apply the color correction list.",
+            "sha256": "44647a7079b1caf909fc4dc49ec49d499d49978c5a601a8d70b64c3a25c96ee4",
+            "fileUrl": "https://github.com/getpatched/packaging-imagemagick/blob/getpatched/debian-trixie/patches/CVE-2026-116159.patch",
+            "cves": ["CVE-2026-116159"],
+            "upstream": {
+              "repository": "https://github.com/ImageMagick/ImageMagick",
+              "commit": "68168e6e5617e4cc478452777586e408f542362b",
+              "url": "https://github.com/ImageMagick/ImageMagick/commit/68168e6e5617e4cc478452777586e408f542362b"
+            },
+            "tests": [
+              {
+                "id": "imagemagick-cdl-memory-release",
+                "baselineExpectation": "On exact installed Debian Trixie baseline packages, Valgrind reports definite lost FileToString allocations through CLIOption (-cdl) and MogrifyImage (-cdl) paths.",
+                "patchedExpectation": "The same CLI and mogrify commands complete and produce valid output with zero definite lost blocks and zero Memcheck errors."
+              }
+            ]
+          },
           {
             "id": "cve-2026-119124-trixie",
             "slug": "cve-2026-119124-trixie",
@@ -1690,7 +1721,7 @@
         ],
         "earlyRedistributionAllowed": false,
         "status": "development-verified-production-release-pending",
-        "verification": "https://github.com/getpatched/platform/actions/runs/41793654256",
+        "verification": "https://github.com/getpatched/platform/actions/runs/42366230048",
         "sourceUrl": "https://github.com/getpatched/packaging-imagemagick/tree/getpatched/debian-trixie",
         "patchUrl": "https://github.com/getpatched/packaging-imagemagick/blob/getpatched/debian-trixie/patches/CVE-2026-119124.patch",
         "testsUrl": "https://github.com/getpatched/packaging-imagemagick/tree/getpatched/debian-trixie/tests",

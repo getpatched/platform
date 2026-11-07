@@ -17,6 +17,52 @@ SMOKE_SPEC.loader.exec_module(SMOKE)
 
 
 class AptRepositorySmokeEvidence(unittest.TestCase):
+    def test_apt_client_disables_base_image_sources_before_fixture_update(self):
+        script = SMOKE.apt_client_script()
+        remove_sources = script.index("find /etc/apt/sources.list.d -mindepth 1 -maxdepth 1")
+        self.assertIn("-type f -o -type l", script)
+        write_fixture_sources = script.index("> /etc/apt/sources.list")
+        update = script.index("apt-get update")
+        self.assertLess(remove_sources, write_fixture_sources)
+        self.assertLess(write_fixture_sources, update)
+        self.assertIn("file:/repo", script)
+
+    def test_expired_immutable_snapshot_check_is_scoped_to_snapshot_lines(self):
+        sources = (
+            "deb [arch=amd64] https://snapshot-fastly.debian.org/archive/debian/20261030T000000Z/ trixie main\n"
+            "deb-src [arch=amd64] https://snapshot.debian.org/archive/debian-security/20261030T000000Z/ trixie-security main\n"
+            "deb [arch=amd64] https://packages.example.invalid/debian stable main\n"
+            "deb [arch=amd64 signed-by=/usr/share/keyrings/getpatched-test-archive.gpg] file:/repo trixie main\n"
+            "deb-src [arch=amd64 signed-by=/usr/share/keyrings/getpatched-test-archive.gpg] file:/repo trixie main\n"
+        )
+        self.assertEqual(
+            SMOKE.scope_immutable_snapshot_expiry(sources),
+            "deb [arch=amd64 check-valid-until=no] https://snapshot-fastly.debian.org/archive/debian/20261030T000000Z/ trixie main\n"
+            "deb-src [arch=amd64 check-valid-until=no] https://snapshot.debian.org/archive/debian-security/20261030T000000Z/ trixie-security main\n"
+            "deb [arch=amd64] https://packages.example.invalid/debian stable main\n"
+            "deb [arch=amd64 signed-by=/usr/share/keyrings/getpatched-test-archive.gpg] file:/repo trixie main\n"
+            "deb-src [arch=amd64 signed-by=/usr/share/keyrings/getpatched-test-archive.gpg] file:/repo trixie main\n",
+        )
+
+    def test_snapshot_without_existing_options_gets_a_source_scoped_option(self):
+        self.assertEqual(
+            SMOKE.scope_immutable_snapshot_expiry(
+                "deb https://snapshot.debian.org/archive/debian/20261030T000000Z/ trixie main\n"
+            ),
+            "deb [check-valid-until=no] https://snapshot.debian.org/archive/debian/20261030T000000Z/ trixie main\n",
+        )
+
+    def test_existing_snapshot_expiry_option_is_not_duplicated(self):
+        line = "deb [arch=amd64 check-valid-until=yes] https://snapshot.debian.org/archive/debian/20261030T000000Z/ trixie main\n"
+        self.assertEqual(SMOKE.scope_immutable_snapshot_expiry(line), line.replace("check-valid-until=yes", "check-valid-until=no"))
+
+    def test_untimestamped_or_non_archive_snapshot_urls_keep_default_expiry(self):
+        sources = (
+            "deb https://snapshot.debian.org/archive/debian/ trixie main\n"
+            "deb https://snapshot-fastly.debian.org/debian/20261030T000000Z/ trixie main\n"
+        )
+        self.assertEqual(SMOKE.scope_immutable_snapshot_expiry(sources), sources)
+
     def test_signing_fingerprint_is_parsed_from_exported_public_key(self):
         fingerprint = "0123456789ABCDEF0123456789ABCDEF01234567"
         listing = "pub:u:2048:1:ABCD:20261029::::::sc::::::\nfpr:::::::::" + fingerprint.lower() + ":\n"

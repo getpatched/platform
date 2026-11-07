@@ -226,9 +226,9 @@ class GetPatchedScannerContract(unittest.TestCase):
         self.assertFalse(SCANNER_MODULE.expat_candidate_checks_succeeded(
             patched, [patched, wrong_version], "patched", "2.5.0"))
 
-    def test_imagemagick_candidate_requires_exact_bounds_regression_and_version(self):
+    def test_imagemagick_candidate_requires_both_exact_regressions_and_version(self):
         baseline_version = "8:7.1.1.43+dfsg1-1+deb13u13"
-        patched_version = baseline_version + "+getpatched1"
+        patched_version = baseline_version + "+getpatched2"
         command = [
             "valgrind", "--tool=memcheck", "--error-exitcode=97", "--leak-check=no",
             "--track-origins=yes", "--log-file=/tmp/CVE-2026-119124.valgrind",
@@ -253,14 +253,56 @@ class GetPatchedScannerContract(unittest.TestCase):
             "magickBinaryOwner": "imagemagick-7.q16",
             "magickBinaryPath": "/usr/bin/magick-im7.q16",
         }
+        cdl_clean = "==1==    definitely lost: 0 bytes in 0 blocks\n==1== ERROR SUMMARY: 0 errors from 0 contexts\n"
+
+        def cdl_check(version, phase):
+            fixture = "/recipe/tests/fixtures/cve-2026-116159-input.ppm"
+            cdl = "/recipe/tests/fixtures/cve-2026-116159.cdl.xml"
+            subchecks = []
+            for test_id, binary in (("imagemagick-cdl-cli", "/usr/bin/magick"),
+                                    ("imagemagick-cdl-mogrify", "/usr/bin/mogrify")):
+                log_path = "/tmp/" + test_id + ".valgrind"
+                output = "/tmp/cdl.miff" if test_id == "imagemagick-cdl-cli" else "/tmp/mogrify-input.ppm"
+                caller = "CLIOption" if test_id == "imagemagick-cdl-cli" else "MogrifyImage"
+                cdl_leak = (
+                    "==1== 4,464 bytes in 1 blocks are definitely lost in loss record 1 of 1\n"
+                    "==1==    at 0x10: FileToString (blob.c:1)\n"
+                    f"==1==    by 0x20: {caller} (operation.c:1)\n"
+                    "==1== \n==1== LEAK SUMMARY:\n"
+                    "==1==    definitely lost: 4,464 bytes in 1 blocks\n"
+                    "==1== ERROR SUMMARY: 1 errors from 1 contexts\n"
+                )
+                operands = ([fixture, "-cdl", cdl, output]
+                            if test_id == "imagemagick-cdl-cli" else ["-cdl", cdl, output])
+                subchecks.append({
+                    "testId": test_id,
+                    "command": ["valgrind", "--tool=memcheck", "--error-exitcode=97", "--leak-check=full",
+                                "--show-leak-kinds=definite", "--errors-for-leak-kinds=definite",
+                                "--log-file=" + log_path, binary, *operands],
+                    "returncode": 97 if phase == "baseline" else 0,
+                    "timedOut": False, "memoryLog": cdl_leak if phase == "baseline" else cdl_clean,
+                    "memoryLogPath": log_path, "inputSourcePath": fixture,
+                    "inputPath": fixture if test_id == "imagemagick-cdl-cli" else output,
+                    "outputPath": output, "outputInspectReturncode": 0,
+                    "outputInspectCommand": ["/usr/bin/magick", "identify", output],
+                })
+            return {
+                "cve": "CVE-2026-116159", "testId": "imagemagick-cdl-memory-release",
+                "passed": True, "expectedPackageVersion": version,
+                "installedPackageVersions": {name: version for name in versions},
+                "magickBinaryOwner": "imagemagick-7.q16",
+                "subchecks": subchecks,
+            }
+        baseline_cdl = cdl_check(baseline_version, "baseline")
+        target_cves = ["CVE-2026-116159", "CVE-2026-119124"]
         self.assertTrue(SCANNER_MODULE.imagemagick_candidate_regression_succeeded(
-            [baseline], ["CVE-2026-119124"], "baseline", baseline_version
+            [baseline, baseline_cdl], target_cves, "baseline", baseline_version
         ))
         self.assertFalse(SCANNER_MODULE.imagemagick_candidate_regression_succeeded(
-            [baseline], ["CVE-2026-119124"], "baseline", "wrong-version"
+            [baseline, baseline_cdl], target_cves, "baseline", "wrong-version"
         ))
         self.assertFalse(SCANNER_MODULE.imagemagick_candidate_regression_succeeded(
-            [baseline, baseline], ["CVE-2026-119124"], "baseline", baseline_version
+            [baseline, baseline, baseline_cdl], target_cves, "baseline", baseline_version
         ))
         patched = {
             **baseline,
@@ -271,14 +313,15 @@ class GetPatchedScannerContract(unittest.TestCase):
             "outputFrames": 3,
             "outputInspectReturncode": 0,
         }
+        patched_cdl = cdl_check(patched_version, "patched")
         self.assertTrue(SCANNER_MODULE.imagemagick_candidate_regression_succeeded(
-            [patched], ["CVE-2026-119124"], "patched", patched_version
+            [patched, patched_cdl], target_cves, "patched", patched_version
         ))
         self.assertFalse(SCANNER_MODULE.imagemagick_candidate_regression_succeeded(
-            [{**patched, "outputFrames": 2}], ["CVE-2026-119124"], "patched", patched_version
+            [{**patched, "outputFrames": 2}, patched_cdl], target_cves, "patched", patched_version
         ))
         self.assertFalse(SCANNER_MODULE.imagemagick_candidate_regression_succeeded(
-            [patched], ["CVE-2026-119123"], "patched", patched_version
+            [patched, patched_cdl], ["CVE-2026-119123"], "patched", patched_version
         ))
 
     def test_poppler_revision6_candidate_requires_clean_regression_and_consumer(self):
@@ -1047,7 +1090,7 @@ raise SystemExit(3)
             "CVE-2025-52885", "CVE-2026-69184", "CVE-2026-111497",
             "CVE-2026-117610", "CVE-2026-69186",
             "CVE-2026-86144", "CVE-2026-76781", "CVE-2026-86141", "CVE-2026-16517",
-            "CVE-2026-119124",
+            "CVE-2026-116159", "CVE-2026-119124",
 
 "CVE-2025-52885", "CVE-2026-107705", "CVE-2026-69184", "CVE-2026-111497",
             "CVE-2025-61144", "CVE-2026-52490", "CVE-2026-12912", "CVE-2026-18495",

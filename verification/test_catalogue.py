@@ -293,6 +293,7 @@ class PublicCatalogueContract(unittest.TestCase):
         expected_catalogue = {
             source for source, record in platform["packages"].items()
             if any(target.get("candidateStatus", "").startswith("development-verified")
+                   or target.get("verifiedReleases")
                    for target in record["targets"].values())
         }
         self.assertEqual(set(entries), expected_catalogue)
@@ -341,35 +342,46 @@ class PublicCatalogueContract(unittest.TestCase):
                          {"cve-2026-16517-trixie"})
         imagemagick = entries["imagemagick"]["targets"]["debian-trixie-amd64"]
         imagemagick_policy = package_target_policy(platform, "imagemagick", "debian-trixie-amd64")
-        self.assertEqual(imagemagick_policy["candidateStatus"],
-                         "development-verified-production-release-pending")
+        self.assertEqual(imagemagick_policy["candidateStatus"], "development-verified-production-release-pending")
         self.assertEqual(imagemagick["baseVersion"], imagemagick_policy["baselineVersion"])
         self.assertEqual(imagemagick["version"], imagemagick_policy["packageVersion"])
-        self.assertEqual(imagemagick["cves"], ["CVE-2026-119124"])
+        self.assertEqual(imagemagick["cves"], imagemagick_policy["targetCves"])
         self.assertEqual(imagemagick["status"], imagemagick_policy["candidateStatus"])
         self.assertEqual(imagemagick["access"], "public")
         self.assertEqual(imagemagick["delayHours"], 0)
         self.assertEqual(imagemagick["verification"],
-                         "https://github.com/getpatched/platform/actions/runs/41793654256")
+                         "https://github.com/getpatched/platform/actions/runs/42366230048")
         self.assertEqual(imagemagick["releaseStatus"], "No production release")
         self.assertEqual({item["slug"] for item in imagemagick["vulnerabilities"]},
-                         {"cve-2026-119124"})
+                         {"cve-2026-116159", "cve-2026-119124"})
         self.assertEqual({item["slug"] for item in imagemagick["patches"]},
-                         {"cve-2026-119124-trixie"})
-        imagemagick_patch = imagemagick["patches"][0]
-        self.assertEqual(imagemagick_patch["sha256"],
-                         "088d417d715c83a15e4bd3ba7fdd41fc2a1d22e551b7b48c4d6cb02f962b8c4a")
-        self.assertEqual(imagemagick_patch["upstream"]["commit"],
-                         "270f70f609f659a01aaa2a8ed7bd887f79722d45")
-        advisory = next(item for item in feed["vulns"] if item["id"] == "CVE-2026-119124")
-        self.assertEqual(advisory["database_specific"]["verification_status"],
-                         imagemagick_policy["candidateStatus"])
-        self.assertEqual({item["package"]["name"] for item in advisory["affected"]},
-                         {"libmagickcore-7.q16-10"})
-        self.assertEqual(advisory["affected"][0]["versions"],
-                         [imagemagick_policy["baselineVersion"]])
-        self.assertEqual(advisory["affected"][0]["database_specific"]["candidate_version"],
-                         imagemagick_policy["packageVersion"])
+                         {"cve-2026-116159-trixie", "cve-2026-119124-trixie"})
+        expected_magick_patches = {
+            "cve-2026-116159-trixie": (
+                "44647a7079b1caf909fc4dc49ec49d499d49978c5a601a8d70b64c3a25c96ee4",
+                "68168e6e5617e4cc478452777586e408f542362b",
+            ),
+            "cve-2026-119124-trixie": (
+                "088d417d715c83a15e4bd3ba7fdd41fc2a1d22e551b7b48c4d6cb02f962b8c4a",
+                "270f70f609f659a01aaa2a8ed7bd887f79722d45",
+            ),
+        }
+        for patch in imagemagick["patches"]:
+            self.assertEqual((patch["sha256"], patch["upstream"]["commit"]),
+                             expected_magick_patches[patch["slug"]])
+        for cve, binary in {
+            "CVE-2026-116159": "libmagickwand-7.q16-10",
+            "CVE-2026-119124": "libmagickcore-7.q16-10",
+        }.items():
+            advisory = next(item for item in feed["vulns"] if item["id"] == cve)
+            self.assertEqual(advisory["database_specific"]["verification_status"],
+                             imagemagick_policy["candidateStatus"])
+            affected = [item for item in advisory["affected"]
+                        if item["ecosystem_specific"].get("target_id") == "debian-trixie-amd64"]
+            self.assertEqual({item["package"]["name"] for item in affected}, {binary})
+            self.assertEqual(affected[0]["versions"], [imagemagick_policy["baselineVersion"]])
+            self.assertEqual(affected[0]["database_specific"]["candidate_version"],
+                             imagemagick_policy["packageVersion"])
         cares_trixie = entries["c-ares"]["targets"]["debian-trixie-amd64"]
         self.assertEqual(cares_trixie["version"], "1.34.5-1+deb13u1+getpatched2")
         self.assertEqual(cares_trixie["cves"], ["CVE-2026-69184", "CVE-2026-69186"])
@@ -455,7 +467,7 @@ class PublicCatalogueContract(unittest.TestCase):
                     ("expat", "debian-trixie-amd64"): "41546270294",
                     ("tiff", "debian-bookworm-amd64"): "41604393283",
                     ("tiff", "debian-trixie-amd64"): "41554198692",
-                    ("imagemagick", "debian-trixie-amd64"): "41793654256",
+                    ("imagemagick", "debian-trixie-amd64"): "42366230048",
                 }[(source, target_id)]
                 self.assertEqual(entry["verification"], f"https://github.com/getpatched/platform/actions/runs/{expected_run}")
                 self.assertEqual(

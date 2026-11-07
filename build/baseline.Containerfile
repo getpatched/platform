@@ -17,6 +17,7 @@ RUN --mount=type=secret,id=runner-ca,target=/tmp/getpatched-runner-ca.crt,requir
     test -n "$BINARY_PACKAGES"; \
     rm -f /etc/apt/sources.list.d/*; \
     printf '%s' "$APT_SOURCES_B64" | base64 -d > /etc/apt/sources.list; \
+    sed -i -E '/^deb(-src)? \[arch=[^]]+\] https?:\/\/snapshot(-fastly)?[.]debian[.]org\/.*\/[0-9]{8}T[0-9]{6}Z\// s/\]/ check-valid-until=no]/' /etc/apt/sources.list; \
     apt-get update; \
     apt-get -y dist-upgrade; \
     apt-get install -y --no-install-recommends build-essential python3 valgrind pkg-config; \
