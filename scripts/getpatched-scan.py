@@ -21,7 +21,7 @@ sys.path.insert(0, str(ROOT / "verification"))
 from regression import (cares_record_count_regression_succeeded, cares_regression_succeeded,
                         imagemagick_cdl_check_succeeded,
                         msgpack_unpacker_reuse_regression_succeeded,
-                        consumer_version_succeeded, libpng_overwrite_reproduced, libpng_stride_read_reproduced,
+                        consumer_version_succeeded, libpng_baseline_checks_succeeded,
                         libpng_patched_checks_succeeded, poppler_revision6_password_overflow_reproduced, poppler_revision6_probe_command, poppler_uaf_reproduced,
                         expat_consumer_succeeded, expat_regression_succeeded,
                         libxml2_baseline_check_succeeded, libxml2_check_cardinality_valid,
@@ -492,12 +492,11 @@ def regression_verified_candidate(directory, scan_images_path, target_id, recipe
         elif source == "libpng1.6":
             target_checks = [cve_checks[cve] for cve in target["targetCves"]]
             if phase == "baseline":
-                if (not libpng_overwrite_reproduced(cve_checks.get("CVE-2025-65018", {}))
-                        or not libpng_stride_read_reproduced(cve_checks.get("CVE-2026-22801", {}))):
-                    raise ValueError("libpng baseline evidence does not reproduce both configured memory-safety issues")
-            else:
-                if not libpng_patched_checks_succeeded(checks):
-                    raise ValueError("libpng patched evidence lacks clean CVE checks, padded-stride follow-up, or Adam7 pixel comparison")
+                if not libpng_baseline_checks_succeeded(target["targetCves"], checks):
+                    raise ValueError("libpng baseline evidence does not reproduce every configured target CVE")
+            elif not libpng_patched_checks_succeeded(
+                    checks, target["targetCves"], target.get("followUpAssessments", {}).keys()):
+                raise ValueError("libpng patched evidence lacks clean configured CVE and follow-up checks")
         elif source == "poppler":
             for cve in target["targetCves"]:
                 check = cve_checks[cve]

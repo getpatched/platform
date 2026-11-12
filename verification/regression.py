@@ -48,11 +48,19 @@ def execute(command, timeout=30, env=None):
 def validate_recipe_regression_fixture_hashes(recipe, manifest):
     """Verify regression inputs declared by the packaging recipe before use."""
     root = Path(recipe).resolve()
+
+    def is_within_root(path):
+        try:
+            path.relative_to(root)
+            return True
+        except ValueError:
+            return False
+
     metadata_name = manifest.get("patchMetadata")
     if not isinstance(metadata_name, str):
         raise RuntimeError("Recipe patch metadata path is missing")
     metadata_path = (root / metadata_name).resolve()
-    if not metadata_path.is_relative_to(root) or not metadata_path.is_file():
+    if not is_within_root(metadata_path) or not metadata_path.is_file():
         raise RuntimeError("Recipe patch metadata path is invalid")
     metadata = json.loads(metadata_path.read_text())
     patches = metadata.get("patches")
@@ -77,7 +85,7 @@ def validate_recipe_regression_fixture_hashes(recipe, manifest):
                     or not re.fullmatch(r"[0-9a-f]{64}", str(declared.get("sha256", "")))):
                 raise RuntimeError("Recipe regression files must declare a path and SHA-256")
             fixture = (root / declared["path"]).resolve()
-            if (not fixture.is_relative_to(root) or not fixture.is_file()
+            if (not is_within_root(fixture) or not fixture.is_file()
                     or hashlib.sha256(fixture.read_bytes()).hexdigest() != declared["sha256"]):
                 raise RuntimeError("Recipe regression fixture hash does not match patch metadata")
 
@@ -947,19 +955,56 @@ def libpng_followup_read_is_clean(check):
             and memcheck_has_no_errors(log))
 
 
-def libpng_patched_checks_succeeded(checks):
+def libpng_baseline_checks_succeeded(target_cves, checks):
+    expected = {
+        "CVE-2025-65018": libpng_overwrite_reproduced,
+        "CVE-2026-22801": libpng_stride_read_reproduced,
+    }
+    if (not isinstance(target_cves, list) or not target_cves
+            or any(not isinstance(cve, str) for cve in target_cves)
+            or len(set(target_cves)) != len(target_cves)
+            or not set(target_cves).issubset(expected)):
+        return False
+    by_cve = {}
+    if isinstance(checks, dict):
+        for cve, check in checks.items():
+            if not isinstance(check, dict) or check.get("cve") != cve:
+                return False
+            by_cve.setdefault(cve, []).append(check)
+    elif isinstance(checks, list):
+        if any(not isinstance(check, dict) for check in checks):
+            return False
+        for check in checks:
+            cve = check.get("cve")
+            if isinstance(cve, str):
+                by_cve.setdefault(cve, []).append(check)
+    else:
+        return False
+    for cve in target_cves:
+        matches = by_cve.get(cve, [])
+        if len(matches) != 1 or not expected[cve](matches[0]):
+            return False
+    return True
+
+
+def libpng_patched_checks_succeeded(checks, required_cves=None, followup_cves=()):
     expected = {
         "CVE-2025-65018": ("read-interlaced-rgba.c", "read-interlaced-rgba", [LIBPNG_CVE_2025_65018_FIXTURE]),
         "CVE-2026-22695": ("CVE-2026-22695-padded-stride-follow-up", "read-padded-stride", ["adam7.png"]),
         "CVE-2026-22801": ("write-negative-stride.c", "write-negative-stride", []),
     }
+    required = set(expected) if required_cves is None else set(required_cves)
+    required.update(followup_cves)
+    if not required or not required.issubset(expected):
+        return False
     by_cve = {}
-    for cve in expected:
+    for cve in required:
         matches = [check for check in checks if check.get("cve") == cve]
         if len(matches) != 1:
             return False
         by_cve[cve] = matches[0]
-    for cve, (test_id, executable, arguments) in expected.items():
+    for cve in required:
+        test_id, executable, arguments = expected[cve]
         check = by_cve[cve]
         if (check.get("passed") is not True
                 or not libpng_probe_command_matches(check, test_id, executable, arguments)
@@ -969,6 +1014,8 @@ def libpng_patched_checks_succeeded(checks):
             return False
         if cve == "CVE-2025-65018" and check.get("stdout", "").strip() != "result=within-output-buffer":
             return False
+    if "CVE-2025-65018" not in required:
+        return True
     comparisons = [check for check in checks if check.get("testId") == "adam7-pixel-equality"]
     if len(comparisons) != 1:
         return False
@@ -1729,32 +1776,49 @@ def main():
         elif package == "libpng1.6":
             cflags = []
             libs = ["-lpng16", "-lz"]
-            cve_fixture_source = fixtures / LIBPNG_CVE_2025_65018_FIXTURE
-            if not cve_fixture_source.is_file():
-                raise RuntimeError("the CVE-2025-65018 RGB16 Adam7 fixture is missing")
-            cve_fixture_data = cve_fixture_source.read_bytes()
-            if hashlib.sha256(cve_fixture_data).hexdigest() != LIBPNG_CVE_2025_65018_FIXTURE_SHA256:
-                raise RuntimeError("the CVE-2025-65018 RGB16 Adam7 fixture hash does not match metadata")
-            cve_fixture = temp / LIBPNG_CVE_2025_65018_FIXTURE
-            cve_fixture.write_bytes(cve_fixture_data)
+            target_cves = policy.get("targetCves")
+            followup_cves = set(policy.get("followUpAssessments", {}))
+            supported_cves = {"CVE-2025-65018", "CVE-2026-22801"}
+            supported_followups = {"CVE-2026-22695"}
+            if (not isinstance(target_cves, list) or not target_cves
+                    or not set(target_cves).issubset(supported_cves)
+                    or not followup_cves.issubset(supported_followups)):
+                raise RuntimeError("libpng target policy names an unsupported CVE or follow-up")
+            needs_adam7 = "CVE-2025-65018" in target_cves or bool(followup_cves)
+            cve_fixture = None
+            if "CVE-2025-65018" in target_cves:
+                cve_fixture_source = fixtures / LIBPNG_CVE_2025_65018_FIXTURE
+                if not cve_fixture_source.is_file():
+                    raise RuntimeError("the CVE-2025-65018 RGB16 Adam7 fixture is missing")
+                cve_fixture_data = cve_fixture_source.read_bytes()
+                if hashlib.sha256(cve_fixture_data).hexdigest() != LIBPNG_CVE_2025_65018_FIXTURE_SHA256:
+                    raise RuntimeError("the CVE-2025-65018 RGB16 Adam7 fixture hash does not match metadata")
+                cve_fixture = temp / LIBPNG_CVE_2025_65018_FIXTURE
+                cve_fixture.write_bytes(cve_fixture_data)
 
             def compile_probe(name):
                 binary = temp / Path(name).stem
+                source = fixtures / name
+                if not source.is_file():
+                    source = fixtures.parent / name
                 subprocess.run(["cc", "-std=c99", "-Wall", "-Wextra", "-Werror",
-                                *cflags, str(fixtures.parent / name), *libs, "-o", str(binary)],
+                                *cflags, str(source), *libs, "-o", str(binary)],
                                check=True, timeout=30)
                 return binary
 
             adam7 = temp / "adam7.png"
             flat = temp / "flat.png"
-            generator = fixtures.parent / "generate-adam7-rgb16.py"
-            subprocess.run(["python3", str(generator), str(adam7)], check=True, timeout=10)
-            subprocess.run(["python3", str(generator), str(flat), "--flat"], check=True, timeout=10)
+            if needs_adam7:
+                generator = fixtures.parent / "generate-adam7-rgb16.py"
+                subprocess.run(["python3", str(generator), str(adam7)], check=True, timeout=10)
+                subprocess.run(["python3", str(generator), str(flat), "--flat"], check=True, timeout=10)
             if args.phase == "baseline":
-                for cve, source in (
-                    ("CVE-2025-65018", "read-interlaced-rgba.c"),
-                    ("CVE-2026-22801", "write-negative-stride.c"),
-                ):
+                baseline_probes = {
+                    "CVE-2025-65018": "read-interlaced-rgba.c",
+                    "CVE-2026-22801": "write-negative-stride.c",
+                }
+                for cve in target_cves:
+                    source = baseline_probes[cve]
                     binary = compile_probe(source)
                     log = temp / (cve + ".valgrind")
                     check = execute(["valgrind", "--tool=memcheck", "--error-exitcode=97",
@@ -1766,22 +1830,24 @@ def main():
                     check["passed"] = (libpng_overwrite_reproduced(check) if cve == "CVE-2025-65018"
                                        else libpng_stride_read_reproduced(check))
                     checks.append(check)
-                binary = compile_probe("read-padded-stride.c")
-                log = temp / "CVE-2026-22695.valgrind"
-                check = execute(["valgrind", "--tool=memcheck", "--error-exitcode=97",
-                                 "--leak-check=no", "--read-var-info=yes", "--log-file=" + str(log),
-                                 str(binary), str(adam7)])
-                check["memoryLog"] = log.read_text() if log.exists() else ""
-                check["cve"] = "CVE-2026-22695"
-                check["testId"] = "CVE-2026-22695-padded-stride-follow-up"
-                check["passed"] = libpng_followup_read_is_clean(check)
-                checks.append(check)
+                if "CVE-2026-22695" in followup_cves:
+                    binary = compile_probe("read-padded-stride.c")
+                    log = temp / "CVE-2026-22695.valgrind"
+                    check = execute(["valgrind", "--tool=memcheck", "--error-exitcode=97",
+                                     "--leak-check=no", "--read-var-info=yes", "--log-file=" + str(log),
+                                     str(binary), str(adam7)])
+                    check["memoryLog"] = log.read_text() if log.exists() else ""
+                    check["cve"] = "CVE-2026-22695"
+                    check["testId"] = "CVE-2026-22695-padded-stride-follow-up"
+                    check["passed"] = libpng_followup_read_is_clean(check)
+                    checks.append(check)
             else:
-                for cve, name, args_for_probe in (
-                    ("CVE-2025-65018", "read-interlaced-rgba.c", [str(cve_fixture)]),
-                    ("CVE-2026-22695", "read-padded-stride.c", [str(adam7)]),
-                    ("CVE-2026-22801", "write-negative-stride.c", []),
-                ):
+                patched_probes = {
+                    "CVE-2025-65018": ("read-interlaced-rgba.c", [str(cve_fixture)]),
+                    "CVE-2026-22801": ("write-negative-stride.c", []),
+                }
+                for cve in target_cves:
+                    name, args_for_probe = patched_probes[cve]
                     binary = compile_probe(name)
                     log = temp / (binary.name + ".valgrind")
                     check = execute(["valgrind", "--tool=memcheck", "--error-exitcode=97",
@@ -1792,18 +1858,27 @@ def main():
                     check["testId"] = name
                     if cve == "CVE-2025-65018":
                         check["passed"] = libpng_output_buffer_result(check, "result=within-output-buffer")
-                    elif cve == "CVE-2026-22695":
-                        check["passed"] = libpng_followup_read_is_clean(check)
                     else:
                         check["passed"] = (not check.get("timedOut") and check.get("returncode") == 0
                                            and memcheck_has_no_errors(check["memoryLog"]))
                     checks.append(check)
-                comparison = compile_probe("compare-interlaced-read.c")
-                check = execute([str(comparison), str(adam7), str(flat)])
-                check["passed"] = check["returncode"] == 0 and "differing channels: 0 / 3072" in check["stdout"]
-                check["testId"] = "adam7-pixel-equality"
-                checks.append(check)
-                checks[1]["testId"] = "CVE-2026-22695-padded-stride-follow-up"
+                if "CVE-2026-22695" in followup_cves:
+                    binary = compile_probe("read-padded-stride.c")
+                    log = temp / "CVE-2026-22695.valgrind"
+                    check = execute(["valgrind", "--tool=memcheck", "--error-exitcode=97",
+                                     "--leak-check=no", "--read-var-info=yes", "--log-file=" + str(log),
+                                     str(binary), str(adam7)])
+                    check["memoryLog"] = log.read_text() if log.exists() else ""
+                    check["cve"] = "CVE-2026-22695"
+                    check["testId"] = "CVE-2026-22695-padded-stride-follow-up"
+                    check["passed"] = libpng_followup_read_is_clean(check)
+                    checks.append(check)
+                if "CVE-2025-65018" in target_cves:
+                    comparison = compile_probe("compare-interlaced-read.c")
+                    check = execute([str(comparison), str(adam7), str(flat)])
+                    check["passed"] = check["returncode"] == 0 and "differing channels: 0 / 3072" in check["stdout"]
+                    check["testId"] = "adam7-pixel-equality"
+                    checks.append(check)
         elif package == "poppler":
             target_cves = set(policy.get("targetCves", []))
             if "CVE-2025-52885" in target_cves:

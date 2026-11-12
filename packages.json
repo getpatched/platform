@@ -416,32 +416,17 @@
           "baselineVersion": "1.6.37-2",
           "sourcePocket": "release",
           "packageEcosystem": "Ubuntu:20.04:LTS",
-          "packageVersion": "1.6.37-2+getpatched1",
-          "releaseSerial": 1,
+          "packageVersion": "1.6.37-2+getpatched2",
+          "releaseSerial": 2,
           "binaryPackages": [
             "libpng16-16",
             "libpng-dev",
             "libpng-tools"
           ],
-          "targetCve": "CVE-2025-65018",
-          "targetCves": [
-            "CVE-2025-65018",
-            "CVE-2026-22801"
-          ],
-          "followUpAssessments": {
-            "CVE-2026-22695": {
-              "baselineApplicability": "not-affected",
-              "candidateDisposition": "fixed-in-backport",
-              "introducedBy": "218612ddd6b17944e21eda56caf8b4bf7779d1ea",
-              "fixedBy": "e4f7ad4ea2a471776c81dda4846b7691925d9786",
-              "regressionTestId": "CVE-2026-22695-padded-stride-follow-up",
-              "scannerTreatment": "not-a-target-finding; explicit installed regression required; scanner absence alone is not remediation evidence"
-            }
-          },
-          "advisory": "https://ubuntu.com/security/CVE-2025-65018",
+          "targetCve": "CVE-2026-22801",
+          "targetCves": ["CVE-2026-22801"],
+          "advisory": "https://ubuntu.com/security/CVE-2026-22801",
           "advisories": {
-            "CVE-2025-65018": "https://ubuntu.com/security/CVE-2025-65018",
-            "CVE-2026-22695": "https://ubuntu.com/security/CVE-2026-22695",
             "CVE-2026-22801": "https://ubuntu.com/security/CVE-2026-22801"
           },
           "candidateStatus": "unverified-development-candidate",

@@ -46,6 +46,27 @@ SCANNER_SPEC.loader.exec_module(SCANNER_MODULE)
 
 
 class GetPatchedScannerContract(unittest.TestCase):
+    def test_libpng_policy_selects_only_the_baseline_reproduced_target(self):
+        config = json.loads((ROOT / "packages.json").read_text())
+        target = config["packages"]["libpng1.6"]["targets"]["ubuntu-focal-amd64"]
+        self.assertEqual(target["targetCves"], ["CVE-2026-22801"])
+        self.assertEqual(target["targetCve"], "CVE-2026-22801")
+
+    def test_libpng_baseline_classifier_uses_configured_cves(self):
+        check = {
+            "cve": "CVE-2026-22801", "testId": "write-negative-stride.c",
+            "returncode": 97, "timedOut": False,
+            "memoryLog": "Invalid read of size 4\nat png_image_write_to_file\nlibpng16.so.16",
+            "command": ["valgrind", "--tool=memcheck", "--error-exitcode=97", "--read-var-info=yes",
+                        "--log-file=/tmp/getpatched-regression-fixture/write-negative-stride.valgrind",
+                        "/tmp/getpatched-regression-fixture/write-negative-stride"],
+        }
+        check["command"].insert(3, "--leak-check=no")
+        self.assertTrue(SCANNER_MODULE.libpng_baseline_checks_succeeded(
+            ["CVE-2026-22801"], {"CVE-2026-22801": check}))
+        self.assertFalse(SCANNER_MODULE.libpng_baseline_checks_succeeded(
+            ["CVE-2025-65018", "CVE-2026-22801"], {"CVE-2026-22801": check}))
+
     def test_libarchive_trixie_independent_regression_receives_pinned_source_evidence(self):
         with tempfile.TemporaryDirectory(prefix="getpatched-libarchive-source-evidence-") as directory:
             root = Path(directory)
@@ -506,10 +527,13 @@ class GetPatchedScannerContract(unittest.TestCase):
         self.assertFalse(SCANNER_MODULE.libgit2_regression_checks_succeeded(patched, "patched"))
 
     def test_followup_assessment_requires_the_paired_installed_regression(self):
-        config = json.loads((ROOT / "packages.json").read_text())
-        target = config["packages"]["libpng1.6"]["targets"]["ubuntu-focal-amd64"]
         cve = "CVE-2026-22695"
-        check = {"cve": cve, "testId": target["followUpAssessments"][cve]["regressionTestId"], "passed": True}
+        test_id = "CVE-2026-22695-padded-stride-follow-up"
+        target = {"followUpAssessments": {cve: {
+            "regressionTestId": test_id,
+            "candidateDisposition": "fixed-in-backport",
+        }}}
+        check = {"cve": cve, "testId": test_id, "passed": True}
         # Baseline applicability is an explicit source-history assessment. The installed
         # padded-stride check is required only on the patched candidate image.
         SCANNER_MODULE.validate_followup_assessment_checks(target, [], "baseline")

@@ -7,7 +7,8 @@ import tempfile
 import unittest
 
 from regression import (imagemagick_cdl_check_succeeded, imagemagick_morph_check_succeeded, LIBPNG_CVE_2025_65018_FIXTURE, pixarlog_baseline_reproduced, pixarlog_patched_succeeded, libpng_followup_read_is_clean, libpng_output_buffer_result, libpng_overwrite_reproduced, libpng_stride_read_reproduced, memcheck_has_no_errors,
-                        libpng_patched_checks_succeeded, tiff_patched_regression_succeeded,
+                        libpng_baseline_checks_succeeded, libpng_patched_checks_succeeded,
+                        tiff_patched_regression_succeeded,
                         brotli_baseline_reproduced, brotli_patched_succeeded,
                         cares_record_count_regression_succeeded, cares_regression_succeeded,
                         msgpack_unpacker_reuse_regression_succeeded,
@@ -977,6 +978,25 @@ class LibpngBaselineClassification(unittest.TestCase):
                                 "CVE-2026-22801", 0,
                                 "Invalid read png_image_write_to_file libpng16.so.16")
         self.assertFalse(libpng_stride_read_reproduced(check))
+
+    def test_configured_baseline_gate_requires_only_selected_libpng_cves(self):
+        stride = libpng_memcheck("write-negative-stride.c", "write-negative-stride", [],
+                                 "CVE-2026-22801", 97,
+                                 "Invalid read of size 4\nat png_image_write_to_file\nlibpng16.so.16")
+        checks = {"CVE-2026-22801": stride}
+        self.assertTrue(libpng_baseline_checks_succeeded(["CVE-2026-22801"], checks))
+        self.assertTrue(libpng_baseline_checks_succeeded(["CVE-2026-22801"], [stride]))
+        self.assertFalse(libpng_baseline_checks_succeeded(
+            ["CVE-2025-65018", "CVE-2026-22801"], checks))
+        self.assertFalse(libpng_baseline_checks_succeeded(
+            ["CVE-2026-22801"], [stride, stride]))
+
+    def test_patched_gate_accepts_only_configured_libpng_cves(self):
+        check = libpng_memcheck("write-negative-stride.c", "write-negative-stride", [],
+                                "CVE-2026-22801")
+        self.assertTrue(libpng_patched_checks_succeeded([check], ["CVE-2026-22801"]))
+        self.assertFalse(libpng_patched_checks_succeeded(
+            [check], ["CVE-2025-65018", "CVE-2026-22801"]))
 
     def test_mislabeled_probe_or_missing_fixture_cannot_reproduce_libpng_cve(self):
         wrong_probe = libpng_memcheck("read-interlaced-rgba.c", "unrelated", [LIBPNG_CVE_2025_65018_FIXTURE],

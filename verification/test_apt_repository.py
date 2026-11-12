@@ -17,6 +17,11 @@ SMOKE_SPEC.loader.exec_module(SMOKE)
 
 
 class AptRepositorySmokeEvidence(unittest.TestCase):
+    def test_repository_signing_home_uses_container_local_filesystem(self):
+        script = SMOKE.repository_index_script("focal", "amd64")
+        self.assertIn("GNUPGHOME=/tmp/getpatched-gnupg", script)
+        self.assertIn('--signing-key-home "$GNUPGHOME"', script)
+
     def test_apt_client_disables_base_image_sources_before_fixture_update(self):
         script = SMOKE.apt_client_script()
         remove_sources = script.index("find /etc/apt/sources.list.d -mindepth 1 -maxdepth 1")

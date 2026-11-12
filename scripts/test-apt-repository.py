@@ -76,6 +76,21 @@ test -f "$SOURCE_PACKAGE"*/debian/getpatched/patches.json
 """
 
 
+def repository_index_script(codename, architecture):
+    """Generate repository metadata with the signing home on the container filesystem."""
+    return f"""#!/bin/bash
+set -euo pipefail
+export GNUPGHOME=/tmp/getpatched-gnupg
+install -d -m 0700 "$GNUPGHOME"
+gpg --batch --pinentry-mode loopback --passphrase '' --quick-generate-key \\
+  'GetPatched Temporary Repository Test <repo-test@getpatched.dev>' rsa2048 sign 0
+fingerprint="$(gpg --batch --with-colons --list-keys | awk -F: '$1 == \"fpr\" {{ print $10; exit }}')"
+python3 /generate-apt-index.py --repo /repo --suite {codename} --architecture {architecture} \\
+  --component main --description 'GetPatched {codename} {architecture} test archive' \\
+  --signing-key-home "$GNUPGHOME" --signing-fingerprint "$fingerprint"
+"""
+
+
 def fingerprint_from_colons(output):
     fingerprints = []
     for line in output.splitlines():
@@ -139,39 +154,24 @@ def main():
     architecture = profile["architecture"]
     container_platform = profile["build"]["containerPlatform"]
     dist = repo / "dists" / codename
-    key_home = args.work / ("gpg-" + uuid.uuid4().hex[:12])
-    key_home.mkdir(mode=0o700)
-    (args.work / "repo-index.sh").write_text(f"""#!/bin/bash
-set -euo pipefail
-export GNUPGHOME=/gnupg
-gpg --batch --pinentry-mode loopback --passphrase '' --quick-generate-key \\
-  'GetPatched Temporary Repository Test <repo-test@getpatched.dev>' rsa2048 sign 0
-fingerprint="$(gpg --batch --with-colons --list-keys | awk -F: '$1 == \"fpr\" {{ print $10; exit }}')"
-python3 /generate-apt-index.py --repo /repo --suite {codename} --architecture {architecture} \\
-  --component main --description 'GetPatched {codename} {architecture} test archive' \\
-  --signing-key-home /gnupg --signing-fingerprint "$fingerprint"
-""")
-    try:
-        run(["docker", "run", "--rm", "--platform", container_platform, "--user", f"{os.getuid()}:{os.getgid()}",
-             "--mount", f"type=bind,source={repo},target=/repo",
-             "--mount", f"type=bind,source={key_home},target=/gnupg",
-             "--mount", f"type=bind,source={args.work / 'repo-index.sh'},target=/repo-index.sh,readonly",
-             "--mount", f"type=bind,source={Path(__file__).resolve().parent / 'generate-apt-index.py'},target=/generate-apt-index.py,readonly",
-             "--entrypoint", "bash", args.builder_image, "/repo-index.sh"])
-        release = dist / "Release"
-        text = release.read_text()
-        if f"Architectures: {architecture}\n" not in text or "SHA256:\n" not in text:
-            raise RuntimeError("APT Release metadata is missing required architecture or SHA-256 fields")
-        if not (dist / "InRelease").is_file() or not (dist / "Release.gpg").is_file():
-            raise RuntimeError("APT Release metadata was not signed")
-        public_key = args.work / "getpatched-test-archive.gpg"
-        shutil.copyfile(repo / "getpatched-archive-keyring.gpg", public_key)
-        fingerprint = fingerprint_from_colons(run(
-            ["gpg", "--batch", "--with-colons", "--show-keys", str(public_key)],
-            capture_output=True, text=True,
-        ).stdout)
-    finally:
-        shutil.rmtree(key_home, ignore_errors=True)
+    (args.work / "repo-index.sh").write_text(repository_index_script(codename, architecture))
+    run(["docker", "run", "--rm", "--platform", container_platform, "--user", f"{os.getuid()}:{os.getgid()}",
+         "--mount", f"type=bind,source={repo},target=/repo",
+         "--mount", f"type=bind,source={args.work / 'repo-index.sh'},target=/repo-index.sh,readonly",
+         "--mount", f"type=bind,source={Path(__file__).resolve().parent / 'generate-apt-index.py'},target=/generate-apt-index.py,readonly",
+         "--entrypoint", "bash", args.builder_image, "/repo-index.sh"])
+    release = dist / "Release"
+    text = release.read_text()
+    if f"Architectures: {architecture}\n" not in text or "SHA256:\n" not in text:
+        raise RuntimeError("APT Release metadata is missing required architecture or SHA-256 fields")
+    if not (dist / "InRelease").is_file() or not (dist / "Release.gpg").is_file():
+        raise RuntimeError("APT Release metadata was not signed")
+    public_key = args.work / "getpatched-test-archive.gpg"
+    shutil.copyfile(repo / "getpatched-archive-keyring.gpg", public_key)
+    fingerprint = fingerprint_from_colons(run(
+        ["gpg", "--batch", "--with-colons", "--show-keys", str(public_key)],
+        capture_output=True, text=True,
+    ).stdout)
 
     client_context = args.work / "apt-client-context"
     shutil.copytree(repo, client_context / "repo")

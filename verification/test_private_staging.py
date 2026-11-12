@@ -75,6 +75,18 @@ class PrivateStagingManifest(unittest.TestCase):
         self.assertIn('eligibility.get("targetId") != target', staging)
         self.assertNotIn('target_id != "ubuntu-focal-amd64"', (ROOT / "scripts/stage-release.py").read_text())
 
+    def test_candidate_push_verification_is_read_only_and_cannot_publish(self):
+        workflow = (ROOT / ".github/workflows/package-verification.yml").read_text()
+        self.assertIn("workflow_dispatch:", workflow)
+        self.assertIn("source_commit:", workflow)
+        self.assertIn("target_id:", workflow)
+        self.assertIn("permissions:\n  contents: read", workflow)
+        self.assertIn("Build and verify without publishing binaries", workflow)
+        self.assertIn("actions/upload-artifact", workflow)
+        self.assertNotIn("secrets.", workflow)
+        self.assertNotIn("stage-release.py", workflow)
+        self.assertNotIn("cloudflare", workflow.lower())
+
     def test_release_endpoint_is_pinned_to_repository_hostname(self):
         self.assertEqual(STAGE.validate_endpoint("https://repo.getpatched.dev/"), "https://repo.getpatched.dev")
         for endpoint in ("http://repo.getpatched.dev", "https://getpatched.dev", "https://attacker.example", "https://repo.getpatched.dev/path"):
