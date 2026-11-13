@@ -1072,6 +1072,20 @@ def compile_libgit2_probe(source, binary, patched):
     return binary
 
 
+def libgit2_pack_size_fixture(fixtures, target_id):
+    fixture_names = {
+        "ubuntu-focal-amd64": "pack-size-limit.c",
+        "ubuntu-jammy-amd64": "pack-size-limit-jammy.c",
+    }
+    fixture_name = fixture_names.get(target_id)
+    if fixture_name is None:
+        raise RuntimeError("No libgit2 pack-size regression fixture for target: " + str(target_id))
+    fixture = Path(fixtures) / fixture_name
+    if not fixture.is_file():
+        raise RuntimeError("The target-specific libgit2 pack-size fixture is missing: " + str(fixture))
+    return fixture
+
+
 def compile_pkg_config_probe(source, binary, modules):
     cflags = subprocess.check_output(["pkg-config", "--cflags", *modules], text=True).split()
     libraries = subprocess.check_output(["pkg-config", "--libs", *modules], text=True).split()
@@ -1943,7 +1957,8 @@ def main():
         elif package == "libgit2":
             patched = args.phase == "patched"
             pack_probe = compile_libgit2_probe(
-                fixtures / "pack-size-limit.c", temp / "pack-size-limit", patched
+                libgit2_pack_size_fixture(fixtures, policy["targetId"]),
+                temp / "pack-size-limit", patched
             )
             pack_work = temp / "pack-indexer"
             pack_work.mkdir()
