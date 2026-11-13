@@ -239,7 +239,8 @@ class ReleaseCandidateOutput(unittest.TestCase):
         self.assertLess(verify_at, eligibility_at)
         self.assertLess(eligibility_at, persist_at)
         self.assertNotIn("require_release_compatibility", source)
-        self.assertIn('verification_checks_passed=True, publication_enabled=profile["repository"]["enabled"]', source)
+        self.assertIn("verification_checks_passed=True, publication_enabled=False", source)
+        self.assertNotIn('publication_enabled=profile["repository"]["enabled"]', source)
 
     def test_package_build_uses_local_resolver_mount_without_network_access(self):
         source = SCRIPT.read_text()

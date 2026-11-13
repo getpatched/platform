@@ -25,7 +25,7 @@ from regression import (imagemagick_cdl_check_succeeded, imagemagick_morph_check
 cares_regression_succeeded, consumer_version_succeeded, poppler_revision6_password_overflow_reproduced, poppler_uaf_reproduced, poppler_revision6_probe_command, schematron_baseline_reproduced,
                         tiff_baseline_reproduced, tiff_null_output_baseline_reproduced,
                         tiff_null_output_patched_succeeded, parse_callback_url,
-                        libgit2_redirect_reproduced, tiff_cve_required,
+                        libgit2_pack_size_fixture, libgit2_redirect_reproduced, tiff_cve_required,
                         tiff_bigstrip_baseline_reproduced, tiff_bigstrip_patched_succeeded,
                         tiff_subdivision_baseline_reproduced, tiff_subdivision_patched_succeeded, execute)
 
@@ -1295,6 +1295,31 @@ class CallbackUrlParsing(unittest.TestCase):
     def test_rejects_missing_or_ambiguous_callback_lines(self):
         self.assertIsNone(parse_callback_url("no callback"))
         self.assertIsNone(parse_callback_url("callback_url=first\ncallback_url=second\n"))
+
+
+class Libgit2PackFixtureSelection(unittest.TestCase):
+    def test_selects_fixture_matching_the_exact_target(self):
+        with tempfile.TemporaryDirectory(prefix="getpatched-libgit2-fixture-") as directory:
+            fixtures = Path(directory)
+            focal = fixtures / "pack-size-limit.c"
+            jammy = fixtures / "pack-size-limit-jammy.c"
+            focal.touch()
+            jammy.touch()
+            self.assertEqual(
+                libgit2_pack_size_fixture(fixtures, "ubuntu-focal-amd64"), focal
+            )
+            self.assertEqual(
+                libgit2_pack_size_fixture(fixtures, "ubuntu-jammy-amd64"), jammy
+            )
+
+    def test_missing_or_unsupported_target_fixture_fails_closed(self):
+        with tempfile.TemporaryDirectory(prefix="getpatched-libgit2-fixture-") as directory:
+            fixtures = Path(directory)
+            (fixtures / "pack-size-limit.c").touch()
+            with self.assertRaisesRegex(RuntimeError, "target-specific.*missing"):
+                libgit2_pack_size_fixture(fixtures, "ubuntu-jammy-amd64")
+            with self.assertRaisesRegex(RuntimeError, "No libgit2 pack-size.*target"):
+                libgit2_pack_size_fixture(fixtures, "debian-trixie-amd64")
 
 
 class Libgit2RedirectEvidence(unittest.TestCase):
