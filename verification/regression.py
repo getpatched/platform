@@ -919,6 +919,28 @@ def memcheck_has_no_errors(log):
             and re.fullmatch(r"0 errors(?: from \d+ contexts)?(?: \(suppressed: \d+ from \d+\))?", summaries[0]) is not None)
 
 
+def cares_reentrant_cancel_succeeded(check, phase, linkage):
+    if (phase not in ("baseline", "patched")
+            or linkage not in ("shared", "static")
+            or check.get("cve") != "CVE-2026-33630"
+            or check.get("testId") != "c-ares-cve-2026-33630-reentrant-cancel"
+            or check.get("linkage") != linkage
+            or check.get("timedOut") is not False):
+        return False
+    output = check.get("stdout", "")
+    log = check.get("memoryLog", "")
+    if phase == "baseline":
+        return (check.get("vulnerabilityReproduced") is True
+                and "callback_done=1 callbacks=2" in output
+                and "Invalid free()" in log
+                and re.search(r"(?m)^==\d+== ERROR SUMMARY: [1-9]\d* errors?", log) is not None
+                and check.get("returncode") != 0)
+    return (check.get("patchedBehavior") is True
+            and check.get("returncode") == 0
+            and "callback_done=1 callbacks=1" in output
+            and memcheck_has_no_errors(log))
+
+
 def libpng_output_buffer_result(check, expected_result):
     log = check.get("memoryLog", "")
     return (check.get("cve") == "CVE-2025-65018"
@@ -1075,6 +1097,32 @@ def compile_libgit2_probe(source, binary, patched):
 def compile_pkg_config_probe(source, binary, modules):
     cflags = subprocess.check_output(["pkg-config", "--cflags", *modules], text=True).split()
     libraries = subprocess.check_output(["pkg-config", "--libs", *modules], text=True).split()
+    command = ["cc", "-std=c99", "-Wall", "-Wextra", "-Werror", *cflags,
+               str(source), *libraries, "-o", str(binary)]
+    subprocess.run(command, check=True, timeout=30)
+    return binary
+
+
+def compile_cares_reentrant_probe(source, binary, linkage):
+    cflags = subprocess.check_output(["pkg-config", "--cflags", "libcares"], text=True).split()
+    if linkage == "shared":
+        libraries = subprocess.check_output(["pkg-config", "--libs", "libcares"], text=True).split()
+    elif linkage == "static":
+        libdir = subprocess.check_output(
+            ["pkg-config", "--variable=libdir", "libcares"], text=True
+        ).strip()
+        archive = Path(libdir) / "libcares.a"
+        if not archive.is_file():
+            raise RuntimeError("libc-ares-dev did not install the required static libcares archive")
+        libraries = subprocess.check_output(
+            ["pkg-config", "--static", "--libs", "libcares"], text=True
+        ).split()
+        try:
+            libraries[libraries.index("-lcares")] = str(archive)
+        except ValueError as error:
+            raise RuntimeError("pkg-config static c-ares flags omitted -lcares") from error
+    else:
+        raise RuntimeError("unsupported c-ares linkage: " + str(linkage))
     command = ["cc", "-std=c99", "-Wall", "-Wextra", "-Werror", *cflags,
                str(source), *libraries, "-o", str(binary)]
     subprocess.run(command, check=True, timeout=30)
@@ -1468,6 +1516,39 @@ def main():
             check["cve"] = "CVE-2026-69184"
             check["passed"] = cares_regression_succeeded(check, policy["targetId"], args.phase)
             checks.append(check)
+            if "CVE-2026-33630" in policy.get("targetCves", []):
+                if policy["targetId"] != "debian-trixie-amd64":
+                    raise RuntimeError("CVE-2026-33630 regression is only defined for Debian Trixie amd64")
+                fixture = fixtures / "c-ares-cve-2026-33630-reentrant-cancel.c"
+                if not fixture.is_file():
+                    raise RuntimeError("CVE-2026-33630 callback-cancel fixture is missing")
+                for linkage in ("shared", "static"):
+                    probe = compile_cares_reentrant_probe(
+                        fixture, temp / ("c-ares-cve-2026-33630-" + linkage), linkage
+                    )
+                    memory_log = temp / ("c-ares-cve-2026-33630-" + linkage + ".valgrind")
+                    check = execute([
+                        "valgrind", "--tool=memcheck", "--error-exitcode=97", "--leak-check=no",
+                        "--log-file=" + str(memory_log), str(probe),
+                    ], timeout=15)
+                    check["memoryLog"] = memory_log.read_text() if memory_log.exists() else ""
+                    check["cve"] = "CVE-2026-33630"
+                    check["testId"] = "c-ares-cve-2026-33630-reentrant-cancel"
+                    check["linkage"] = linkage
+                    check["vulnerabilityReproduced"] = (
+                        "callback_done=1 callbacks=2" in check.get("stdout", "")
+                        and "Invalid free()" in check["memoryLog"]
+                        and re.search(r"(?m)^==\d+== ERROR SUMMARY: [1-9]\d* errors?",
+                                      check["memoryLog"]) is not None
+                    )
+                    check["patchedBehavior"] = (
+                        "callback_done=1 callbacks=1" in check.get("stdout", "")
+                        and memcheck_has_no_errors(check["memoryLog"])
+                    )
+                    check["passed"] = cares_reentrant_cancel_succeeded(
+                        check, args.phase, linkage
+                    )
+                    checks.append(check)
             if "CVE-2026-69186" in policy.get("targetCves", []):
                 if policy["targetId"] != "debian-trixie-amd64":
                     raise RuntimeError("CVE-2026-69186 regression is only defined for Debian Trixie amd64")

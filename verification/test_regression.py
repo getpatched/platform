@@ -10,6 +10,7 @@ from regression import (imagemagick_cdl_check_succeeded, imagemagick_morph_check
                         libpng_patched_checks_succeeded, tiff_patched_regression_succeeded,
                         brotli_baseline_reproduced, brotli_patched_succeeded,
                         cares_record_count_regression_succeeded, cares_regression_succeeded,
+                        cares_reentrant_cancel_succeeded,
                         msgpack_unpacker_reuse_regression_succeeded,
                         massif_peak_heap_bytes,
                         consumer_version_succeeded, expat_consumer_succeeded, expat_regression_succeeded,
@@ -565,6 +566,34 @@ class CaresTargetRegression(unittest.TestCase):
         ))
         self.assertFalse(cares_record_count_regression_succeeded(
             baseline, "ubuntu-focal-amd64", "baseline"
+        ))
+
+    def test_cares_reentrant_cancel_requires_baseline_invalid_free_and_clean_patched_linkages(self):
+        baseline = {
+            "cve": "CVE-2026-33630",
+            "testId": "c-ares-cve-2026-33630-reentrant-cancel",
+            "linkage": "shared", "timedOut": False, "returncode": 97,
+            "vulnerabilityReproduced": True,
+            "stdout": "callback_done=1 callbacks=2\n",
+            "memoryLog": "==1== Invalid free() / delete / delete[] / realloc()\n"
+                         "==1== ERROR SUMMARY: 3 errors from 2 contexts\n",
+        }
+        patched = {
+            **baseline, "linkage": "static", "timedOut": False, "returncode": 0,
+            "patchedBehavior": True, "stdout": "callback_done=1 callbacks=1\n",
+            "memoryLog": "==1== ERROR SUMMARY: 0 errors from 0 contexts\n",
+        }
+        self.assertTrue(cares_reentrant_cancel_succeeded(baseline, "baseline", "shared"))
+        self.assertTrue(cares_reentrant_cancel_succeeded(patched, "patched", "static"))
+        self.assertFalse(cares_reentrant_cancel_succeeded(
+            {**baseline, "stdout": "callback_done=1 callbacks=1\n"}, "baseline", "shared"
+        ))
+        self.assertFalse(cares_reentrant_cancel_succeeded(
+            {**patched, "memoryLog": "==1== ERROR SUMMARY: 1 errors from 1 contexts\n"},
+            "patched", "static"
+        ))
+        self.assertFalse(cares_reentrant_cancel_succeeded(
+            baseline, "baseline", "static"
         ))
 
 
