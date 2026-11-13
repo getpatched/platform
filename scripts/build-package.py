@@ -480,8 +480,11 @@ def main():
             run(["python3", str(ROOT / "scripts/test-apt-repository.py"), "--recipe", str(source), "--policy", str(output / "package-policy.json"), "--output", str(output),
                  "--work", str(temp), "--builder-image", name, "--base-image", profile["baseImage"],
                  "--apt-sources-b64", build_sources])
+            # This workflow only verifies candidates. Publication permission is
+            # a separate release action and must never be inferred from target
+            # repository configuration here.
             (output / "release-eligibility.json").write_text(json.dumps(release_eligibility(
-                policy, verification_checks_passed=True, publication_enabled=profile["repository"]["enabled"]
+                policy, verification_checks_passed=True, publication_enabled=False
             ), indent=2) + "\n")
             persist_release_candidates(selected, binary_manifest, output, package, policy["version"], commit, policy["targetId"], profile)
             print(package + ": target " + policy["targetId"] + " build, installed regressions, advisory comparison, consumer checks, and signed APT binary/source install passed; repository publication enabled=" + str(profile["repository"]["enabled"]).lower())
