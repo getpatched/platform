@@ -11,11 +11,11 @@ on:
   workflow_dispatch:
     inputs:
       operation:
-        description: Publish current indexes, prune old snapshots, or restore a retained snapshot
+        description: Publish indexes, check inventory, prune old snapshots, or restore a retained snapshot
         type: choice
         required: true
         default: publish
-        options: [publish, rollback, prune]
+        options: [publish, inventory, rollback, prune]
       rollback_channel:
         description: Channel to restore when operation is rollback
         type: choice
@@ -71,11 +71,16 @@ jobs:
         with:
           ref: ${{ github.sha }}
           persist-credentials: false
+      - name: Check authenticated Focal inventory
+        if: github.event_name == 'workflow_dispatch' && inputs.operation == 'inventory'
+        run: python3 scripts/build-apt-snapshot.py --suite focal --channel public --inventory-only
       - name: Install Ubuntu and Debian repository metadata tools
+        if: github.event_name != 'workflow_dispatch' || inputs.operation == 'publish'
         run: |
           sudo apt-get update
           sudo apt-get install --yes --no-install-recommends apt-utils dpkg-dev xz-utils
       - name: Assemble and privately stage unsigned indexes
+        if: github.event_name != 'workflow_dispatch' || inputs.operation == 'publish'
         id: build
         env:
           GETPATCHED_RELEASE_ENDPOINT: https://repo.getpatched.dev
@@ -106,8 +111,7 @@ jobs:
 
   sign-and-publish:
     if: >-
-      (github.event_name != 'workflow_dispatch' || github.event.inputs.operation != 'rollback') &&
-      (github.event_name != 'workflow_dispatch' || github.event.inputs.operation != 'prune') &&
+      (github.event_name != 'workflow_dispatch' || inputs.operation == 'publish') &&
       needs.build-indexes.outputs.snapshot_ids != '[]'
     needs: build-indexes
     runs-on: ubuntu-24.04

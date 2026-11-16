@@ -38,7 +38,9 @@ class NoRedirect(urllib.request.HTTPRedirectHandler):
 
 
 def open_without_redirect(request, timeout):
-    return urllib.request.build_opener(NoRedirect()).open(request, timeout=timeout)
+    opener = urllib.request.build_opener(NoRedirect())
+    opener.addheaders = [("User-Agent", "GetPatched-APT-Snapshot/1.0")]
+    return opener.open(request, timeout=timeout)
 
 
 def validate_identity():

@@ -119,8 +119,8 @@ def download_asset(endpoint, channel, release, asset, target, *, private_binary=
         request = urllib.request.Request(url)
     total = 0
     digest = hashlib.sha256()
-    opener = urllib.request.build_opener() if not private_binary else urllib.request.build_opener(PUBLISH.NoRedirect())
-    with opener.open(request, timeout=180) as response, target.open("xb") as output:
+    open_asset = PUBLISH.open_without_redirect if private_binary else urllib.request.build_opener().open
+    with open_asset(request, timeout=180) as response, target.open("xb") as output:
         declared = response.headers.get("Content-Length")
         if declared is not None and (not declared.isdigit() or int(declared) > MAX_ASSET_BYTES):
             raise ValueError("package asset exceeds the 64 MiB limit")
@@ -226,15 +226,22 @@ def main():
                         help="Ubuntu or Debian suite to publish")
     parser.add_argument("--architecture", choices=("amd64",), default="amd64")
     parser.add_argument("--force-refresh", action="store_true", help="rebuild even when the eligible release set matches the healthy active snapshot")
+    parser.add_argument("--inventory-only", action="store_true", help="check authenticated inventory without staging indexes")
     args = parser.parse_args()
     PUBLISH.validate_identity()
     endpoint = args.endpoint.rstrip("/")
     parsed = urllib.parse.urlsplit(endpoint)
     if parsed.scheme != "https" or parsed.hostname != "repo.getpatched.dev" or parsed.path or parsed.query or parsed.fragment:
         raise SystemExit("snapshot endpoint must be the configured HTTPS repo.getpatched.dev gateway")
+    channels = ("public", "early") if args.channel == "both" else (args.channel,)
+    if args.inventory_only:
+        for channel in channels:
+            inventory = fetch_inventory(endpoint, channel, args.suite, args.architecture)
+            print(f"Authenticated inventory reachable for {channel} {args.suite}/{args.architecture} "
+                  f"({len(inventory['releases'])} release records)")
+        return
     with tempfile.TemporaryDirectory(prefix="getpatched-repository-build-") as temporary:
         root = Path(temporary)
-        channels = ("public", "early") if args.channel == "both" else (args.channel,)
         results = []
         for channel in channels:
             results.append(assemble_channel(endpoint, channel, root, suite=args.suite, architecture=args.architecture,

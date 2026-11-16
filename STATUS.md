@@ -1,5 +1,9 @@
 # GetPatched implementation status
 
+## APT snapshot incident, 16 Nov 2026
+
+- The organization Actions variable `GETPATCHED_REPOSITORY_ENABLED` is `true` and scoped to `getpatched/platform`. The enabled workflow reached the protected index build. Cloudflare Browser Integrity Check blocked the Focal amd64 inventory request before it reached the Worker. Public Focal InRelease returned HTTP 503. See the [incident evidence](EVIDENCE.md#apt-snapshot-incident-16-nov-2026).
+
 ## Active 100-CVE goal checkpoint — 2 Nov 2026
 
 - **Poppler / Debian Bookworm and Trixie amd64, CVE-2026-107705:** hosted runs [41518910177](https://github.com/getpatched/platform/actions/runs/41518910177) and [41531130479](https://github.com/getpatched/platform/actions/runs/41531130479) passed exact-source builds, installed baseline overflow reproductions, patched regressions, package-aware before/after scans, consumer checks, and isolated signed APT-client verification. Policy and catalogue now mark only these exact Debian targets as development-verified. Raw Trivy 0.70 still reports CVE-2026-107705 in 14 Poppler package records in each image; this is not a Trivy-clean claim. The target repository profiles are disabled, so release eligibility remains false and nothing was published. Independent review and CI for this metadata update remain pending.
