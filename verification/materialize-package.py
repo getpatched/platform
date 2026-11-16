@@ -17,7 +17,7 @@ def copy_identical(source, destination):
     destination.parent.mkdir(parents=True, exist_ok=True)
     if destination.exists():
         if destination.read_bytes() != source.read_bytes():
-            raise RuntimeError(f"Recipe file would overwrite different Ubuntu source content: {destination}")
+            raise RuntimeError(f"Recipe file would overwrite different distribution source content: {destination}")
         return
     shutil.copyfile(source, destination)
 
@@ -51,6 +51,7 @@ def main():
     else:
         target = target_ref
     package = manifest["package"]["source"]
+    distribution = target["base"]["distribution"]
     base_version = target["source"]["version"]
     package_version = target["packageVersion"]
     changelog_path = source_root / "debian/changelog"
@@ -59,7 +60,7 @@ def main():
     if not current_entry or current_entry.group(1) != package or current_entry.group(2) != base_version:
         raise RuntimeError("Extracted source changelog does not match the recipe's pinned source package")
     if (source_root / "debian/source/format").read_text().strip() != "3.0 (quilt)":
-        raise RuntimeError("Extracted Ubuntu source package is not in 3.0 (quilt) format")
+        raise RuntimeError("Extracted source package is not in 3.0 (quilt) format")
 
     metadata = read_json(recipe / manifest["patchMetadata"])
     patch_by_id = {item["id"]: item for item in metadata["patches"]}
@@ -163,7 +164,7 @@ def main():
     entry = (
         f"{package} ({package_version}) {changelog_data['distribution']}; urgency={changelog_data['urgency']}\n\n"
         f"{patch_summary}\n"
-        "  * Build from the SHA-256-pinned public Ubuntu source package using the GetPatched recipe.\n\n"
+        f"  * Build from the SHA-256-pinned public {distribution} source package using the GetPatched recipe.\n\n"
         f" -- {changelog_data['maintainer']}  {changelog_data['date']}\n\n"
     )
     changelog_path.write_text(entry + changelog)
