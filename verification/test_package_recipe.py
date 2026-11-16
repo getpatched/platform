@@ -231,6 +231,12 @@ class PackageRecipeContract(unittest.TestCase):
         with self.assertRaisesRegex(RuntimeError, "SHA-256 mismatch"):
             RECIPE.load_recipe(self.root, PLATFORM_CONFIG)
 
+    def test_ci_baseline_cannot_enter_release_verification(self):
+        self.target["status"] = "ci-baseline"
+        self._write_json(self.root / "targets/ubuntu/focal-amd64.json", self.target)
+        with self.assertRaisesRegex(RuntimeError, "CI baseline recipes are not eligible for release verification"):
+            RECIPE.load_recipe(self.root, PLATFORM_CONFIG)
+
     def test_source_version_must_match_the_public_candidate_exactly(self):
         self.target["source"]["version"] += "1"
         self._write_json(self.root / "targets/ubuntu/focal-amd64.json", self.target)

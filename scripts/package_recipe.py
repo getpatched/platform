@@ -172,6 +172,9 @@ def load_recipe(root, platform_config, target_id=None):
     else:
         target = target_ref
 
+    if target.get("status") == "ci-baseline":
+        raise RuntimeError("CI baseline recipes are not eligible for release verification")
+
     profile = target_profile(platform_config, target["id"])
     central = package_target_policy(platform_config, package, target["id"])
     base = target.get("base", {})
