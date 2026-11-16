@@ -1,5 +1,10 @@
 # GetPatched evidence index
 
+## APT snapshot incident, 16 Nov 2026
+
+- The [manual snapshot run](https://github.com/getpatched/platform/actions/runs/43731313289) failed on the initial authenticated Focal amd64 inventory GET with HTTP 403 and skipped signing. Cloudflare Security Events recorded a Browser Integrity Check block at 2026-11-15 15:42:05 UTC for the same host, path and query (Ray ID `a5af5d2669799200`, client `Python-urllib/3.12`).
+- A read-only comparison from the workstation returned Cloudflare error 1010 / HTTP 403 using `Python-urllib/3.12` and the Worker's expected HTTP 401 using `GetPatched-APT-Snapshot/1.0` without credentials. The workflow's `inventory` operation checks the same route using the protected GitHub Actions OIDC identity before a publication retry.
+
 ## Active 100-CVE goal — Poppler CVE-2026-107705 — 2 Nov 2026
 
 - Debian Bookworm verification run [41518910177](https://github.com/getpatched/platform/actions/runs/41518910177) and Trixie run [41531130479](https://github.com/getpatched/platform/actions/runs/41531130479) passed the exact pinned source build, installed vulnerable-baseline reproduction, patched installed regression, package-aware before/after scan, `pdfinfo -v` consumer check, and isolated signed APT client checks. The tested versions are `22.12.0-2+deb12u3+getpatched1` and `25.03.0-5+deb13u4+getpatched1`.
