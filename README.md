@@ -49,3 +49,5 @@ The Worker has an authenticated, bounded R2 staging upload endpoint that accepts
 See [`docs/operations-cost.md`](docs/operations-cost.md) for the current usage-based hosting estimate and pricing references. It is a planning model, not approval to enable paid Cloudflare Workers service.
 
 See [`docs/project-policies.md`](docs/project-policies.md) for contribution guidance, private security reporting, archive signing-key handling, support scope, and the current licensing position. See [`docs/operations-runbook.md`](docs/operations-runbook.md) for build, deployment, release, rollback, and recovery procedures.
+
+[![advertisement](https://ads.servead.net/i/cdfc81b5-abb6-4747-bbe8-4f1fe98537ab.svg)](https://ads.servead.net/c/cdfc81b5-abb6-4747-bbe8-4f1fe98537ab)
