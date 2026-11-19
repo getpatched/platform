@@ -113,6 +113,7 @@ class PublicCatalogueContract(unittest.TestCase):
         self.assertEqual(jammy["binaryPackages"][0], "libgit2-1.1")
         self.assertEqual(package_target_policy(platform, "libxml2", "ubuntu-focal-amd64")["builderPackages"], ["libxml2-dev"])
         self.assertEqual(package_target_policy(platform, "libarchive", "ubuntu-focal-amd64")["builderPackages"], ["libarchive-dev"])
+        self.assertEqual(package_target_policy(platform, "libarchive", "ubuntu-focal-amd64")["regressionPackages"], ["libarchive-dev"])
         for filename in ("packaging.Containerfile", "baseline.Containerfile", "patched-scan.Containerfile"):
             containerfile = (ROOT / "build" / filename).read_text()
             self.assertIn("ARG BINARY_PACKAGES", containerfile)
@@ -123,6 +124,7 @@ class PublicCatalogueContract(unittest.TestCase):
                 self.assertIn("for binary in $install_packages; do", containerfile)
             else:
                 self.assertIn("for binary in $BINARY_PACKAGES; do", containerfile)
+                self.assertIn("ARG REGRESSION_PACKAGES", containerfile)
         build_script = (ROOT / "scripts/build-package.py").read_text()
         baseline_script = (ROOT / "scripts/run-baseline.py").read_text()
         self.assertIn('"BINARY_PACKAGES=" + " ".join(policy["binaryPackages"])', build_script)
@@ -138,6 +140,10 @@ class PublicCatalogueContract(unittest.TestCase):
         invalid = deepcopy(platform)
         invalid["packages"]["libgit2"]["targets"]["ubuntu-jammy-amd64"]["builderPackages"] = ["bad package"]
         with self.assertRaisesRegex(ValueError, "invalid builder package scope"):
+            package_target_policy(invalid, "libgit2", "ubuntu-jammy-amd64")
+        invalid["packages"]["libgit2"]["targets"]["ubuntu-jammy-amd64"]["builderPackages"] = []
+        invalid["packages"]["libgit2"]["targets"]["ubuntu-jammy-amd64"]["regressionPackages"] = ["bad package"]
+        with self.assertRaisesRegex(ValueError, "invalid regression package scope"):
             package_target_policy(invalid, "libgit2", "ubuntu-jammy-amd64")
 
     def test_target_recipe_branch_rejects_untrusted_ref_syntax(self):
