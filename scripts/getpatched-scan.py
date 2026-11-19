@@ -276,7 +276,8 @@ def regression_verified_candidate(directory, scan_images_path, target_id, recipe
         raise ValueError("candidate build policy does not identify the selected source and target")
     target = package_target_policy(config, source, target_id)
     profile = target_profile(config, target_id)
-    runner = ROOT / "verification" / "regression.py"
+    verification_directory = ROOT / "verification"
+    runner = verification_directory / "regression.py"
     report_paths = {}
     verification_id = uuid.uuid4().hex
     with tempfile.TemporaryDirectory(prefix="getpatched-verified-candidate-") as temporary:
@@ -299,10 +300,10 @@ def regression_verified_candidate(directory, scan_images_path, target_id, recipe
             command = [
                 "docker", "run", "--rm", "--network", "none", "--platform", profile["build"]["containerPlatform"],
                 "--mount", "type=bind,source=" + str(Path(recipe_directory).resolve()) + ",target=/recipe,readonly",
-                "--mount", "type=bind,source=" + str(runner.resolve()) + ",target=/regression.py,readonly",
+                "--mount", "type=bind,source=" + str(verification_directory.resolve()) + ",target=/verification,readonly",
                 "--mount", "type=bind,source=" + str(Path(policy_path).resolve()) + ",target=/policy.json,readonly",
                 "--mount", "type=bind,source=" + str(temp.resolve()) + ",target=/proof",
-                image_id, "python3", "/regression.py", "--recipe", "/recipe", "--policy", "/policy.json",
+                image_id, "python3", "/verification/regression.py", "--recipe", "/recipe", "--policy", "/policy.json",
                 "--phase", report_phase, "--image-id", image_id, "--verification-id", verification_id,
                 "--output", "/proof/" + report_name,
             ]
