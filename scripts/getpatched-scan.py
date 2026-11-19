@@ -308,7 +308,10 @@ def regression_verified_candidate(directory, scan_images_path, target_id, recipe
             ]
             executed = subprocess.run(command, capture_output=True, text=True, timeout=240, check=False)
             if executed.returncode != 0 or not report_path.is_file():
-                raise ValueError("independent installed regression execution failed for the candidate scan images")
+                detail = (executed.stderr or executed.stdout).strip()[-1200:]
+                status = f"exit status {executed.returncode}" if executed.returncode != 0 else "no regression report was produced"
+                suffix = f": {detail}" if detail else ""
+                raise ValueError(f"independent installed regression execution failed for the candidate scan images ({status}){suffix}")
             report_paths[report_phase] = report_path
         baseline = json.loads(report_paths["baseline"].read_text())
         patched = json.loads(report_paths["patched"].read_text())
