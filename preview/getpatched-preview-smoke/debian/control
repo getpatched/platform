@@ -1,0 +1,13 @@
+Source: getpatched-preview-smoke
+Section: misc
+Priority: optional
+Maintainer: GetPatched Release Engineering <release@getpatched.dev>
+Standards-Version: 4.5.0
+Rules-Requires-Root: no
+
+Package: getpatched-preview-smoke
+Architecture: all
+Depends: ${misc:Depends}
+Description: Harmless package for GetPatched isolated APT preview checks
+ This package only installs a small command and documentation under /usr.
+ It contains no service, privileged hook, or vendored third-party source.

@@ -1,0 +1,5 @@
+getpatched-preview-smoke (0.1.0+preview1) focal; urgency=low
+
+  * Add a harmless package for isolated APT preview verification.
+
+ -- GetPatched Release Engineering <release@getpatched.dev>  Thu, 19 Nov 2026 00:00:00 +0000
