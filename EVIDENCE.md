@@ -1,5 +1,13 @@
 # GetPatched evidence index
 
+## APT preview access recheck — 19 Nov 2026 03:16 UTC
+
+- PR [#133](https://github.com/getpatched/platform/pull/133) remains open and draft at `bb869ae4423f2ecbe8f1bd2e2ed2dade334d4ca5`. Platform quality run [44449663156](https://github.com/getpatched/platform/actions/runs/44449663156) and preview build-only run [44449663150](https://github.com/getpatched/platform/actions/runs/44449663150) completed successfully. The preview deploy, signing/publish, and clean-client jobs have not run.
+- Scheduled snapshot run [44433957389](https://github.com/getpatched/platform/actions/runs/44433957389) completed `build-indexes` successfully; `sign-and-publish` and `snapshot-retention` were skipped because there were no snapshot IDs. The prior run evidence records zero eligible release/index entries across the supported suites and channels.
+- A live HTTPS request to `repo.getpatched.dev/dists/focal/InRelease` returned HTTP 503 with `{"error":"repository snapshot is not available"}`. A request to `preview.getpatched.dev/healthz` failed DNS resolution, so the preview route is not currently reachable from this host.
+- Read-only GitHub environment listing confirms `getpatched-apt-preview` currently contains only the dedicated signing-key secret and signing-fingerprint variable. The deploy token, Cloudflare account ID, bucket-scoped R2 access-key ID/secret, and R2 endpoint variable are absent. Local `wrangler` is unavailable. Chrome is running, but this chat cannot access its browser tabs, so the Cloudflare dashboard could not be rechecked.
+- No preview package or metadata was published and production remains unchanged. The next safe step requires Cloudflare owner access to finish only the preview Worker/domain and bucket-scoped credentials, then run the gated main-only workflow and verify from its clean Focal client.
+
 ## APT repository recheck — 19 Nov 2026
 
 - GitHub Actions run [44433957389](https://github.com/getpatched/platform/actions/runs/44433957389) was a scheduled run on `main` and completed successfully. Its `build-indexes` job succeeded; `sign-and-publish` and `snapshot-retention` were skipped because the builder emitted no snapshot IDs. The run's `Check authenticated Focal inventory` step was also skipped as designed because that diagnostic step only runs for manual `operation: inventory` dispatches. The decoded builder log records `release_count: 0`, `file_count: 0`, `index_count: 0`, and `snapshot_build: null` for every public/early channel in Focal, Jammy, Bookworm, and Trixie. The cron schedule and repository-enable gate are working; there is currently nothing eligible to index or sign.

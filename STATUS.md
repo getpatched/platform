@@ -1,5 +1,11 @@
 # GetPatched implementation status
 
+## APT preview access recheck, 19 Nov 2026 03:16 UTC
+
+- PR [#133](https://github.com/getpatched/platform/pull/133) is still open and draft at `bb869ae4423f2ecbe8f1bd2e2ed2dade334d4ca5`; Platform quality [44449663156](https://github.com/getpatched/platform/actions/runs/44449663156) and preview build-only [44449663150](https://github.com/getpatched/platform/actions/runs/44449663150) pass. The scheduled snapshot run [44433957389](https://github.com/getpatched/platform/actions/runs/44433957389) built successfully but skipped signing and retention because no snapshot IDs were produced.
+- `repo.getpatched.dev/dists/focal/InRelease` currently returns HTTP 503 with `{"error":"repository snapshot is not available"}`. `preview.getpatched.dev/healthz` fails DNS resolution. GitHub environment `getpatched-apt-preview` currently has only the preview signing-key secret and fingerprint variable; the deploy token/account ID and bucket-scoped R2 credentials/endpoint are absent. This chat cannot access Chrome tabs, and no local `wrangler` command is available, so Cloudflare setup cannot be completed from this session.
+- No production or preview artifacts were published. Continue by provisioning the dedicated preview Worker, custom domain and bucket-scoped credentials, then dispatch the gated main-only workflow for clean-client verification. Keep PR #133 draft and scout downstream consumers only after a matching package is accessible.
+
 ## APT repository recheck, 19 Nov 2026
 
 - Scheduled run [44433957389](https://github.com/getpatched/platform/actions/runs/44433957389) ran successfully. Its index builder returned zero eligible releases for all eight suite/channel combinations (Focal, Jammy, Bookworm, Trixie × public, early), so the signing/publication and retention jobs were skipped with no snapshot IDs. The authenticated Focal inventory diagnostic step is manual-dispatch-only and was skipped by design on the schedule. The cron and repository-enable gate are working; current release inventories contain no packages to index.
