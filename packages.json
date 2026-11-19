@@ -197,6 +197,7 @@
             "libarchive-tools"
           ],
           "builderPackages": ["libarchive-dev"],
+          "regressionPackages": ["libarchive-dev"],
           "targetCve": "CVE-2026-4111",
           "targetCves": [
             "CVE-2026-4111"

@@ -1,0 +1,3 @@
+This harmless package exists only to verify the isolated GetPatched public APT preview channel.
+
+It contains a command under /usr/bin and no maintainer scripts or service configuration.

@@ -32,6 +32,20 @@ def sha256(path):
     return result.hexdigest()
 
 
+def separate_verified_packages(packages, binary_packages, regression_packages):
+    binary_names = set(binary_packages)
+    regression_names = set(regression_packages)
+    if binary_names & regression_names:
+        raise RuntimeError("Runtime and regression package scopes overlap")
+    runtime = [path for path in packages if path.name.split("_", 1)[0] in binary_names]
+    regression = [path for path in packages if path.name.split("_", 1)[0] in regression_names]
+    selected_names = {path.name.split("_", 1)[0] for path in packages}
+    if (selected_names != binary_names | regression_names
+            or len(runtime) != len(binary_names) or len(regression) != len(regression_names)):
+        raise RuntimeError("Could not extract every patched runtime and regression package exactly once")
+    return runtime, regression
+
+
 def persist_release_candidates(selected, binary_manifest, output, package, version, source_commit, target_id, profile):
     if (binary_manifest.get("source") != package or binary_manifest.get("targetId") != target_id
             or binary_manifest.get("version") != version
@@ -178,6 +192,7 @@ def validate_release_policy(policy, config):
             or policy["release"] != profile["codename"]
             or policy["distribution"] != profile["distribution"]
             or policy["releaseVersion"] != profile["releaseVersion"]
+            or policy["regressionPackages"] != expected["regressionPackages"]
             or policy["version"] != expected["packageVersion"]):
         raise RuntimeError("Unexpected pilot backport identity")
     return package, expected, profile
@@ -335,22 +350,28 @@ def main():
             debs.mkdir()
             binary_manifest = json.loads((output / "binary-manifest.json").read_text())
             selected = []
+            regression_selected = []
             for item in binary_manifest["packages"]:
                 binary_name = item["control"].splitlines()[0].split(": ", 1)[1]
-                if binary_name not in expected["binaryPackages"]:
+                if binary_name not in set(expected["binaryPackages"]) | set(expected["regressionPackages"]):
                     continue
                 target = debs / item["name"]
                 run(["docker", "cp", container + ":/build/" + item["name"], str(target)])
                 if sha256(target) != item["sha256"]:
                     raise RuntimeError("Extracted package differs from recorded binary manifest")
-                selected.append(target)
-            if {p.name.split("_", 1)[0] for p in selected} != set(expected["binaryPackages"]):
-                raise RuntimeError("Could not extract every patched runtime package")
+                (selected if binary_name in expected["binaryPackages"] else regression_selected).append(target)
+            selected, regression_selected = separate_verified_packages(
+                [*selected, *regression_selected], expected["binaryPackages"], expected["regressionPackages"]
+            )
             patched_context = temp / "patched-context"
             patched_context.mkdir()
             (patched_context / "getpatched").mkdir()
+            (patched_context / "regression").mkdir()
+            (patched_context / "regression" / ".keep").touch()
             for deb in selected:
                 shutil.copyfile(deb, patched_context / "getpatched" / deb.name)
+            for deb in regression_selected:
+                shutil.copyfile(deb, patched_context / "regression" / deb.name)
             shutil.copyfile(ROOT / "build/patched-scan.Containerfile", patched_context / "Dockerfile")
             scan_args = [
                 "docker", "build", "--no-cache", "--platform", container_platform, "--tag", scan_patched,
@@ -361,6 +382,7 @@ def main():
                 "--build-arg", "EXPECTED_VERSION=" + policy["version"],
                 "--build-arg", "APT_SOURCES_B64=" + binary_sources,
                 "--build-arg", "BINARY_PACKAGES=" + " ".join(expected["binaryPackages"]),
+                "--build-arg", "REGRESSION_PACKAGES=" + " ".join(expected["regressionPackages"]),
                 str(patched_context),
             ]
             run(scan_args)
@@ -374,6 +396,7 @@ def main():
                 "--build-arg", "EXPECTED_VERSION=" + policy["baseVersion"],
                 "--build-arg", "APT_SOURCES_B64=" + binary_sources,
                 "--build-arg", "BINARY_PACKAGES=" + " ".join(expected["binaryPackages"]),
+                "--build-arg", "REGRESSION_PACKAGES=" + " ".join(expected["regressionPackages"]),
                 str(ROOT),
             ])
             scan_images.append(scan_base)

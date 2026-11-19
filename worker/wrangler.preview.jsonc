@@ -1,0 +1,16 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "getpatched-apt-preview",
+  "main": "src/preview-apt.js",
+  "compatibility_date": "2026-11-19",
+  "workers_dev": false,
+  "routes": [
+    { "pattern": "preview.getpatched.dev", "custom_domain": true }
+  ],
+  "r2_buckets": [
+    { "binding": "PREVIEW", "bucket_name": "getpatched-apt-preview" }
+  ],
+  "observability": {
+    "logs": { "enabled": true, "invocation_logs": true, "persist": true }
+  }
+}

@@ -45,6 +45,11 @@ SCANNER_SPEC.loader.exec_module(SCANNER_MODULE)
 
 
 class GetPatchedScannerContract(unittest.TestCase):
+    def test_independent_regression_replay_mounts_the_complete_verification_directory(self):
+        scanner = SCANNER.read_text()
+        self.assertIn('str(verification_directory.resolve()) + ",target=/verification,readonly"', scanner)
+        self.assertIn('"python3", "/verification/regression.py"', scanner)
+
     def test_poppler_revision6_candidate_requires_clean_regression_and_consumer(self):
         cve_check = {
             "cve": "CVE-2026-107705",

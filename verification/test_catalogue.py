@@ -17,6 +17,22 @@ debian_version_compare = _SCAN.debian_version_compare
 
 
 class PublicCatalogueContract(unittest.TestCase):
+    def test_policy_schema_declares_regression_only_packages(self):
+        schema = json.loads((ROOT / "schemas/platform-policy.schema.json").read_text())
+        policy = json.loads((ROOT / "packages.json").read_text())
+        definition = schema["$defs"]["packageTarget"]["properties"]["regressionPackages"]
+        self.assertEqual(definition["type"], "array")
+        self.assertTrue(definition["uniqueItems"])
+        self.assertEqual(definition["items"]["type"], "string")
+        self.assertEqual(definition["items"]["pattern"], "^[a-z0-9][a-z0-9+.-]*$")
+        for package in policy["packages"].values():
+            for target in package["targets"].values():
+                names = target.get("regressionPackages", [])
+                self.assertIsInstance(names, list)
+                self.assertEqual(len(names), len(set(names)))
+                for name in names:
+                    self.assertRegex(name, definition["items"]["pattern"])
+
     def test_ubuntu_snapshot_source_list_emits_one_suite_per_apt_line(self):
         platform = json.loads((ROOT / "packages.json").read_text())
         profile = target_profile(platform, "ubuntu-focal-amd64")
@@ -113,6 +129,7 @@ class PublicCatalogueContract(unittest.TestCase):
         self.assertEqual(jammy["binaryPackages"][0], "libgit2-1.1")
         self.assertEqual(package_target_policy(platform, "libxml2", "ubuntu-focal-amd64")["builderPackages"], ["libxml2-dev"])
         self.assertEqual(package_target_policy(platform, "libarchive", "ubuntu-focal-amd64")["builderPackages"], ["libarchive-dev"])
+        self.assertEqual(package_target_policy(platform, "libarchive", "ubuntu-focal-amd64")["regressionPackages"], ["libarchive-dev"])
         for filename in ("packaging.Containerfile", "baseline.Containerfile", "patched-scan.Containerfile"):
             containerfile = (ROOT / "build" / filename).read_text()
             self.assertIn("ARG BINARY_PACKAGES", containerfile)
@@ -123,6 +140,7 @@ class PublicCatalogueContract(unittest.TestCase):
                 self.assertIn("for binary in $install_packages; do", containerfile)
             else:
                 self.assertIn("for binary in $BINARY_PACKAGES; do", containerfile)
+                self.assertIn("ARG REGRESSION_PACKAGES", containerfile)
         build_script = (ROOT / "scripts/build-package.py").read_text()
         baseline_script = (ROOT / "scripts/run-baseline.py").read_text()
         self.assertIn('"BINARY_PACKAGES=" + " ".join(policy["binaryPackages"])', build_script)
@@ -138,6 +156,10 @@ class PublicCatalogueContract(unittest.TestCase):
         invalid = deepcopy(platform)
         invalid["packages"]["libgit2"]["targets"]["ubuntu-jammy-amd64"]["builderPackages"] = ["bad package"]
         with self.assertRaisesRegex(ValueError, "invalid builder package scope"):
+            package_target_policy(invalid, "libgit2", "ubuntu-jammy-amd64")
+        invalid["packages"]["libgit2"]["targets"]["ubuntu-jammy-amd64"]["builderPackages"] = []
+        invalid["packages"]["libgit2"]["targets"]["ubuntu-jammy-amd64"]["regressionPackages"] = ["bad package"]
+        with self.assertRaisesRegex(ValueError, "invalid regression package scope"):
             package_target_policy(invalid, "libgit2", "ubuntu-jammy-amd64")
 
     def test_target_recipe_branch_rejects_untrusted_ref_syntax(self):

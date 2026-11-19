@@ -4,6 +4,7 @@ FROM ${BASE_IMAGE}
 ARG SOURCE_PACKAGE
 ARG EXPECTED_VERSION
 ARG BINARY_PACKAGES
+ARG REGRESSION_PACKAGES
 ARG APT_SOURCES_B64
 ENV DEBIAN_FRONTEND=noninteractive
 RUN --mount=type=secret,id=runner-ca,target=/tmp/getpatched-runner-ca.crt,required=true \
@@ -26,6 +27,12 @@ RUN --mount=type=secret,id=runner-ca,target=/tmp/getpatched-runner-ca.crt,requir
         exit 1; \
       }; \
     done; \
-    for binary in $BINARY_PACKAGES; do apt-get install -y --no-install-recommends "$binary=$EXPECTED_VERSION"; done; \
+    for binary in $REGRESSION_PACKAGES; do \
+      candidate="$(apt-cache policy "$binary" | awk '/Candidate:/ {print $2}')"; \
+      test "$candidate" = "$EXPECTED_VERSION" || { echo "Regression package candidate changed for $binary: $candidate (expected $EXPECTED_VERSION); refresh preflight, do not downgrade." >&2; exit 1; }; \
+    done; \
+    install_packages=""; \
+    for binary in $BINARY_PACKAGES $REGRESSION_PACKAGES; do install_packages="${install_packages}${install_packages:+ }$binary=$EXPECTED_VERSION"; done; \
+    apt-get install -y --no-install-recommends $install_packages; \
     dpkg-query -W $BINARY_PACKAGES 2>/dev/null || true; \
     rm -rf /var/lib/apt/lists/*

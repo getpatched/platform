@@ -1,0 +1,3 @@
+#!/bin/sh
+set -eu
+printf '%s\n' 'GetPatched isolated public preview package: 0.1.0+preview1'

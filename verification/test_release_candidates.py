@@ -33,6 +33,7 @@ def source_policy(source, target_id=TARGET_ID):
         "ubuntuProEsmCompatibility": package.get("ubuntuProEsmCompatibility", "not-applicable"),
         "sponsorDelayHours": package["releaseAccess"]["sponsorDelayHours"],
         "binaryPackages": package["binaryPackages"], "advisoryPackages": package["advisoryPackages"],
+        "regressionPackages": package["regressionPackages"],
         "architecture": profile["architecture"],
         "release": profile["codename"], "codename": profile["codename"], "distribution": profile["distribution"],
         "releaseVersion": profile["releaseVersion"],
@@ -40,6 +41,16 @@ def source_policy(source, target_id=TARGET_ID):
 
 
 class ReleaseCandidateOutput(unittest.TestCase):
+    def test_regression_packages_are_separate_from_release_candidates(self):
+        runtime = Path("libarchive13_3.4.0-2ubuntu1.5+getpatched1_amd64.deb")
+        runtime_tools = Path("libarchive-tools_3.4.0-2ubuntu1.5+getpatched1_amd64.deb")
+        regression = Path("libarchive-dev_3.4.0-2ubuntu1.5+getpatched1_amd64.deb")
+        release, test_only = BUILD_PACKAGE.separate_verified_packages(
+            [runtime, runtime_tools, regression], ["libarchive13", "libarchive-tools"], ["libarchive-dev"]
+        )
+        self.assertEqual(release, [runtime, runtime_tools])
+        self.assertEqual(test_only, [regression])
+
     def test_poppler_advisory_scan_scope_excludes_docs_binary(self):
         expected = source_policy("poppler")
         self.assertIn("libpoppler-glib-doc", expected["binaryPackages"])
@@ -89,8 +100,10 @@ class ReleaseCandidateOutput(unittest.TestCase):
 
     def test_patched_scan_installs_interdependent_local_packages_together(self):
         containerfile = (ROOT / "build/patched-scan.Containerfile").read_text()
+        build_script = SCRIPT.read_text()
+        self.assertIn('(patched_context / "regression" / ".keep").touch()', build_script)
         local_deb_loop = containerfile.index('for binary in $BINARY_PACKAGES; do')
-        local_install = containerfile.index('apt-get install -y --no-install-recommends $packages;')
+        local_install = containerfile.index('apt-get install -y --no-install-recommends $packages $regression_packages;')
         version_check = containerfile.index('dpkg-query -W', local_install)
         self.assertLess(local_deb_loop, local_install)
         self.assertLess(local_install, version_check)
@@ -106,6 +119,7 @@ class ReleaseCandidateOutput(unittest.TestCase):
         self.assertIn('"libgit2"', baseline_cli)
         self.assertIn('"c-ares"', baseline_cli)
         self.assertIn('"brotli"', baseline_cli)
+        self.assertIn('"--build-arg", "REGRESSION_PACKAGES=" + " ".join(package["regressionPackages"])', baseline_cli)
         preflight = (ROOT / ".github/workflows/candidate-preflight.yml").read_text()
         for package, target in (("c-ares", "ubuntu-focal-amd64"), ("c-ares", "debian-trixie-amd64"), ("brotli", "ubuntu-focal-amd64")):
             self.assertIn(f"package: {package}\n            target_id: {target}", preflight)

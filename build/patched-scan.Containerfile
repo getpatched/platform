@@ -5,6 +5,7 @@ ARG BASELINE_VERSION
 ARG EXPECTED_VERSION
 ARG APT_SOURCES_B64
 ARG BINARY_PACKAGES
+ARG REGRESSION_PACKAGES
 ENV DEBIAN_FRONTEND=noninteractive
 RUN --mount=type=secret,id=runner-ca,target=/tmp/getpatched-runner-ca.crt,required=true \
     set -eu; \
@@ -25,16 +26,25 @@ RUN --mount=type=secret,id=runner-ca,target=/tmp/getpatched-runner-ca.crt,requir
     done; \
     for binary in $BINARY_PACKAGES; do apt-get install -y --no-install-recommends "$binary=$BASELINE_VERSION"; done
 COPY getpatched/ /tmp/getpatched/
+COPY regression/ /tmp/regression/
 RUN set -eu; \
     test -n "$BINARY_PACKAGES"; \
-    packages=""; \
+    packages=""; regression_packages=""; \
     for binary in $BINARY_PACKAGES; do \
       package="$(find /tmp/getpatched -maxdepth 1 -name "${binary}_*.deb" -print -quit)"; \
       test -n "$package"; \
       packages="${packages}${packages:+ }$package"; \
     done; \
-    apt-get install -y --no-install-recommends $packages; \
+    for binary in $REGRESSION_PACKAGES; do \
+      package="$(find /tmp/regression -maxdepth 1 -name "${binary}_*.deb" -print -quit)"; \
+      test -n "$package"; \
+      regression_packages="${regression_packages}${regression_packages:+ }$package"; \
+    done; \
+    apt-get install -y --no-install-recommends $packages $regression_packages; \
     for binary in $BINARY_PACKAGES; do \
       test "$(dpkg-query -W -f='${Version}' "$binary")" = "$EXPECTED_VERSION"; \
     done; \
-    rm -rf /tmp/getpatched /var/lib/apt/lists/*
+    for binary in $REGRESSION_PACKAGES; do \
+      test "$(dpkg-query -W -f='${Version}' "$binary")" = "$EXPECTED_VERSION"; \
+    done; \
+    rm -rf /tmp/getpatched /tmp/regression /var/lib/apt/lists/*
