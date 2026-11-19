@@ -17,6 +17,22 @@ debian_version_compare = _SCAN.debian_version_compare
 
 
 class PublicCatalogueContract(unittest.TestCase):
+    def test_policy_schema_declares_regression_only_packages(self):
+        schema = json.loads((ROOT / "schemas/platform-policy.schema.json").read_text())
+        policy = json.loads((ROOT / "packages.json").read_text())
+        definition = schema["$defs"]["packageTarget"]["properties"]["regressionPackages"]
+        self.assertEqual(definition["type"], "array")
+        self.assertTrue(definition["uniqueItems"])
+        self.assertEqual(definition["items"]["type"], "string")
+        self.assertEqual(definition["items"]["pattern"], "^[a-z0-9][a-z0-9+.-]*$")
+        for package in policy["packages"].values():
+            for target in package["targets"].values():
+                names = target.get("regressionPackages", [])
+                self.assertIsInstance(names, list)
+                self.assertEqual(len(names), len(set(names)))
+                for name in names:
+                    self.assertRegex(name, definition["items"]["pattern"])
+
     def test_ubuntu_snapshot_source_list_emits_one_suite_per_apt_line(self):
         platform = json.loads((ROOT / "packages.json").read_text())
         profile = target_profile(platform, "ubuntu-focal-amd64")

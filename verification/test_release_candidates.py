@@ -119,6 +119,7 @@ class ReleaseCandidateOutput(unittest.TestCase):
         self.assertIn('"libgit2"', baseline_cli)
         self.assertIn('"c-ares"', baseline_cli)
         self.assertIn('"brotli"', baseline_cli)
+        self.assertIn('"--build-arg", "REGRESSION_PACKAGES=" + " ".join(package["regressionPackages"])', baseline_cli)
         preflight = (ROOT / ".github/workflows/candidate-preflight.yml").read_text()
         for package, target in (("c-ares", "ubuntu-focal-amd64"), ("c-ares", "debian-trixie-amd64"), ("brotli", "ubuntu-focal-amd64")):
             self.assertIn(f"package: {package}\n            target_id: {target}", preflight)
