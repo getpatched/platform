@@ -31,6 +31,15 @@ def run(command: list[str], *, cwd: Path | None = None) -> subprocess.CompletedP
     return subprocess.run(command, cwd=cwd, check=True, stdout=subprocess.PIPE)
 
 
+def parse_binary_identity(control_text: str) -> tuple[str | None, str | None, str | None]:
+    fields: dict[str, str] = {}
+    for line in control_text.splitlines():
+        if line and not line[0].isspace() and ":" in line:
+            name, value = line.split(":", 1)
+            fields[name] = value.strip()
+    return fields.get("Package"), fields.get("Version"), fields.get("Architecture")
+
+
 def build_package(repository: Path, version: str) -> None:
     if not re.fullmatch(r"[0-9][A-Za-z0-9.+:~]*", version):
         raise ValueError("preview package version is not a valid native Debian version")
@@ -64,8 +73,8 @@ def build_package(repository: Path, version: str) -> None:
         run(["dpkg-deb", "--root-owner-group", "--build", str(binary_root), str(deb_path)])
         run(["dpkg-source", "-b", str(source_tree)], cwd=temporary_path)
 
-        binary_fields = run(["dpkg-deb", "-f", str(deb_path), "Package", "Version", "Architecture"]).stdout.decode()
-        if binary_fields.splitlines() != [PACKAGE_NAME, version, "all"]:
+        binary_control = run(["dpkg-deb", "-f", str(deb_path)]).stdout.decode()
+        if parse_binary_identity(binary_control) != (PACKAGE_NAME, version, "all"):
             raise ValueError("generated preview binary has an unexpected package identity")
         extracted = temporary_path / "extracted-package"
         run(["dpkg-deb", "--extract", str(deb_path), str(extracted)])

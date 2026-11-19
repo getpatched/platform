@@ -42,6 +42,19 @@ class PreviewAptContract(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "valid native Debian version"):
                 BUILD.build_package(Path(temporary), "../../etc/passwd")
 
+    def test_binary_identity_parses_control_fields_by_name(self):
+        control = (
+            "Package: getpatched-preview-smoke\n"
+            "Version: 0.1.0+preview1.123.1\n"
+            "Architecture: all\n"
+            "Description: harmless smoke package\n"
+            " for repository checks\n"
+        )
+        self.assertEqual(
+            BUILD.parse_binary_identity(control),
+            ("getpatched-preview-smoke", "0.1.0+preview1.123.1", "all"),
+        )
+
     def test_builder_refuses_to_delete_existing_output_contents(self):
         import tempfile
 
